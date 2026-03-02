@@ -3,11 +3,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
-import { PAY_THAI, SHIP_THAI } from '@/components/ThaiStatus'
 import { supabaseBrowser } from '@/lib/supabase/browser'
 
 function isUuid(v) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''))
+}
+
+/** UI ภาษาไทย (ไม่แตะค่าที่เก็บใน DB/RPC) */
+const TH = {
+  pay: { unpaid: 'ยังไม่จ่าย', partial: 'จ่ายบางส่วน', paid: 'จ่ายแล้ว' },
+  ship: { not_shipped: 'ยังไม่ส่ง', shipped: 'ส่งแล้ว' },
+}
+
+function pad4(n) {
+  const s = String(n ?? '')
+  return s.padStart(4, '0')
+}
+
+function digitsOnly(s) {
+  return /^[0-9]+$/.test(String(s || ''))
 }
 
 /**
@@ -16,6 +30,10 @@ function isUuid(v) {
  *  - N26020010 -> N-2602-0010
  *  - N-2602-0010 -> N-2602-0010
  *  - n 2602 0010 -> N-2602-0010
+ *  - o26030042 -> O-2603-0042
+ *
+ * หมายเหตุ: ถ้าเป็นเลขล้วน (ไม่มี N/O) จะคืนค่าเป็นเลขล้วนไว้ก่อน
+ * แล้วให้ UI เด้ง popup เลือก N/O เพื่อ normalize ต่อ
  */
 function normalizeCode(input) {
   const raw = String(input || '').trim().toUpperCase()
@@ -24,25 +42,35 @@ function normalizeCode(input) {
   // เอาเฉพาะ A-Z 0-9 และ -
   const cleaned = raw.replace(/[^A-Z0-9-]/g, '')
 
+  // เลขล้วน (ยังไม่รู้ N/O) -> ปล่อยให้ popup จัดการ
+  const compact = cleaned.replace(/-/g, '')
+  if (compact && digitsOnly(compact) && !compact.startsWith('N') && !compact.startsWith('O')) return compact
+
   // แบบไม่มีขีด: N26020010 (1 + 4 + 4)
-  let m = cleaned.match(/^([NO])(\d{4})(\d{4})$/)
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`
+  let m = cleaned.match(/^([NO])(\d{4})(\d{1,4})$/)
+  if (m) return `${m[1]}-${m[2]}-${pad4(m[3])}`
 
   // แบบมี/ไม่มีขีดปนกัน: N-2602-0010, N2602-0010, N-26020010
-  m = cleaned.match(/^([NO])\-?(\d{4})\-?(\d{4})$/)
-  if (m) return `${m[1]}-${m[2]}-${m[3]}`
+  m = cleaned.match(/^([NO])\-?(\d{4})\-?(\d{1,4})$/)
+  if (m) return `${m[1]}-${m[2]}-${pad4(m[3])}`
 
-  // ถ้าไม่เข้าแพทเทิร์น ก็คืนแบบ cleaned (อย่างน้อยให้ตรงกับที่พิมพ์)
   return cleaned
 }
 
-// รับโค้ดหลายรูปแบบ: newline / space / comma / ; / tab แล้ว normalize ทุกตัว
+/** รับโค้ดหลายรูปแบบ: newline / space / comma / ; / tab แล้ว normalize ทุกตัว */
 function parseCodes(input) {
   return String(input || '')
     .replace(/\r/g, '\n')
     .split(/[\n,\t; ]+/g)
     .map((s) => normalizeCode(s))
     .filter(Boolean)
+}
+
+function parseParts(code /* N-2603-0002 */) {
+  const s = String(code || '')
+  const m = s.match(/^([NO])-(\d{4})-(\d{4})$/)
+  if (!m) return null
+  return { prefix: m[1], yymm: m[2], run: parseInt(m[3], 10) || 0 }
 }
 
 export default function SellPage() {
@@ -57,8 +85,15 @@ export default function SellPage() {
   const [paymentMethod, setPaymentMethod] = useState('transfer')
   const [paidDate, setPaidDate] = useState('')
 
+  // ✅ ใช้เมื่อ payStatus = partial
+  const [receivedAmount, setReceivedAmount] = useState('')
+
   const [plantCode, setPlantCode] = useState('')
   const [bulkText, setBulkText] = useState('')
+
+  // ✅ Range
+  const [rangeStart, setRangeStart] = useState('')
+  const [rangeEnd, setRangeEnd] = useState('')
 
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
@@ -69,6 +104,11 @@ export default function SellPage() {
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupMap, setLookupMap] = useState({}) // normalizedCode -> { found, plant_code, name, cost, status }
   const lastLookupKeyRef = useRef('')
+
+  // ✅ Digits-only popup (ไม่เดา N/O)
+  const [needPrefixModal, setNeedPrefixModal] = useState(false)
+  const [pendingDigits, setPendingDigits] = useState('')
+  const pendingSetterRef = useRef(null) // function(norm) => void
 
   const totals = useMemo(() => {
     const totalCost = items.reduce((s, x) => s + Number(x.cost || 0), 0)
@@ -86,6 +126,9 @@ export default function SellPage() {
     const uniq = []
     const seen = new Set()
     for (const c of [...single, ...bulk]) {
+      // ข้ามเลขล้วนใน preview (เพราะยังไม่รู้ N/O)
+      if (digitsOnly(String(c).replace(/-/g, ''))) continue
+
       if (!seen.has(c)) {
         seen.add(c)
         uniq.push(c)
@@ -94,6 +137,24 @@ export default function SellPage() {
     }
     return uniq
   }, [plantCode, bulkText])
+
+  function openPrefixModal(digits, setterFn) {
+    setPendingDigits(digits)
+    pendingSetterRef.current = setterFn
+    setNeedPrefixModal(true)
+  }
+
+  function choosePrefix(pfx /* 'N'|'O' */) {
+    const digits = String(pendingDigits || '').replace(/[^0-9]/g, '')
+    const yymm = digits.slice(0, 4)
+    const run = digits.slice(4)
+    const norm = `${pfx}-${yymm}-${pad4(run)}`
+    setNeedPrefixModal(false)
+    setPendingDigits('')
+    const fn = pendingSetterRef.current
+    pendingSetterRef.current = null
+    if (typeof fn === 'function') fn(norm)
+  }
 
   // --- Realtime Lookup (debounce) ---
   useEffect(() => {
@@ -110,7 +171,6 @@ export default function SellPage() {
     const t = setTimeout(async () => {
       setLookupLoading(true)
       try {
-        // query ด้วย normalized codes (ซึ่งตรงกับใน DB ที่เป็น N-2602-xxxx)
         const { data, error } = await supabase
           .from('plants')
           .select('plant_code,name,cost,status')
@@ -143,7 +203,14 @@ export default function SellPage() {
 
   async function addOne(codeRaw) {
     setErr('')
-    const code = normalizeCode(codeRaw)
+    const code0 = normalizeCode(codeRaw)
+
+    // เลขล้วน -> popup เลือก N/O
+    if (code0 && digitsOnly(code0)) {
+      return openPrefixModal(code0, (norm) => addOne(norm))
+    }
+
+    const code = code0
     if (!code) return
 
     const cached = lookupMap?.[code]
@@ -166,10 +233,6 @@ export default function SellPage() {
 
     setItems((prev) => [...prev, { plant_code: data[0].plant_code, name: data[0].name, cost: data[0].cost, price: '' }])
     setPlantCode('')
-  }
-
-  async function addByCode() {
-    await addOne(plantCode)
   }
 
   function updatePrice(idx, v) {
@@ -231,6 +294,9 @@ export default function SellPage() {
 
     const canAdd = []
     for (const code of codes) {
+      // ข้ามเลขล้วนใน bulk (ไม่รู้ N/O) ให้ผู้ใช้ใส่ N/O เองใน bulk
+      if (digitsOnly(code)) continue
+
       if (existingSet.has(code)) continue
       const info = lookupMap?.[code]
       if (info?.found && info.status === 'ACTIVE') {
@@ -254,12 +320,127 @@ export default function SellPage() {
     setBulkText('')
   }
 
+  // ✅ Add range (A: prefix+เดือนเดียวกันเท่านั้น)
+  async function addRange() {
+    setErr('')
+
+    const s0 = normalizeCode(rangeStart)
+    const e0 = normalizeCode(rangeEnd)
+
+    // digits-only -> popup
+    if (s0 && digitsOnly(s0)) return openPrefixModal(s0, (norm) => setRangeStart(norm))
+    if (e0 && digitsOnly(e0)) return openPrefixModal(e0, (norm) => setRangeEnd(norm))
+
+    const start = s0
+    const end = e0
+
+    const ps = parseParts(start)
+    const pe = parseParts(end)
+    if (!ps || !pe) return setErr('รูปแบบรหัสไม่ถูกต้อง (ตัวอย่าง: O-2603-0042 หรือ O26030042)')
+    if (ps.prefix !== pe.prefix) return setErr('ช่วงต้องเป็นประเภทเดียวกัน (N กับ N หรือ O กับ O)')
+    if (ps.yymm !== pe.yymm) return setErr('ช่วงต้องอยู่เดือนเดียวกัน (YYMM เดียวกัน)')
+    if (ps.run <= 0 || pe.run <= 0) return setErr('เลขรันต้องมากกว่า 0')
+    if (ps.run > pe.run) return setErr('รหัสเริ่มต้นต้องน้อยกว่าหรือเท่ารหัสสิ้นสุด')
+
+    const count = pe.run - ps.run + 1
+    const MAX = 220
+    if (count > MAX) return setErr(`ช่วงยาวเกินไป (${count} รายการ) จำกัดไม่เกิน ${MAX} รายการต่อครั้ง`)
+
+    const codes = Array.from({ length: count }, (_, i) => `${ps.prefix}-${ps.yymm}-${pad4(ps.run + i)}`)
+
+    const { data, error } = await supabase
+      .from('plants')
+      .select('plant_code,name,cost,status')
+      .in('plant_code', codes)
+      .limit(500)
+
+    if (error) return setErr(error.message)
+
+    const map = new Map()
+    for (const r of data || []) {
+      map.set(normalizeCode(r.plant_code), r)
+    }
+
+    let added = 0
+    let missing = 0
+    let notActive = 0
+    let dup = 0
+
+    const toAdd = []
+    for (const code of codes) {
+      if (existingSet.has(code)) {
+        dup++
+        continue
+      }
+      const r = map.get(code)
+      if (!r) {
+        missing++
+        continue
+      }
+      if (r.status !== 'ACTIVE') {
+        notActive++
+        continue
+      }
+      toAdd.push({ plant_code: r.plant_code, name: r.name, cost: r.cost, price: '' })
+      added++
+    }
+
+    if (!toAdd.length) {
+      return setErr(`เพิ่มไม่ได้ • ไม่พบ ${missing} • ไม่ ACTIVE ${notActive} • ซ้ำ ${dup}`)
+    }
+
+    setItems((prev) => [...prev, ...toAdd])
+    setRangeStart('')
+    setRangeEnd('')
+
+    if (missing || notActive || dup) {
+      setErr(`เพิ่มแล้ว ${added} • ไม่พบ ${missing} • ไม่ ACTIVE ${notActive} • ซ้ำ ${dup}`)
+    }
+  }
+
+  // ✅ บันทึกรับเงินจริงเข้า payments
+  async function createPaymentRecord({ invoiceId }) {
+    // unpaid = ไม่บันทึก
+    if (payStatus === 'unpaid') return
+
+    const total = Number(totals.totalPrice || 0)
+    if (total <= 0) return
+
+    let amt = 0
+    if (payStatus === 'paid') {
+      amt = total
+    } else if (payStatus === 'partial') {
+      amt = Number(receivedAmount || 0)
+      if (!amt || amt <= 0) throw new Error('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
+      if (amt > total) throw new Error('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
+    }
+
+    const payDate = paidDate ? paidDate : saleDate
+
+    const { error } = await supabase.from('payments').insert({
+      invoice_id: invoiceId,
+      pay_date: payDate,
+      bank,
+      amount: amt,
+      payment_method: paymentMethod || null,
+      note: 'รับเงินจากการขาย',
+    })
+    if (error) throw error
+  }
+
   async function submit() {
     setErr('')
     if (!items.length) return setErr('ยังไม่มีรายการขาย')
 
     const bad = items.find((x) => Number(x.price) <= 0)
     if (bad) return setErr(`กรุณาใส่ราคาขายให้ครบ: ${bad.plant_code}`)
+
+    // ✅ partial ต้องกรอกยอดรับจริง
+    if (payStatus === 'partial') {
+      const ra = Number(receivedAmount || 0)
+      if (!ra || ra <= 0) return setErr('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
+      if (ra > Number(totals.totalPrice || 0)) return setErr('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
+    }
 
     setLoading(true)
 
@@ -276,22 +457,33 @@ export default function SellPage() {
       p_items: payloadItems,
     })
 
-    setLoading(false)
-
-    if (error) return setErr(error.message)
-
-    const candidate = pickCandidateFromRpc(data)
-    const invoiceId = await resolveInvoiceId(candidate)
-
-    if (!isUuid(invoiceId)) {
-      return setErr(
-        `สร้างบิลแล้ว แต่ระบบยังหา invoiceId (UUID) ไม่เจอ\n` +
-          `RPC raw data: ${JSON.stringify(data)}\n` +
-          `candidate: ${String(candidate)}`
-      )
+    if (error) {
+      setLoading(false)
+      return setErr(error.message)
     }
 
-    router.push(`/receipt/${invoiceId}`)
+    try {
+      const candidate = pickCandidateFromRpc(data)
+      const invoiceId = await resolveInvoiceId(candidate)
+
+      if (!isUuid(invoiceId)) {
+        setLoading(false)
+        return setErr(
+          `สร้างบิลแล้ว แต่ระบบยังหา invoiceId (UUID) ไม่เจอ\n` +
+            `RPC raw data: ${JSON.stringify(data)}\n` +
+            `candidate: ${String(candidate)}`
+        )
+      }
+
+      // ✅ ผูก payments ที่นี่
+      await createPaymentRecord({ invoiceId })
+
+      setLoading(false)
+      router.push(`/receipt/${invoiceId}`)
+    } catch (e) {
+      setLoading(false)
+      setErr(e?.message || String(e))
+    }
   }
 
   const previewRows = useMemo(() => {
@@ -312,7 +504,7 @@ export default function SellPage() {
   const canAddCount = useMemo(() => previewRows.filter((r) => r.state === 'ok').length, [previewRows])
 
   return (
-    <AppShell title="ขาย (Sell)">
+    <AppShell title="ขาย">
       <div style={{ display: 'grid', gap: 12, maxWidth: 880, margin: '0 auto' }}>
         <Card title="ข้อมูลบิล">
           <div style={grid2}>
@@ -333,17 +525,25 @@ export default function SellPage() {
             </Field>
 
             <Field label="การชำระเงิน">
-              <select value={payStatus} onChange={(e) => setPayStatus(e.target.value)} style={inputCompact}>
-                <option value="unpaid">{PAY_THAI.unpaid}</option>
-                <option value="partial">{PAY_THAI.partial}</option>
-                <option value="paid">{PAY_THAI.paid}</option>
+              <select
+                value={payStatus}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setPayStatus(v)
+                  if (v !== 'partial') setReceivedAmount('')
+                }}
+                style={inputCompact}
+              >
+                <option value="unpaid">{TH.pay.unpaid}</option>
+                <option value="partial">{TH.pay.partial}</option>
+                <option value="paid">{TH.pay.paid}</option>
               </select>
             </Field>
 
             <Field label="การจัดส่ง">
               <select value={shipStatus} onChange={(e) => setShipStatus(e.target.value)} style={inputCompact}>
-                <option value="not_shipped">{SHIP_THAI.not_shipped}</option>
-                <option value="shipped">{SHIP_THAI.shipped}</option>
+                <option value="not_shipped">{TH.ship.not_shipped}</option>
+                <option value="shipped">{TH.ship.shipped}</option>
               </select>
             </Field>
 
@@ -358,20 +558,65 @@ export default function SellPage() {
             <Field label="วันที่รับเงิน (ถ้ามี)">
               <input value={paidDate} onChange={(e) => setPaidDate(e.target.value)} type="date" style={inputCompact} />
             </Field>
+
+            {/* ✅ เฉพาะ partial */}
+            {payStatus === 'partial' ? (
+              <Field label="ยอดที่รับจริง (จ่ายบางส่วน)">
+                <input
+                  value={receivedAmount}
+                  onChange={(e) => setReceivedAmount(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="เช่น 3000"
+                  style={inputCompact}
+                />
+              </Field>
+            ) : null}
           </div>
         </Card>
 
         <Card title="เพิ่มรายการขาย (Plant Code) — เร็ว + เช็คเรียลไทม์">
+          {/* ✅ Range input */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>
+              เพิ่มแบบ “ช่วงรหัส” (ต้องเป็นเดือนเดียวกัน + ประเภทเดียวกัน)
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+                placeholder="เริ่มต้น เช่น O-2603-0005 หรือ o26030005"
+                style={{ ...inputCompact, flex: 1, minWidth: 220 }}
+                onBlur={() => {
+                  const norm = normalizeCode(rangeStart)
+                  if (norm && norm !== rangeStart) setRangeStart(norm)
+                }}
+              />
+              <input
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+                placeholder="สิ้นสุด เช่น O-2603-0015"
+                style={{ ...inputCompact, flex: 1, minWidth: 220 }}
+                onBlur={() => {
+                  const norm = normalizeCode(rangeEnd)
+                  if (norm && norm !== rangeEnd) setRangeEnd(norm)
+                }}
+              />
+              <button onClick={addRange} style={primaryBtnCompact}>
+                เพิ่มช่วง
+              </button>
+            </div>
+          </div>
+
+          {/* Single add */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               value={plantCode}
               onChange={(e) => setPlantCode(e.target.value)}
-              placeholder="พิมพ์รหัสแล้วกด Enter (เช่น N-2602-0010 หรือ N26020010)"
+              placeholder="พิมพ์รหัสแล้วกด Enter (เช่น N-2603-0002 หรือ n26030002 หรือ 26030002)"
               style={{ ...inputCompact, flex: 1, minWidth: 220 }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
-                  // auto-format ก่อนเพิ่ม
                   const norm = normalizeCode(plantCode)
                   setPlantCode(norm)
                   addOne(norm)
@@ -394,6 +639,7 @@ export default function SellPage() {
             </button>
           </div>
 
+          {/* Bulk */}
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>
               เพิ่มหลายรหัสในทีเดียว (วางได้หลายบรรทัด / คั่นด้วยเว้นวรรค / คอมม่า)
@@ -401,7 +647,7 @@ export default function SellPage() {
             <textarea
               value={bulkText}
               onChange={(e) => setBulkText(e.target.value)}
-              placeholder={`ตัวอย่าง:\nN26020001\nN-2602-0002\nN 2602 0003`}
+              placeholder={`ตัวอย่าง:\nN26030001\nN-2603-0002\nO 2603 0042`}
               style={textareaCompact}
               rows={4}
             />
@@ -436,11 +682,13 @@ export default function SellPage() {
                     <div style={{ fontWeight: 900 }}>{x.plant_code}</div>
                     <div style={{ fontSize: 13, opacity: 0.85 }}>{x.name}</div>
                   </div>
-                  <button onClick={() => removeItem(idx)} style={ghostBtn}>ลบ</button>
+                  <button onClick={() => removeItem(idx)} style={ghostBtn}>
+                    ลบ
+                  </button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
-                  <Mini label="ทุน">{Number(x.cost || 0).toLocaleString()}</Mini>
+                  <Mini label="ทุน">{Number(x.cost || 0).toLocaleString('th-TH')}</Mini>
                   <div>
                     <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>ราคาขาย</div>
                     <input value={x.price} onChange={(e) => updatePrice(idx, e.target.value)} inputMode="numeric" style={inputCompact} />
@@ -454,9 +702,9 @@ export default function SellPage() {
 
         <Card title="สรุป">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-            <Mini label="ต้นทุนรวม">{totals.totalCost.toLocaleString()}</Mini>
-            <Mini label="ยอดขายรวม">{totals.totalPrice.toLocaleString()}</Mini>
-            <Mini label="กำไร">{totals.profit.toLocaleString()}</Mini>
+            <Mini label="ต้นทุนรวม">{totals.totalCost.toLocaleString('th-TH')}</Mini>
+            <Mini label="ยอดขายรวม">{totals.totalPrice.toLocaleString('th-TH')}</Mini>
+            <Mini label="กำไร">{totals.profit.toLocaleString('th-TH')}</Mini>
           </div>
 
           {err ? <pre style={{ marginTop: 10, color: '#ffb4b4', whiteSpace: 'pre-wrap' }}>{err}</pre> : null}
@@ -466,6 +714,45 @@ export default function SellPage() {
           </button>
         </Card>
       </div>
+
+      {/* ✅ Popup เลือก N/O เมื่อพิมพ์เลขล้วน */}
+      {needPrefixModal ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 md:items-center">
+          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0b1a14] p-4">
+            <div className="text-base font-semibold text-white">เลือกว่าเป็น N หรือ O</div>
+            <div className="mt-1 text-xs text-white/70">
+              คุณพิมพ์เป็นเลขล้วน: <span className="font-mono text-white/90">{pendingDigits}</span>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => choosePrefix('N')}
+                className="flex-1 rounded-2xl bg-emerald-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
+              >
+                ใหม่ (N)
+              </button>
+              <button
+                type="button"
+                onClick={() => choosePrefix('O')}
+                className="flex-1 rounded-2xl bg-sky-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+              >
+                เก่า (O)
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setNeedPrefixModal(false)
+                setPendingDigits('')
+                pendingSetterRef.current = null
+              }}
+              className="mt-3 w-full rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/90 hover:bg-white/15"
+            >
+              ยกเลิก
+            </button>
+          </div>
+        </div>
+      ) : null}
     </AppShell>
   )
 }

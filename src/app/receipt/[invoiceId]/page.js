@@ -141,14 +141,32 @@ export default function ReceiptPage() {
   }, [lang])
 
   async function exportImage() {
-    if (!printRef.current) return
-    const dataUrl = await htmlToImage.toPng(printRef.current, { cacheBust: true, pixelRatio: 2 })
-    const a = document.createElement('a')
-    a.href = dataUrl
-    a.download = `${inv?.invoice_no || 'receipt'}.png`
-    a.click()
-  }
+  if (!printRef.current) return
 
+  // รอให้รูปทั้งหมดโหลดก่อน
+  const images = printRef.current.querySelectorAll('img')
+  await Promise.all(
+    Array.from(images).map((img) => {
+      if (img.complete) return Promise.resolve()
+      return new Promise((resolve) => {
+        img.onload = resolve
+        img.onerror = resolve
+      })
+    })
+  )
+
+  const dataUrl = await htmlToImage.toPng(printRef.current, {
+    cacheBust: true,
+    pixelRatio: 2,
+    useCORS: true,
+    backgroundColor: '#ffffff',
+  })
+
+  const a = document.createElement('a')
+  a.href = dataUrl
+  a.download = `${inv?.invoice_no || 'receipt'}.png`
+  a.click()
+}
   function printNow() {
     window.print()
   }

@@ -4,882 +4,506 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { supabaseBrowser } from '@/lib/supabase/browser'
 
+/**
+ * Plants Page (Locked scope)
+ * ✅ รวมเพิ่มต้นไม้ Single + Bulk ในฟอร์มเดียว
+ * ✅ ใช้เฉพาะ "ทุน (cost)" — ตัด price_hint / notes / legacy_code ออก
+ * ✅ ถ้าเป็น NEW (N) -> บันทึกรายจ่ายหัก GSB อัตโนมัติ (ตาราง expenses)
+ * ✅ รายการต้นไม้โชว์เฉพาะ ACTIVE และเรียง plant_code จากน้อย -> มาก
+ * ✅ รองรับค้นหารหัสแบบพิมพ์ง่าย (n/o ตัวเล็ก, ไม่ต้องใส่ขีด)
+ *    - ถ้าเป็น "เลขล้วน" จะเด้ง popup ให้เลือก N/O (ไม่เดาเอง)
+ */
+
+function pad4(n) {
+  const s = String(n ?? '')
+  return s.padStart(4, '0')
+}
+
+function currentYYMM() {
+  const d = new Date()
+  const yy = String(d.getFullYear() % 100).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${yy}${mm}`
+}
+
+function isDigitsOnly(s) {
+  return /^[0-9]+$/.test(s)
+}
+
+/**
+ * รับอินพุตหลายแบบ:
+ * - n26030001 / N26030001
+ * - n-2603-0001 / O-2603-0042
+ * - 26030001 (เลขล้วน) -> ต้องเลือก prefix ก่อน
+ *
+ * คืนค่า format มาตรฐาน: N-2603-0001
+ */
+function normalizePlantCode(raw, forcedPrefix /* 'N' | 'O' | '' */) {
+  if (!raw) return ''
+  let s = String(raw).trim().toUpperCase()
+  s = s.replace(/\s+/g, '')
+  s = s.replace(/-/g, '')
+
+  if (!s) return ''
+
+  let prefix = ''
+  let body = s
+
+  if (s.startsWith('N') || s.startsWith('O')) {
+    prefix = s[0]
+    body = s.slice(1)
+  } else {
+    prefix = forcedPrefix || ''
+    body = s
+  }
+
+  // body should be YYMM + RUNNING(4)
+  const digits = body.replace(/[^0-9]/g, '')
+  const yymm = digits.slice(0, 4)
+  const running = digits.slice(4)
+
+  if (!prefix) return '' // ยังไม่รู้ว่า N/O
+
+  return `${prefix}-${yymm}-${pad4(running)}`
+}
+
+function parseRunning(code /* N-2603-0001 */) {
+  const parts = String(code || '').split('-')
+  const run = parts?.[2] ?? ''
+  const n = parseInt(run, 10)
+  return Number.isFinite(n) ? n : 0
+}
+
 export default function PlantsPage() {
   const supabase = supabaseBrowser()
 
-  // ---------- View mode (UI only) ----------
-  const [view, setView] = useState('single') // single | bulk | list
-
-  // ---------- Single add ----------
-  const [kind, setKind] = useState('LEGACY') // NEW | OLD | LEGACY
-  const [plantCode, setPlantCode] = useState('')
-  const [legacyCode, setLegacyCode] = useState('')
-  const [name, setName] = useState('')
-  const [cost, setCost] = useState('')
-  const [priceHint, setPriceHint] = useState('')
-  const [acquiredDate, setAcquiredDate] = useState('')
-  const [notes, setNotes] = useState('')
-  const [savingOne, setSavingOne] = useState(false)
-
-  // ---------- Bulk ----------
-  const [bulkKind, setBulkKind] = useState('NEW') // NEW | OLD
-  const [bulkCount, setBulkCount] = useState('10')
-  const [bulkName, setBulkName] = useState('')
-  const [bulkCost, setBulkCost] = useState('')
-  const [bulkPriceHint, setBulkPriceHint] = useState('')
-  const [bulkAcquiredDate, setBulkAcquiredDate] = useState('')
-  const [bulkNotes, setBulkNotes] = useState('')
-  const [previewing, setPreviewing] = useState(false)
-  const [creatingBulk, setCreatingBulk] = useState(false)
-  const [previewCodes, setPreviewCodes] = useState([]) // [{code}]
-  // ✅ Label print offsets / sizes (14x60mm)
-const [labelX, setLabelX] = useState(0)        // mm
-const [labelY, setLabelY] = useState(0)        // mm
-const [labelCodeSize, setLabelCodeSize] = useState(16) // px
-const [labelNameSize, setLabelNameSize] = useState(10) // px
-
-  // ---------- Labels queue (local only) ----------
-  const [labelQueue, setLabelQueue] = useState([]) // [{plant_code,name}]
-
-  const labelsToPrint = useMemo(() => {
-    const items = []
-
-    // current single preview
-    if (view === 'single' && plantCode.trim() && name.trim()) {
-      items.push({ plant_code: plantCode.trim(), name: name.trim() })
-    }
-
-    // bulk preview codes
-    if (view === 'bulk' && previewCodes?.length) {
-      previewCodes.forEach((x) => items.push({ plant_code: String(x.code || '').trim(), name: bulkName.trim() }))
-    }
-
-    // fallback: last added queue
-    labelQueue.forEach((x) => items.push({ plant_code: x.plant_code, name: x.name }))
-
-    // uniq by code (keep first)
-    const seen = new Set()
-    const uniq = []
-    for (const it of items) {
-      const key = it.plant_code
-      if (!key) continue
-      if (seen.has(key)) continue
-      seen.add(key)
-      uniq.push(it)
-    }
-    return uniq.slice(0, 48)
-  }, [view, plantCode, name, previewCodes, bulkName, labelQueue])
-
-  // ---------- List ----------
-  const [loadingList, setLoadingList] = useState(true)
-  const [plants, setPlants] = useState([])
-  const [q, setQ] = useState('')
   const [err, setErr] = useState('')
   const [ok, setOk] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  // ---------- Summary (ACTIVE only) ----------
-  const [summary, setSummary] = useState({ activeCount: 0, totalCost: 0 })
-  const [loadingSummary, setLoadingSummary] = useState(false)
+  // ---------- Add form (single+bulk) ----------
+  const [kind, setKind] = useState('NEW') // NEW | OLD
+  const [dateCode, setDateCode] = useState(currentYYMM()) // YYMM
+  const [qty, setQty] = useState(1)
+  const [name, setName] = useState('')
+  const [cost, setCost] = useState('')
+
+  // ---------- List ----------
+  const [plants, setPlants] = useState([])
+  const [q, setQ] = useState('')
+
+  // ---------- Search normalize modal (digits only) ----------
+  const [needPrefixModal, setNeedPrefixModal] = useState(false)
+  const [pendingDigits, setPendingDigits] = useState('') // digits-only input waiting for N/O
+  const [pendingResolved, setPendingResolved] = useState('') // final normalized code to set as query
+
+  const isNew = kind === 'NEW'
+  const prefix = isNew ? 'N' : 'O'
 
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase()
-    if (!s) return plants
-    return plants.filter((p) => {
-      return (
-        String(p.plant_code || '').toLowerCase().includes(s) ||
-        String(p.legacy_code || '').toLowerCase().includes(s) ||
-        String(p.name || '').toLowerCase().includes(s)
-      )
-    })
+    const query = (q || '').trim()
+    if (!query) return plants
+
+    const up = query.toUpperCase()
+    const noDash = up.replace(/-/g, '')
+    const looksDigits = isDigitsOnly(noDash)
+
+    if (looksDigits) {
+      return plants.filter((p) => String(p.plant_code || '').replace(/-/g, '').includes(noDash))
+    }
+
+    return plants.filter(
+      (p) =>
+        String(p.plant_code || '').toUpperCase().includes(up) ||
+        String(p.name || '').toUpperCase().includes(up)
+    )
   }, [plants, q])
-
-  async function loadPlants() {
-    setErr('')
-    setLoadingList(true)
-    const { data, error } = await supabase
-      .from('plants')
-      .select('id,plant_code,legacy_code,code_kind,name,cost,price_hint,status,acquired_date,notes,created_at')
-      .order('created_at', { ascending: false })
-      .limit(100) // ✅ ล่าสุด 100 ตามที่ขอ
-
-    setLoadingList(false)
-    if (error) return setErr(error.message)
-    setPlants(data || [])
-  }
-
-  async function loadActiveSummary() {
-    setErr('')
-    setLoadingSummary(true)
-
-    const { data, error } = await supabase.from('plants').select('cost').eq('status', 'ACTIVE').limit(10000)
-
-    setLoadingSummary(false)
-    if (error) return setErr(error.message)
-
-    const rows = data || []
-    const totalCost = rows.reduce((sum, r) => sum + Number(r.cost || 0), 0)
-    setSummary({ activeCount: rows.length, totalCost })
-  }
-
-  useEffect(() => {
-    loadPlants()
-
-    // label print settings (local only)
-    try {
-      const raw = localStorage.getItem('np_label_cfg')
-      if (raw) {
-        const cfg = JSON.parse(raw)
-        if (typeof cfg.x === 'number') setLabelX(cfg.x)
-        if (typeof cfg.y === 'number') setLabelY(cfg.y)
-        if (typeof cfg.codeSize === 'number') setLabelCodeSize(cfg.codeSize)
-        if (typeof cfg.nameSize === 'number') setLabelNameSize(cfg.nameSize)
-      }
-    } catch {}
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        'np_label_cfg',
-        JSON.stringify({ x: labelX, y: labelY, codeSize: labelCodeSize, nameSize: labelNameSize })
-      )
-    } catch {}
-  }, [labelX, labelY, labelCodeSize, labelNameSize])
 
   function toastOk(msg) {
     setOk(msg)
     setTimeout(() => setOk(''), 2500)
   }
 
-  // ✅ FIX: เพิ่มฟังก์ชันนี้ เพื่อให้ createBulk() เรียกได้จริง และให้ฟอร์ม bulk รีเซ็ตหลังสร้างเสร็จ
-  function resetBulkForm() {
-    // รีเซ็ตเฉพาะฟอร์ม Bulk (ไม่กระทบ logic อื่น)
-    setBulkKind('NEW')
-    setBulkCount('10')
-    setBulkName('')
-    setBulkCost('')
-    setBulkPriceHint('')
-    setBulkAcquiredDate('')
-    setBulkNotes('')
-    setPreviewCodes([])
+  function toastErr(msg) {
+    setErr(msg)
+    setTimeout(() => setErr(''), 4000)
   }
 
-  async function addOne() {
+  async function loadPlants() {
+    setLoading(true)
     setErr('')
-    setOk('')
+    try {
+      const { data, error } = await supabase
+        .from('plants')
+        .select('id, plant_code, name, cost, status, created_at')
+        .eq('status', 'ACTIVE')
+        .order('plant_code', { ascending: true })
 
-    if (!name.trim()) return setErr('กรุณาใส่ชื่อไม้')
-    if (!plantCode.trim()) return setErr('กรุณาใส่ Plant Code')
+      if (error) throw error
+      setPlants(data || [])
+    } catch (e) {
+      toastErr(e?.message || 'โหลดรายการต้นไม้ไม่สำเร็จ')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    setSavingOne(true)
-    const { error } = await supabase.from('plants').insert([
-      {
-        plant_code: plantCode.trim(),
-        legacy_code: legacyCode.trim() ? legacyCode.trim() : null,
-        code_kind: kind,
-        name: name.trim(),
-        cost: Number(cost || 0),
-        price_hint: Number(priceHint || 0),
-        status: 'ACTIVE',
-        acquired_date: acquiredDate ? acquiredDate : null,
-        notes: notes.trim() ? notes.trim() : null,
-      },
-    ])
-    setSavingOne(false)
+  useEffect(() => {
+    loadPlants()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-    if (error) return setErr(error.message)
-
-    // push to label queue (for quick print)
-    setLabelQueue((q) => [{ plant_code: plantCode.trim(), name: name.trim() }, ...q].slice(0, 24))
-
-    setPlantCode('')
-    setLegacyCode('')
+  function resetFormKeepDate() {
+    setQty(1)
     setName('')
     setCost('')
-    setPriceHint('')
-    setAcquiredDate('')
-    setNotes('')
-    toastOk('เพิ่มต้นไม้สำเร็จ')
-    // ✅ ตามสเปก: ทำรายการเสร็จให้รีเฟรชหน้า
-    window.location.reload()
   }
 
-  async function previewBulkCodes() {
-    setErr('')
-    setOk('')
-    setPreviewCodes([])
-
-    const n = Number(bulkCount || 0)
-    if (!bulkName.trim()) return setErr('กรุณาใส่ชื่อไม้ (สำหรับ bulk)')
-    if (!n || n <= 0 || n > 500) return setErr('จำนวนต้องอยู่ระหว่าง 1 - 500')
-    if (bulkKind !== 'NEW' && bulkKind !== 'OLD') return setErr('bulkKind ต้องเป็น NEW หรือ OLD')
-
-    setPreviewing(true)
-    const { data, error } = await supabase.rpc('preview_plant_codes', {
-      p_kind: bulkKind,
-      p_count: n,
-    })
-    setPreviewing(false)
-
-    if (error) return setErr(error.message)
-    setPreviewCodes(data || [])
-    toastOk('พรีวิวโค้ดเรียบร้อย')
+  async function getNextCode(pfx, yymm) {
+    // RPC: public.next_plant_code(p_prefix text, p_datecode text)
+    const { data, error } = await supabase.rpc('next_plant_code', { p_prefix: pfx, p_datecode: yymm })
+    if (error) throw error
+    return data // string
   }
 
-  async function createBulk() {
+  async function addPlants() {
     setErr('')
     setOk('')
 
-    if (!previewCodes.length) return setErr('ยังไม่ได้พรีวิวโค้ด')
-    const n = previewCodes.length
+    const qn = Math.max(1, parseInt(qty || 1, 10) || 1)
+    const costNum = Number(cost)
+    if (!dateCode || String(dateCode).trim().length !== 4) return toastErr('กรุณาใส่ DateCode (YYMM) เช่น 2603')
+    if (!name.trim()) return toastErr('กรุณาใส่ชื่อไม้')
+    if (!Number.isFinite(costNum) || costNum <= 0) return toastErr('กรุณาใส่ทุน (ตัวเลขมากกว่า 0)')
 
-    setCreatingBulk(true)
-    const rows = previewCodes.map((x) => ({
-      plant_code: x.code,
-      legacy_code: null,
-      name: bulkName.trim(),
-      cost: Number(bulkCost || 0),
-      price_hint: Number(bulkPriceHint || 0),
-      status: 'ACTIVE',
-      acquired_date: bulkAcquiredDate ? bulkAcquiredDate : null,
-      notes: bulkNotes.trim() ? bulkNotes.trim() : null,
-    }))
+    setSaving(true)
+    try {
+      // 1) หาโค้ดเริ่มต้นจาก DB
+      const startCode = await getNextCode(prefix, dateCode)
+      const startRun = parseRunning(startCode)
+      if (!startRun) throw new Error('อ่านเลข running ไม่สำเร็จ')
 
-    const { data, error } = await supabase.rpc('add_plants_bulk', {
-      p_rows: rows,
-      p_kind: bulkKind,
-    })
-    setCreatingBulk(false)
+      // 2) สร้างชุดโค้ดตามจำนวน
+      const codes = Array.from({ length: qn }, (_, i) => `${prefix}-${dateCode}-${pad4(startRun + i)}`)
 
-    if (error) return setErr(error.message)
+      // 3) กันซ้ำก่อน insert
+      const { data: existed, error: existErr } = await supabase
+        .from('plants')
+        .select('plant_code')
+        .in('plant_code', codes)
+        .limit(2000)
 
-    toastOk(`เพิ่มแบบ bulk สำเร็จ ${data || n} รายการ`)
-    // ✅ ตามสเปก: ทำรายการเสร็จให้รีเฟรชหน้า (ไม่ให้ข้อมูลค้าง)
-    window.location.reload()
+      if (existErr) throw existErr
+      const existedCodes = new Set((existed || []).map((x) => x.plant_code))
+      if (existedCodes.size > 0) {
+        const sample = Array.from(existedCodes).slice(0, 10).join(', ')
+        throw new Error(`โค้ดซ้ำในระบบ: ${sample}${existedCodes.size > 10 ? ' ...' : ''}`)
+      }
+
+      // 4) insert plants (ACTIVE only)
+      const rows = codes.map((c) => ({
+        plant_code: c,
+        code_kind: isNew ? 'NEW' : 'OLD',
+        name: name.trim(),
+        cost: costNum,
+        status: 'ACTIVE',
+        acquired_date: isNew ? new Date().toISOString().slice(0, 10) : null,
+      }))
+
+      const { error: insErr } = await supabase.from('plants').insert(rows)
+      if (insErr) throw insErr
+
+      // 5) ถ้า NEW -> บันทึกรายจ่ายหัก GSB อัตโนมัติ (รวมยอดครั้งเดียว)
+      if (isNew) {
+        const total = costNum * qn
+        const note =
+          qn === 1
+            ? `ซื้อไม้เข้า: ${codes[0]}`
+            : `ซื้อไม้เข้า: ${codes[0]} ถึง ${codes[codes.length - 1]} (${qn} ต้น)`
+
+        const { error: expErr } = await supabase.from('expenses').insert([
+          {
+            expense_date: new Date().toISOString().slice(0, 10),
+            category: 'ซื้อไม้เข้า',
+            amount: total,
+            bank: 'GSB',
+            note,
+          },
+        ])
+
+        // ถ้ารายจ่ายพัง: แจ้งเตือนให้ไปเพิ่มเอง (แต่ plants insert ไปแล้ว)
+        if (expErr) {
+          toastErr(`เพิ่มต้นไม้สำเร็จ แต่บันทึกรายจ่ายอัตโนมัติไม่สำเร็จ: ${expErr.message}`)
+        }
+      }
+
+      toastOk(qn === 1 ? `เพิ่มต้นไม้สำเร็จ: ${codes[0]}` : `เพิ่มต้นไม้สำเร็จ ${qn} ต้น`)
+      resetFormKeepDate()
+      await loadPlants()
+    } catch (e) {
+      toastErr(e?.message || 'บันทึกไม่สำเร็จ')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  async function markSold(id) {
-    setErr('')
-    const { error } = await supabase.from('plants').update({ status: 'SOLD' }).eq('id', id)
-    if (error) return setErr(error.message)
-    toastOk('เปลี่ยนเป็น SOLD แล้ว')
-    window.location.reload()
+  // ---------- Search helpers ----------
+  function onSearchBlur() {
+    const raw = (q || '').trim()
+    if (!raw) return
+
+    const compact = raw.toUpperCase().replace(/\s+/g, '').replace(/-/g, '')
+    if (compact && isDigitsOnly(compact)) {
+      setPendingDigits(compact)
+      setNeedPrefixModal(true)
+      return
+    }
+
+    if (compact.startsWith('N') || compact.startsWith('O')) {
+      const norm = normalizePlantCode(raw, '')
+      if (norm) setQ(norm)
+    }
   }
 
-  async function markActive(id) {
-    setErr('')
-    const { error } = await supabase.from('plants').update({ status: 'ACTIVE' }).eq('id', id)
-    if (error) return setErr(error.message)
-    toastOk('เปลี่ยนเป็น ACTIVE แล้ว')
-    window.location.reload()
+  function choosePrefix(pfx) {
+    const norm = normalizePlantCode(pendingDigits, pfx)
+    setNeedPrefixModal(false)
+    setPendingDigits('')
+    if (norm) {
+      setQ(norm)
+      setPendingResolved(norm)
+      setTimeout(() => setPendingResolved(''), 1200)
+    }
   }
 
   return (
-    <AppShell title="ฐานต้นไม้ (Plants)">
-      <div style={wrap}>
-        {err ? <Banner type="err">{err}</Banner> : null}
-        {ok ? <Banner type="ok">{ok}</Banner> : null}
-
-        {/* ✅ เลือกหมวด (แทนการเลื่อนยาว) */}
-        <div style={segWrap}>
-          <div style={{ fontWeight: 950, marginBottom: 8 }}>เลือกหมวด</div>
-          <div style={segRow}>
-            <SegBtn active={view === 'single'} onClick={() => setView('single')}>
-              เพิ่มทีละต้น
-            </SegBtn>
-            <SegBtn active={view === 'bulk'} onClick={() => setView('bulk')}>
-              เพิ่มแบบ Bulk
-            </SegBtn>
-            <SegBtn
-              active={view === 'list'}
-              onClick={() => {
-                setView('list')
-                loadPlants()
-                loadActiveSummary()
-              }}
-            >
-              รายการล่าสุด 100
-            </SegBtn>
+    <AppShell title="ฐานต้นไม้">
+      <div className="mx-auto w-full max-w-5xl px-3 pb-10">
+        {(err || ok) && (
+          <div className="mt-3 space-y-2">
+            {err ? (
+              <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {err}
+              </div>
+            ) : null}
+            {ok ? (
+              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                {ok}
+              </div>
+            ) : null}
           </div>
-          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 8 }}>
-            * หน้านี้จะแสดงเฉพาะหมวดที่เลือก เพื่อไม่ให้ยาวและไม่รก
+        )}
+
+        {/* Add form */}
+        <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-base font-semibold text-white">เพิ่มต้นไม้</div>
+              <div className="text-xs text-white/60">กรอกน้อยที่สุด • Single/Bulk ในฟอร์มเดียว • ใช้ทุนอย่างเดียว</div>
+            </div>
+            <div className="text-xs text-white/60">
+              โค้ดตัวอย่าง: <span className="font-mono text-white/80">{prefix}-{dateCode}-0001</span>
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {/* Kind toggle */}
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="mb-2 text-xs text-white/70">ประเภท</div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setKind('NEW')}
+                  className={`flex-1 rounded-xl px-3 py-2 text-sm ${
+                    kind === 'NEW' ? 'bg-emerald-600/80 text-white' : 'bg-white/5 text-white/80 hover:bg-white/10'
+                  }`}
+                >
+                  ใหม่ (N)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKind('OLD')}
+                  className={`flex-1 rounded-xl px-3 py-2 text-sm ${
+                    kind === 'OLD' ? 'bg-sky-600/80 text-white' : 'bg-white/5 text-white/80 hover:bg-white/10'
+                  }`}
+                >
+                  เก่า (O)
+                </button>
+              </div>
+              <div className="mt-2 text-[11px] text-white/55">
+                {isNew ? '✅ จะบันทึกรายจ่ายหัก GSB อัตโนมัติ' : 'ℹ️ ไม้เก่าไม่หักเงิน'}
+              </div>
+            </div>
+
+            {/* DateCode + Qty */}
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="mb-2 text-xs text-white/70">เดือน (YYMM)</div>
+                  <input
+                    value={dateCode}
+                    onChange={(e) => setDateCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 font-mono text-sm text-white outline-none focus:border-white/20"
+                    placeholder="2603"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div>
+                  <div className="mb-2 text-xs text-white/70">จำนวน</div>
+                  <input
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ''))}
+                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                    placeholder="1"
+                    inputMode="numeric"
+                  />
+                  <div className="mt-1 text-[11px] text-white/50">ใส่ 1 = เพิ่มทีละต้น</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="mb-2 text-xs text-white/70">ชื่อไม้</div>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                placeholder="เช่น Alocasia..."
+              />
+            </div>
+
+            {/* Cost */}
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+              <div className="mb-2 text-xs text-white/70">ทุน (บาท)</div>
+              <input
+                value={cost}
+                onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ''))}
+                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                placeholder="0"
+                inputMode="decimal"
+              />
+              <div className="mt-1 text-[11px] text-white/50">
+                {isNew ? 'จะถูกนำไปหักออกจาก GSB อัตโนมัติ' : 'ใช้คำนวณกำไรตอนขาย'}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="text-xs text-white/60">
+              ระบบจะสร้างรหัสให้เองตามลำดับล่าสุดของเดือนนั้น ๆ (ไม่ต้องพิมพ์รหัส)
+            </div>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={addPlants}
+              className="rounded-2xl bg-emerald-600/80 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
+            >
+              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+            </button>
           </div>
         </div>
 
-        {view === 'single' ? (
-          <Card title="เพิ่มต้นไม้ (ทีละต้น)">
-            <GridForm>
-              <Field label="ชนิดโค้ด">
-                <select value={kind} onChange={(e) => setKind(e.target.value)} style={inputStyle}>
-                  <option value="LEGACY">LEGACY (โค้ดเดิมที่มีอยู่แล้ว)</option>
-                  <option value="NEW">NEW (ของใหม่)</option>
-                  <option value="OLD">OLD (ของเก่าในระบบใหม่)</option>
-                </select>
-              </Field>
-
-              <Field label="Plant Code (โค้ดหลักที่ใช้ขาย/ค้นหา)">
-                <input
-                  value={plantCode}
-                  onChange={(e) => setPlantCode(e.target.value)}
-                  placeholder="เช่น N-2602-0001 หรือ โค้ดเดิมของนาย"
-                  style={inputStyle}
-                />
-              </Field>
-
-              <Field label="Legacy Code (ถ้ามี)">
-                <input value={legacyCode} onChange={(e) => setLegacyCode(e.target.value)} placeholder="ใส่ได้/ไม่ใส่ก็ได้" style={inputStyle} />
-              </Field>
-
-              <Field label="ชื่อไม้">
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น Alocasia Maharani Var" style={inputStyle} />
-              </Field>
-
-              <Field label="ทุน">
-                <input value={cost} onChange={(e) => setCost(e.target.value)} inputMode="numeric" placeholder="0" style={inputStyle} />
-              </Field>
-
-              <Field label="ราคาตั้งต้น (ถ้ามี)">
-                <input value={priceHint} onChange={(e) => setPriceHint(e.target.value)} inputMode="numeric" placeholder="0" style={inputStyle} />
-              </Field>
-
-              <Field label="วันที่ได้มา (ถ้ามี)">
-                <input value={acquiredDate} onChange={(e) => setAcquiredDate(e.target.value)} type="date" style={inputStyle} />
-              </Field>
-
-              <Field label="หมายเหตุ (ถ้ามี)">
-                <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="เช่น ไม้แม่/ลูก, ตำหนิ, ฯลฯ" style={inputStyle} />
-              </Field>
-            </GridForm>
-
-            <button disabled={savingOne} onClick={addOne} style={{ ...primaryBtn, width: '100%', height: 46, marginTop: 10 }}>
-              {savingOne ? 'กำลังบันทึก...' : 'เพิ่มต้นไม้'}
-            </button>
-
-            <div style={{ marginTop: 10, fontSize: 12, opacity: 0.85 }}>
-              * ถ้าอยากให้ระบบ generate โค้ด NEW/OLD อัตโนมัติ ให้ใช้ “เพิ่มแบบ Bulk”
+        {/* List */}
+        <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-base font-semibold text-white">รายการต้นไม้ที่ยังมีอยู่</div>
+              <div className="text-xs text-white/60">แสดงเฉพาะ ACTIVE • เรียงจากน้อยไปมาก</div>
             </div>
-          </Card>
-        ) : null}
-
-        {view === 'bulk' ? (
-          <Card title="เพิ่มแบบ Bulk (สร้างโค้ด NEW/OLD อัตโนมัติ)">
-            <GridForm>
-              <Field label="ชนิดโค้ด (Bulk)">
-                <select value={bulkKind} onChange={(e) => setBulkKind(e.target.value)} style={inputStyle}>
-                  <option value="NEW">NEW (N-YYMM-XXXX)</option>
-                  <option value="OLD">OLD (O-YYMM-XXXX)</option>
-                </select>
-              </Field>
-
-              <Field label="จำนวน (1-500)">
-                <input value={bulkCount} onChange={(e) => setBulkCount(e.target.value)} inputMode="numeric" style={inputStyle} />
-              </Field>
-
-              <Field label="ชื่อไม้ (ใช้ให้ทุกต้นในชุดนี้)">
-                <input value={bulkName} onChange={(e) => setBulkName(e.target.value)} placeholder="เช่น Monstera Albo" style={inputStyle} />
-              </Field>
-
-              <Field label="ทุน (ใช้ให้ทุกต้น)">
-                <input value={bulkCost} onChange={(e) => setBulkCost(e.target.value)} inputMode="numeric" placeholder="0" style={inputStyle} />
-              </Field>
-
-              <Field label="ราคาตั้งต้น (ถ้ามี)">
-                <input value={bulkPriceHint} onChange={(e) => setBulkPriceHint(e.target.value)} inputMode="numeric" placeholder="0" style={inputStyle} />
-              </Field>
-
-              <Field label="วันที่ได้มา (ถ้ามี)">
-                <input value={bulkAcquiredDate} onChange={(e) => setBulkAcquiredDate(e.target.value)} type="date" style={inputStyle} />
-              </Field>
-
-              <Field label="หมายเหตุ (ถ้ามี)">
-                <input value={bulkNotes} onChange={(e) => setBulkNotes(e.target.value)} placeholder="ใส่ได้" style={inputStyle} />
-              </Field>
-            </GridForm>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-              <button disabled={previewing} onClick={previewBulkCodes} style={primaryBtn}>
-                {previewing ? 'กำลังพรีวิว...' : 'พรีวิวโค้ด'}
-              </button>
-              <button disabled={creatingBulk || !previewCodes.length} onClick={createBulk} style={secondaryBtn}>
-                {creatingBulk ? 'กำลังสร้าง...' : 'สร้างต้นไม้ (Bulk)'}
-              </button>
-            </div>
-
-            {previewCodes.length ? (
-              <div style={previewBox}>
-                <div style={{ fontWeight: 900, marginBottom: 8 }}>พรีวิวโค้ด ({previewCodes.length})</div>
-                <div style={previewGrid}>
-                  {previewCodes.map((x) => (
-                    <div key={x.code} style={chipCard}>
-                      <div style={{ fontWeight: 900 }}>{x.code}</div>
-                      <div style={{ fontSize: 12, opacity: 0.85 }}>{bulkName || '-'}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </Card>
-        ) : null}
-
-        {view === 'list' ? (
-          <>
-            {/* ✅ สรุปสต๊อก ACTIVE (คงเหลือทั้งหมด) */}
-            <div style={summaryBox}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontWeight: 950 }}>สรุปสต๊อก (ยังไม่ขาย)</div>
-                  <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>นับเฉพาะสถานะ ACTIVE (คงเหลือ)</div>
-                </div>
-
-                <button onClick={loadActiveSummary} style={ghostBtn} disabled={loadingSummary}>
-                  {loadingSummary ? 'กำลังคำนวณ...' : 'รีเฟรชสรุป'}
-                </button>
-              </div>
-
-              <div style={summaryGrid}>
-                <Mini label="จำนวนไม้คงเหลือ (ACTIVE)">{loadingSummary ? '...' : summary.activeCount.toLocaleString()}</Mini>
-                <Mini label="มูลค่าไม้ (ทุนรวม)">{loadingSummary ? '...' : summary.totalCost.toLocaleString()}</Mini>
-                <Mini label="หน่วย">บาท (THB)</Mini>
-              </div>
-            </div>
-
-            <Card title="รายการต้นไม้ (ล่าสุด 100)">
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหา: code / legacy / name" style={{ ...inputStyle, flex: 1, minWidth: 220 }} />
-                <button onClick={loadPlants} style={ghostBtn}>
-                  รีเฟรช
-                </button>
-              </div>
-
-              {loadingList ? <div style={{ marginTop: 10, opacity: 0.85 }}>กำลังโหลด...</div> : null}
-
-              <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
-                {filtered.map((p) => {
-                  const isActive = String(p.status || '').toUpperCase() === 'ACTIVE'
-                  const bd = isActive ? 'rgba(0,255,120,0.35)' : 'rgba(255,60,60,0.45)'
-                  const glow = isActive ? 'rgba(0,255,120,0.10)' : 'rgba(255,60,60,0.10)'
-
-                  return (
-                    <div
-                      key={p.id}
-                      style={{
-                        border: `1px solid ${bd}`,
-                        background: glow,
-                        borderRadius: 16,
-                        padding: 12,
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                        <div style={{ minWidth: 220 }}>
-                          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <div style={{ fontWeight: 950, fontSize: 16 }}>{p.plant_code}</div>
-                            <StatusPill status={p.status} />
-                          </div>
-                          <div style={{ fontSize: 13, opacity: 0.9, marginTop: 2 }}>{p.name}</div>
-                          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-                            kind: {p.code_kind}
-                            {p.legacy_code ? ` • legacy: ${p.legacy_code}` : ''}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'start', flexWrap: 'wrap' }}>
-                          {isActive ? (
-                            <button onClick={() => markSold(p.id)} style={smallBtn}>
-                              Mark SOLD
-                            </button>
-                          ) : (
-                            <button onClick={() => markActive(p.id)} style={smallBtn}>
-                              Mark ACTIVE
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div style={miniGrid}>
-                        <Mini label="ทุน">{Number(p.cost || 0).toLocaleString()}</Mini>
-                        <Mini label="สถานะ">
-                          <span style={{ fontWeight: 950 }}>{String(p.status || '-').toUpperCase()}</span>
-                        </Mini>
-                        <Mini label="วันที่ได้มา">{p.acquired_date || '-'}</Mini>
-                      </div>
-                    </div>
-                  )
-                })}
-
-                {!filtered.length && !loadingList ? <div style={{ opacity: 0.8 }}>ไม่พบข้อมูล</div> : null}
-              </div>
-            </Card>
-          </>
-        ) : null}
-
-        {/* Label Print (14x60mm) */}
-        <Card title="พรีวิวสติ๊กเกอร์ (14×60 mm)">
-          <div style={{ display: 'grid', gap: 10 }} className="no-print">
-            <div style={{ fontSize: 12, opacity: 0.8 }}>
-              พิมพ์เฉพาะ <b>Plant Code</b> และ <b>ชื่อไม้</b> • ปรับระยะขยับได้เผื่อเครื่องกินขอบไม่เท่ากัน
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
-              <Field label="เลื่อนซ้าย/ขวา (mm)">
-                <input className="input" type="number" step="0.5" value={labelX} onChange={(e) => setLabelX(Number(e.target.value || 0))} />
-              </Field>
-              <Field label="เลื่อนขึ้น/ลง (mm)">
-                <input className="input" type="number" step="0.5" value={labelY} onChange={(e) => setLabelY(Number(e.target.value || 0))} />
-              </Field>
-              <Field label="ขนาดโค้ด (px)">
-                <input className="input" type="number" step="1" value={labelCodeSize} onChange={(e) => setLabelCodeSize(Number(e.target.value || 16))} />
-              </Field>
-              <Field label="ขนาดชื่อ (px)">
-                <input className="input" type="number" step="1" value={labelNameSize} onChange={(e) => setLabelNameSize(Number(e.target.value || 10))} />
-              </Field>
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onBlur={onSearchBlur}
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20 md:w-[280px]"
+                placeholder="ค้นหา (รหัส/ชื่อ) เช่น n26030001 หรือ O-2603-0042"
+              />
               <button
-                className="btn btn-primary"
+                type="button"
+                onClick={loadPlants}
+                className="rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/90 hover:bg-white/15"
+              >
+                รีเฟรช
+              </button>
+            </div>
+          </div>
+
+          {pendingResolved ? (
+            <div className="mt-2 text-xs text-emerald-200">
+              แปลงรหัสเป็น: <span className="font-mono">{pendingResolved}</span>
+            </div>
+          ) : null}
+
+          <div className="mt-4">
+            {loading ? (
+              <div className="text-sm text-white/70">กำลังโหลด...</div>
+            ) : filtered.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+                ไม่พบรายการ (ตอนนี้แสดงเฉพาะ ACTIVE)
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {filtered.map((p) => (
+                  <div key={p.id} className="rounded-2xl border border-emerald-500/30 bg-black/20 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-mono text-sm text-white">{p.plant_code}</div>
+                        <div className="truncate text-sm text-white/85">{p.name || '-'}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[11px] text-white/55">ทุน</div>
+                        <div className="text-sm font-semibold text-white">
+                          {Number(p.cost || 0).toLocaleString('th-TH')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Prefix modal (digits-only search) */}
+        {needPrefixModal ? (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 md:items-center">
+            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0b1a14] p-4">
+              <div className="text-base font-semibold text-white">เลือกว่าเป็น N หรือ O</div>
+              <div className="mt-1 text-xs text-white/70">
+                คุณพิมพ์เป็นเลขล้วน: <span className="font-mono text-white/90">{pendingDigits}</span>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => choosePrefix('N')}
+                  className="flex-1 rounded-2xl bg-emerald-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
+                >
+                  ใหม่ (N)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => choosePrefix('O')}
+                  className="flex-1 rounded-2xl bg-sky-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+                >
+                  เก่า (O)
+                </button>
+              </div>
+              <button
+                type="button"
                 onClick={() => {
-                  if (!labelsToPrint.length) return toastErr('ยังไม่มีรายการสำหรับพิมพ์')
-                  window.print()
+                  setNeedPrefixModal(false)
+                  setPendingDigits('')
                 }}
+                className="mt-3 w-full rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/90 hover:bg-white/15"
               >
-                พิมพ์สติ๊กเกอร์
+                ยกเลิก
               </button>
-              <button className="btn" onClick={() => setLabelQueue([])}>
-                เคลียร์คิวล่าสุด
-              </button>
-              <div style={{ fontSize: 12, opacity: 0.75 }}>
-                รายการสำหรับพิมพ์: <b>{labelsToPrint.length}</b>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gap: 8 }}>
-              {labelsToPrint.slice(0, 10).map((it) => (
-                <div
-                  key={it.plant_code}
-                  style={{
-                    borderRadius: 14,
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    background: 'rgba(255,255,255,0.04)',
-                    padding: 10,
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 10,
-                    alignItems: 'center',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 950 }}>{it.plant_code}</div>
-                    <div style={{ fontSize: 12, opacity: 0.85 }}>{it.name || '-'}</div>
-                  </div>
-                </div>
-              ))}
-              {labelsToPrint.length > 10 ? (
-                <div style={{ fontSize: 12, opacity: 0.75 }}>…และอีก {labelsToPrint.length - 10} รายการ</div>
-              ) : null}
-              {!labelsToPrint.length ? <div style={{ opacity: 0.8 }}>ยังไม่มีรายการสำหรับพิมพ์</div> : null}
             </div>
           </div>
-
-          {/* Print-only area */}
-          <div id="label-print-area">
-            {labelsToPrint.map((it, idx) => (
-              <div
-                key={it.plant_code + idx}
-                className="label-page"
-                style={{
-                  width: '60mm',
-                  height: '14mm',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  padding: 0,
-                }}
-              >
-                <div
-                  style={{
-                    transform: `translate(${labelX}mm, ${labelY}mm)`,
-                    paddingLeft: '1.5mm',
-                    paddingRight: '1.5mm',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: labelCodeSize,
-                      fontWeight: 900,
-                      lineHeight: 1.05,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {it.plant_code}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 1,
-                      fontSize: labelNameSize,
-                      fontWeight: 700,
-                      lineHeight: 1.05,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      opacity: 0.95,
-                    }}
-                  >
-                    {it.name || ''}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <style jsx global>{`
-            @media print {
-              /* Print only the label area on this page */
-              @page { size: 60mm 14mm; margin: 0; }
-              body { background: #fff !important; }
-              body * { visibility: hidden !important; }
-              #label-print-area, #label-print-area * { visibility: visible !important; }
-              #label-print-area { position: absolute; left: 0; top: 0; }
-              .label-page { page-break-after: always; }
-              .label-page:last-child { page-break-after: auto; }
-            }
-          `}</style>
-        </Card>
-
+        ) : null}
       </div>
     </AppShell>
   )
-}
-
-function Banner({ type, children }) {
-  const bg = type === 'err' ? 'rgba(255,0,0,0.12)' : 'rgba(0,255,120,0.10)'
-  const bd = type === 'err' ? 'rgba(255,0,0,0.25)' : 'rgba(0,255,120,0.22)'
-  return <div style={{ background: bg, border: `1px solid ${bd}`, borderRadius: 14, padding: 12 }}>{children}</div>
-}
-
-function Card({ title, children }) {
-  return (
-    <div style={cardStyle}>
-      <div style={{ fontWeight: 950, marginBottom: 10, fontSize: 14 }}>{title}</div>
-      {children}
-    </div>
-  )
-}
-
-function Field({ label, children }) {
-  return (
-    <label style={{ display: 'block' }}>
-      <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>{label}</div>
-      {children}
-    </label>
-  )
-}
-
-function GridForm({ children }) {
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gap: 10,
-        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-      }}
-    >
-      <div style={{ display: 'contents' }}>{children}</div>
-      <style jsx>{`
-        @media (max-width: 820px) {
-          div[style*='grid-template-columns: repeat(2'] {
-            grid-template-columns: 1fr !important;
-          }
-          div[style*='grid-template-columns: repeat(3'] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
-    </div>
-  )
-}
-
-function Mini({ label, children }) {
-  return (
-    <div style={{ border: '1px solid rgba(255,255,255,0.10)', borderRadius: 14, padding: 10, background: 'rgba(255,255,255,0.04)' }}>
-      <div style={{ fontSize: 12, opacity: 0.85 }}>{label}</div>
-      <div style={{ fontSize: 14, fontWeight: 900, marginTop: 2 }}>{children}</div>
-    </div>
-  )
-}
-
-function StatusPill({ status }) {
-  const s = String(status || '').toUpperCase()
-  const isActive = s === 'ACTIVE'
-  return (
-    <span
-      style={{
-        padding: '6px 10px',
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 950,
-        border: `1px solid ${isActive ? 'rgba(0,255,120,0.45)' : 'rgba(255,60,60,0.55)'}`,
-        background: isActive ? 'rgba(0,255,120,0.10)' : 'rgba(255,60,60,0.12)',
-      }}
-    >
-      {s || '-'}
-    </span>
-  )
-}
-
-function SegBtn({ active, onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        ...segBtnBase,
-        ...(active ? segBtnActive : {}),
-      }}
-    >
-      {children}
-    </button>
-  )
-}
-
-const wrap = {
-  display: 'grid',
-  gap: 12,
-  maxWidth: 980,
-  margin: '0 auto',
-  paddingBottom: 30,
-}
-
-const segWrap = {
-  borderRadius: 18,
-  padding: 14,
-  border: '1px solid rgba(255,255,255,0.10)',
-  background: 'rgba(255,255,255,0.06)',
-}
-
-const segRow = {
-  display: 'flex',
-  gap: 8,
-  flexWrap: 'wrap',
-}
-
-const segBtnBase = {
-  height: 40,
-  padding: '0 14px',
-  borderRadius: 999,
-  border: '1px solid rgba(255,255,255,0.18)',
-  background: 'rgba(255,255,255,0.06)',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const segBtnActive = {
-  background: 'rgba(0,255,120,0.12)',
-  border: '1px solid rgba(0,255,120,0.35)',
-}
-
-const summaryBox = {
-  borderRadius: 18,
-  padding: 14,
-  border: '1px solid rgba(255,255,255,0.10)',
-  background: 'rgba(255,255,255,0.06)',
-}
-
-const summaryGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: 10,
-  marginTop: 10,
-}
-
-const cardStyle = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.10)',
-  borderRadius: 18,
-  padding: 14,
-}
-
-const miniGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  gap: 10,
-  marginTop: 10,
-}
-
-const previewBox = {
-  marginTop: 10,
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: 16,
-  padding: 12,
-  background: 'rgba(255,255,255,0.04)',
-}
-
-const previewGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-  gap: 8,
-}
-
-const chipCard = {
-  padding: 10,
-  borderRadius: 14,
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.10)',
-}
-
-const inputStyle = {
-  width: '100%',
-  height: 40,
-  padding: '0 12px',
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.18)',
-  background: 'rgba(0,0,0,0.20)',
-  color: 'white',
-  outline: 'none',
-}
-
-const primaryBtn = {
-  height: 44,
-  padding: '0 16px',
-  borderRadius: 14,
-  border: 'none',
-  background: '#1f8a5b',
-  color: 'white',
-  fontWeight: 950,
-  cursor: 'pointer',
-}
-
-const secondaryBtn = {
-  height: 44,
-  padding: '0 16px',
-  borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.25)',
-  background: 'rgba(255,255,255,0.08)',
-  color: 'white',
-  fontWeight: 950,
-  cursor: 'pointer',
-}
-
-const ghostBtn = {
-  height: 40,
-  padding: '0 14px',
-  borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.25)',
-  background: 'transparent',
-  color: 'white',
-  cursor: 'pointer',
-}
-
-const smallBtn = {
-  height: 34,
-  padding: '0 12px',
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.25)',
-  background: 'transparent',
-  color: 'white',
-  cursor: 'pointer',
 }

@@ -18,13 +18,6 @@ import {
   CartesianGrid,
 } from 'recharts'
 
-// ✅ ยอดเงิน “ล่าสุด” ตามที่ตั้งไว้ (ไม่แตะ logic/DB)
-const BALANCES = {
-  GSB: 76994.75,
-  KTB: 9278.44,
-  KBANK: 87833.34,
-}
-
 export default function DashboardPage() {
   const supabase = supabaseBrowser()
 
@@ -47,182 +40,36 @@ export default function DashboardPage() {
   const [dailySales, setDailySales] = useState([])
   const [latestInvoices, setLatestInvoices] = useState([])
 
-  // งานค้าง + breakdown เดือนนี้ (ถ้า enum ใน DB ไม่ตรง จะเป็น null แล้ว UI โชว์ "-")
+  // ✅ งานค้าง + breakdown เดือนนี้
   const [work, setWork] = useState({
     unpaidOrPartialCount: null,
     notShippedCount: null,
   })
 
   const [statusBreakdown, setStatusBreakdown] = useState({
-    paid: null,
-    partial: null,
-    unpaid: null,
-    shipped: null,
-    not_shipped: null,
+    pay_unpaid: null,
+    pay_partial: null,
+    pay_paid: null,
+    ship_not: null,
+    ship_yes: null,
   })
 
-  const monthStart = useMemo(() => {
-    const d = new Date()
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    return `${y}-${m}-01` // type=date
-  }, [])
+  // ✅ ยอดเงินจริงจาก DB
+  const [bankBalances, setBankBalances] = useState({
+    GSB: { balance: 0, income: 0, expense: 0, opening_amount: 0 },
+    KTB: { balance: 0, income: 0, expense: 0, opening_amount: 0 },
+    KBANK: { balance: 0, income: 0, expense: 0, opening_amount: 0 },
+  })
 
   function toastOk(msg) {
     setOk(msg)
-    setTimeout(() => setOk(''), 2000)
+    setTimeout(() => setOk(''), 2200)
   }
 
-  // ✅ นับ count แบบ “ไม่พัง” ถ้าค่า enum ไม่ตรง/คอลัมน์ไม่ตรง
-  async function safeCount(queryBuilder) {
-    try {
-      const res = await queryBuilder
-      if (res?.error) return null
-      return typeof res?.count === 'number' ? res.count : null
-    } catch {
-      return null
-    }
+  function toastErr(msg) {
+    setErr(msg)
+    setTimeout(() => setErr(''), 4500)
   }
-
-  async function loadDashboard() {
-    setErr('')
-    setOk('')
-    setLoading(true)
-
-    try {
-      // plants counts
-      const activeCountReq = supabase.from('plants').select('id', { count: 'exact', head: true }).eq('status', 'ACTIVE')
-      const soldCountReq = supabase.from('plants').select('id', { count: 'exact', head: true }).eq('status', 'SOLD')
-      const totalCountReq = supabase.from('plants').select('id', { count: 'exact', head: true })
-
-      // sum(cost) ACTIVE
-      const activeCostsReq = supabase.from('plants').select('cost').eq('status', 'ACTIVE').limit(10000)
-
-      // invoices month
-      const monthInvoicesReq = supabase
-        .from('invoices')
-        .select('total_price,total_profit,sale_date')
-        .gte('sale_date', monthStart)
-        .limit(5000)
-
-      // expenses month
-      const monthExpensesReq = supabase
-        .from('expenses')
-        .select('amount,expense_date')
-        .gte('expense_date', monthStart)
-        .limit(5000)
-
-      // latest invoices
-      const latestInvoicesReq = supabase
-        .from('invoices')
-        .select('id,invoice_no,sale_date,customer_name,total_price,total_profit,pay_status,ship_status,invoice_status,created_at')
-        .order('sale_date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(10)
-
-      const [
-        activeCountRes,
-        soldCountRes,
-        totalCountRes,
-        activeCostsRes,
-        monthInvoicesRes,
-        monthExpensesRes,
-        latestInvoicesRes,
-      ] = await Promise.all([
-        activeCountReq,
-        soldCountReq,
-        totalCountReq,
-        activeCostsReq,
-        monthInvoicesReq,
-        monthExpensesReq,
-        latestInvoicesReq,
-      ])
-
-      if (activeCountRes.error) throw activeCountRes.error
-      if (soldCountRes.error) throw soldCountRes.error
-      if (totalCountRes.error) throw totalCountRes.error
-      if (activeCostsRes.error) throw activeCostsRes.error
-      if (monthInvoicesRes.error) throw monthInvoicesRes.error
-      if (monthExpensesRes.error) throw monthExpensesRes.error
-      if (latestInvoicesRes.error) throw latestInvoicesRes.error
-
-      const activeCostSum = (activeCostsRes.data || []).reduce((sum, r) => sum + Number(r.cost || 0), 0)
-      const monthSales = (monthInvoicesRes.data || []).reduce((sum, r) => sum + Number(r.total_price || 0), 0)
-      const monthProfit = (monthInvoicesRes.data || []).reduce((sum, r) => sum + Number(r.total_profit || 0), 0)
-      const monthExpenses = (monthExpensesRes.data || []).reduce((sum, r) => sum + Number(r.amount || 0), 0)
-      const monthNet = monthProfit - monthExpenses
-
-      // daily sales (group by sale_date)
-      const map = new Map()
-      for (const r of monthInvoicesRes.data || []) {
-        const key = r.sale_date || 'unknown'
-        map.set(key, (map.get(key) || 0) + Number(r.total_price || 0))
-      }
-      const daily = Array.from(map.entries())
-        .filter(([d]) => d !== 'unknown')
-        .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
-        .map(([date, sales]) => ({ date, sales }))
-
-      setKpi({
-        activeCount: activeCountRes.count || 0,
-        soldCount: soldCountRes.count || 0,
-        totalCount: totalCountRes.count || 0,
-        activeCostSum,
-        monthSales,
-        monthProfit,
-        monthExpenses,
-        monthNet,
-      })
-
-      setDailySales(daily)
-      setLatestInvoices(latestInvoicesRes.data || [])
-
-      // ✅ งานค้าง + breakdown (เดือนนี้) — ทำแบบ safe (ไม่ throw)
-      const unpaidCount = await safeCount(
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).gte('sale_date', monthStart).eq('pay_status', 'unpaid')
-      )
-      const partialCount = await safeCount(
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).gte('sale_date', monthStart).eq('pay_status', 'partial')
-      )
-      const paidCount = await safeCount(
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).gte('sale_date', monthStart).eq('pay_status', 'paid')
-      )
-
-      const notShippedCount = await safeCount(
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).gte('sale_date', monthStart).eq('ship_status', 'not_shipped')
-      )
-      const shippedCount = await safeCount(
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).gte('sale_date', monthStart).eq('ship_status', 'shipped')
-      )
-
-      const unpaidOrPartialCount =
-        unpaidCount == null && partialCount == null ? null : Number(unpaidCount || 0) + Number(partialCount || 0)
-
-      setWork({
-        unpaidOrPartialCount,
-        notShippedCount,
-      })
-
-      setStatusBreakdown({
-        paid: paidCount,
-        partial: partialCount,
-        unpaid: unpaidCount,
-        shipped: shippedCount,
-        not_shipped: notShippedCount,
-      })
-
-      toastOk('อัปเดต Dashboard แล้ว')
-    } catch (e) {
-      setErr(e?.message || 'โหลด Dashboard ไม่สำเร็จ')
-    }
-
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    loadDashboard()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   const donutData = useMemo(() => {
     return [
@@ -236,6 +83,44 @@ export default function DashboardPage() {
     if (!total) return 0
     return Math.round(((kpi.soldCount || 0) / total) * 100)
   }, [kpi.totalCount, kpi.soldCount])
+
+  // เงินเดือน (สูตร B): คิดจาก “กำไรหลังกันภาษี 15%”
+  const tax15 = useMemo(() => {
+    const net = Number(kpi.monthNet || 0)
+    if (net <= 0) return 0
+    return Math.floor(net * 0.15)
+  }, [kpi.monthNet])
+
+  const afterTax15 = useMemo(() => {
+    const net = Number(kpi.monthNet || 0)
+    if (net <= 0) return 0
+    return Math.max(0, net - tax15)
+  }, [kpi.monthNet, tax15])
+
+  const salary = useMemo(() => {
+    const base = Number(afterTax15 || 0)
+    if (base <= 0) return { husband: 0, wife: 0, total: 0, capped: false }
+
+    let husband = Math.floor(base * 0.1)
+    let wife = Math.floor(base * 0.2)
+    let total = husband + wife
+
+    const CAP = 60000
+    let capped = false
+    if (total > CAP) {
+      capped = true
+      husband = Math.floor(CAP / 3)
+      wife = Math.floor((CAP * 2) / 3)
+      total = husband + wife
+    }
+
+    return { husband, wife, total, capped }
+  }, [afterTax15])
+
+  const afterSalary = useMemo(() => {
+    const v = Number(afterTax15 || 0) - Number(salary.total || 0)
+    return Math.max(0, v)
+  }, [afterTax15, salary.total])
 
   const insights = useMemo(() => {
     const msgs = []
@@ -254,54 +139,176 @@ export default function DashboardPage() {
       else msgs.push({ tone: 'bad', text: `เดือนนี้กำไรสุทธิติดลบ (${kpi.monthNet.toLocaleString()} บาท) — ค่าใช้จ่ายกินกำไร/มาร์จิ้นต่ำ` })
     }
 
-    // งานค้าง (ถ้านับได้)
-    if (work.unpaidOrPartialCount != null) {
-      if (work.unpaidOrPartialCount > 0) msgs.push({ tone: 'warn', text: `มีบิลค้างชำระเดือนนี้ ${work.unpaidOrPartialCount} บิล — ไปปิดยอด/ตามเงิน` })
-      else msgs.push({ tone: 'good', text: 'เดือนนี้ไม่มีบิลค้างชำระ (ดีมาก)' })
-    }
-    if (work.notShippedCount != null) {
-      if (work.notShippedCount > 0) msgs.push({ tone: 'warn', text: `มีบิลค้างส่งเดือนนี้ ${work.notShippedCount} บิล — เช็คการแพ็ค/เลขพัสดุ` })
-      else msgs.push({ tone: 'good', text: 'เดือนนี้ไม่มีบิลค้างส่ง (ดีมาก)' })
+    if ((kpi.monthNet || 0) > 0) {
+      msgs.push({
+        tone: salary.capped ? 'warn' : 'ok',
+        text: `เดือนนี้กันภาษี 15% = ${tax15.toLocaleString()} • เงินเดือนรวม = ${salary.total.toLocaleString()}${salary.capped ? ' (ชนเพดาน 60,000)' : ''}`,
+      })
+    } else {
+      msgs.push({ tone: 'ok', text: 'เดือนนี้กำไรสุทธิยังไม่เป็นบวก → ภาษี/เงินเดือน = 0' })
     }
 
-    return msgs.slice(0, 8)
-  }, [kpi.activeCount, kpi.monthNet, kpi.monthSales, turnoverPct, work.notShippedCount, work.unpaidOrPartialCount])
+    return msgs.slice(0, 6)
+  }, [kpi.activeCount, kpi.monthSales, kpi.monthNet, turnoverPct, salary.capped, salary.total, tax15])
 
   const buyAdvice = useMemo(() => {
-    const net = Number(kpi.monthNet || 0)
-    const sales = Number(kpi.monthSales || 0)
-    const active = Number(kpi.activeCount || 0)
-    const cash = Number(BALANCES.GSB + BALANCES.KTB + BALANCES.KBANK)
-
-    // ✅ เป็น “คำแนะนำเชิงปฏิบัติ” แบบไม่ยุ่งกับ logic/DB
-    if (sales === 0) {
-      return { tone: 'warn', title: 'การซื้อเข้า', text: 'เดือนนี้ยังไม่เห็นยอดขายในระบบ — ถ้าจะซื้อเข้า ให้ซื้อแค่ตัวหมุนไว/ทุนต่ำ และโฟกัสปิดการขายก่อน' }
+    if ((kpi.monthNet || 0) <= 0) {
+      return {
+        title: 'คำแนะนำการซื้อเข้า (เดือนนี้)',
+        tone: 'bad',
+        text: 'เดือนนี้กำไรสุทธิติดลบ/ใกล้ศูนย์ — แนะนำ “งดซื้อเข้าเพิ่ม” หรือซื้อเฉพาะตัวหมุนไวจริง ๆ',
+      }
     }
 
-    if (net > 0 && turnoverPct >= 25) {
-      if (active < 120) return { tone: 'good', title: 'การซื้อเข้า', text: 'ยอดขายเดิน + กำไรเป็นบวก + สต๊อกไม่เยอะ — ซื้อเข้าได้ แต่เน้นตัวที่ขายไว/มีจองชัด' }
-      return { tone: 'ok', title: 'การซื้อเข้า', text: 'กำไรเป็นบวก แต่สต๊อกยังพอมี — ซื้อเข้าได้แบบคุมงบ และเร่งหมุนของเก่าควบคู่' }
+    if ((kpi.activeCostSum || 0) > (kpi.monthSales || 0) * 2) {
+      return {
+        title: 'คำแนะนำการซื้อเข้า (เดือนนี้)',
+        tone: 'warn',
+        text: 'ทุนคงเหลือสูงเมื่อเทียบยอดขาย — ซื้อเข้าพอประมาณ เน้นขาย/ลดเงินจมก่อน',
+      }
     }
 
-    if (net <= 0 && cash > 0) {
-      return { tone: 'bad', title: 'การซื้อเข้า', text: 'กำไรสุทธิยังไม่บวก — แนะนำ “ชะลอซื้อเข้า” แล้วเน้นปรับมาร์จิ้น/ลดค่าใช้จ่าย + เร่งขายของคงเหลือ' }
+    return {
+      title: 'คำแนะนำการซื้อเข้า (เดือนนี้)',
+      tone: 'good',
+      text: 'สถานะโดยรวมโอเค — ซื้อเข้าได้ แต่ควรคุมงบและเน้นไม้หมุนเร็ว',
     }
+  }, [kpi.monthNet, kpi.activeCostSum, kpi.monthSales])
 
-    return { tone: 'ok', title: 'การซื้อเข้า', text: 'ซื้อเข้าได้แบบระวังงบ เลือกเฉพาะตัวที่หมุนไว และตั้งราคาให้ได้กำไรจริง' }
-  }, [kpi.activeCount, kpi.monthNet, kpi.monthSales, turnoverPct])
+  function mapBalances(rows) {
+    const next = {
+      GSB: { balance: 0, income: 0, expense: 0, opening_amount: 0 },
+      KTB: { balance: 0, income: 0, expense: 0, opening_amount: 0 },
+      KBANK: { balance: 0, income: 0, expense: 0, opening_amount: 0 },
+    }
+    for (const r of rows || []) {
+      if (!r?.bank) continue
+      const b = String(r.bank).toUpperCase()
+      if (!next[b]) continue
+      next[b] = {
+        balance: Number(r.balance || 0),
+        income: Number(r.income || 0),
+        expense: Number(r.expense || 0),
+        opening_amount: Number(r.opening_amount || 0),
+      }
+    }
+    return next
+  }
+
+  async function loadDashboard() {
+    setLoading(true)
+    setErr('')
+    try {
+      // ✅ 0) Bank balances (เงินจริง)
+      const { data: bdata, error: berr } = await supabase.rpc('get_bank_balances')
+      if (berr) throw berr
+      setBankBalances(mapBalances(bdata))
+
+      // 1) Plants counts + cost
+      const { data: plantsAgg, error: plantsErr } = await supabase.rpc('dashboard_plants_agg')
+      if (plantsErr) throw plantsErr
+
+      // 2) Month summary
+      const { data: monthSum, error: sumErr } = await supabase.rpc('get_month_summary')
+      if (sumErr) throw sumErr
+
+      // 3) Daily sales (last 14 days)
+      const { data: daily, error: dailyErr } = await supabase.rpc('get_daily_sales_last_n', { p_days: 14 })
+      if (dailyErr) throw dailyErr
+
+      // 4) Latest invoices (last 8)
+      const { data: inv, error: invErr } = await supabase
+        .from('invoices')
+        .select('id, invoice_no, sale_date, customer_name, total, pay_status, ship_status')
+        .order('created_at', { ascending: false })
+        .limit(8)
+      if (invErr) throw invErr
+
+      // 5) Work counts (month)
+      const { data: w, error: wErr } = await supabase.rpc('get_month_work_counts')
+      if (!wErr) {
+        setWork({
+          unpaidOrPartialCount: w?.unpaid_or_partial_count ?? null,
+          notShippedCount: w?.not_shipped_count ?? null,
+        })
+      } else {
+        setWork({ unpaidOrPartialCount: null, notShippedCount: null })
+      }
+
+      // 6) Status breakdown (month)
+      const { data: sb, error: sbErr } = await supabase.rpc('get_month_status_breakdown')
+      if (!sbErr) {
+        setStatusBreakdown({
+          pay_unpaid: sb?.pay_unpaid ?? null,
+          pay_partial: sb?.pay_partial ?? null,
+          pay_paid: sb?.pay_paid ?? null,
+          ship_not: sb?.ship_not ?? null,
+          ship_yes: sb?.ship_yes ?? null,
+        })
+      } else {
+        setStatusBreakdown({
+          pay_unpaid: null,
+          pay_partial: null,
+          pay_paid: null,
+          ship_not: null,
+          ship_yes: null,
+        })
+      }
+
+      setKpi({
+        activeCount: Number(plantsAgg?.active_count || 0),
+        soldCount: Number(plantsAgg?.sold_count || 0),
+        totalCount: Number(plantsAgg?.total_count || 0),
+        activeCostSum: Number(plantsAgg?.active_cost_sum || 0),
+
+        monthSales: Number(monthSum?.sales || 0),
+        monthProfit: Number(monthSum?.gross || 0),
+        monthExpenses: Number(monthSum?.expenses || 0),
+        monthNet: Number(monthSum?.net || 0),
+      })
+
+      setDailySales(daily || [])
+      setLatestInvoices(inv || [])
+
+      toastOk('อัปเดต Dashboard แล้ว')
+    } catch (e) {
+      toastErr(e?.message || 'โหลด Dashboard ไม่สำเร็จ')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadDashboard()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const totalCash = useMemo(() => {
+    return (
+      Number(bankBalances.GSB.balance || 0) +
+      Number(bankBalances.KTB.balance || 0) +
+      Number(bankBalances.KBANK.balance || 0)
+    )
+  }, [bankBalances])
+
+  const fmt2 = (n) => Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
   return (
     <AppShell title="Dashboard">
-      <div style={wrap}>
-        {err ? <Banner type="err">{err}</Banner> : null}
-        {ok ? <Banner type="ok">{ok}</Banner> : null}
+      <div style={{ maxWidth: 980, margin: '0 auto', padding: '0 14px 30px' }}>
+        {(err || ok) && (
+          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+            {err ? <div style={alertBad}>{err}</div> : null}
+            {ok ? <div style={alertGood}>{ok}</div> : null}
+          </div>
+        )}
 
-        {/* Quick actions */}
-        <div style={panel}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Header + quick actions */}
+        <div style={{ marginTop: 14, ...panel }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
-              <div style={panelTitle}>ปุ่มลัด</div>
-              <div style={{ fontSize: 12, opacity: 0.8 }}>เข้าเมนูที่ใช้บ่อยแบบเร็ว ๆ</div>
+              <div style={{ fontWeight: 950, fontSize: 18 }}>ศูนย์บัญชาการ (เดือนนี้)</div>
+              <div style={{ fontSize: 12, opacity: 0.8 }}>ดูสถานการณ์เร็ว ๆ + ไม่ตัดการวิเคราะห์</div>
             </div>
 
             <button onClick={loadDashboard} style={primaryBtn} disabled={loading}>
@@ -325,13 +332,40 @@ export default function DashboardPage() {
           <KpiCard title="กำไรสุทธิเดือนนี้" value={(kpi.monthNet || 0).toLocaleString()} sub="บาท" />
         </div>
 
-
-        {/* Balances */}
+        {/* ภาษี + เงินเดือน */}
         <div style={kpiGrid}>
-          <KpiCard title="ยอดเงิน GSB" value={Number(BALANCES.GSB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} sub="บาท" />
-          <KpiCard title="ยอดเงิน KTB" value={Number(BALANCES.KTB).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} sub="บาท" />
-          <KpiCard title="ยอดเงิน KBANK" value={Number(BALANCES.KBANK).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} sub="บาท" />
-          <KpiCard title="รวมทั้งหมด" value={Number(BALANCES.GSB + BALANCES.KTB + BALANCES.KBANK).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} sub="บาท" />
+          <KpiCard title="กันภาษี 15% (เดือนนี้)" value={(tax15 || 0).toLocaleString()} sub="บาท" />
+          <KpiCard title="กำไรหลังภาษี (เดือนนี้)" value={(afterTax15 || 0).toLocaleString()} sub="บาท" />
+          <KpiCard
+            title="เงินเดือนผัว+เมีย (เดือนนี้)"
+            value={(salary.total || 0).toLocaleString()}
+            sub={salary.capped ? 'บาท (ชนเพดาน 60,000)' : 'บาท'}
+          />
+          <KpiCard title="เหลือหลังเงินเดือน" value={(afterSalary || 0).toLocaleString()} sub="บาท" />
+        </div>
+
+        <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+          <div style={rowCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+              <div style={{ fontWeight: 900 }}>เงินเดือน (สูตร B)</div>
+              <div style={{ opacity: 0.8, fontSize: 12 }}>
+                คิดจากกำไรหลังกันภาษี 15% • ผัว 10% • เมีย 20% • รวมไม่เกิน 60,000 • ปัดลง
+              </div>
+            </div>
+            <div style={miniGrid3}>
+              <Mini tone="ok" label="ผัว (10%)">{(salary.husband || 0).toLocaleString()} บาท</Mini>
+              <Mini tone="ok" label="เมีย (20%)">{(salary.wife || 0).toLocaleString()} บาท</Mini>
+              <Mini tone={salary.capped ? 'warn' : 'good'} label="รวม">{(salary.total || 0).toLocaleString()} บาท</Mini>
+            </div>
+          </div>
+        </div>
+
+        {/* ✅ ยอดเงินธนาคาร (ดึงจริง) */}
+        <div style={kpiGrid}>
+          <KpiCard title="ยอดเงิน GSB" value={fmt2(bankBalances.GSB.balance)} sub={`รับ ${fmt2(bankBalances.GSB.income)} | จ่าย ${fmt2(bankBalances.GSB.expense)}`} />
+          <KpiCard title="ยอดเงิน KTB" value={fmt2(bankBalances.KTB.balance)} sub={`รับ ${fmt2(bankBalances.KTB.income)} | จ่าย ${fmt2(bankBalances.KTB.expense)}`} />
+          <KpiCard title="ยอดเงิน KBANK" value={fmt2(bankBalances.KBANK.balance)} sub={`รับ ${fmt2(bankBalances.KBANK.income)} | จ่าย ${fmt2(bankBalances.KBANK.expense)}`} />
+          <KpiCard title="รวมทั้งหมด" value={fmt2(totalCash)} sub="บาท" />
         </div>
 
         {/* Insights */}
@@ -357,24 +391,34 @@ export default function DashboardPage() {
           <div style={panel}>
             <div style={panelTitle}>งานค้าง (เดือนนี้)</div>
             <div style={miniGrid2}>
-              <Mini tone="warn" label="บิลค้างชำระ (unpaid + partial)">
+              <Mini tone="warn" label="บิลค้างชำระ (ยังไม่จ่าย + จ่ายบางส่วน)">
                 {work.unpaidOrPartialCount == null ? '-' : work.unpaidOrPartialCount.toLocaleString()}
               </Mini>
-              <Mini tone="warn" label="บิลค้างส่ง (not_shipped)">
+              <Mini tone="warn" label="บิลค้างส่ง (ยังไม่ส่ง)">
                 {work.notShippedCount == null ? '-' : work.notShippedCount.toLocaleString()}
               </Mini>
+            </div>
+
+            <div style={note}>
+              *ตัวเลขงานค้างอาศัย RPC: <code>get_month_work_counts</code>
             </div>
           </div>
 
           <div style={panel}>
-            <div style={panelTitle}>สถานะบิล (เดือนนี้)</div>
+            <div style={panelTitle}>Breakdown สถานะ (เดือนนี้)</div>
             <div style={miniGrid3}>
-              <Mini label="paid">{fmtCount(statusBreakdown.paid)}</Mini>
-              <Mini label="partial">{fmtCount(statusBreakdown.partial)}</Mini>
-              <Mini label="unpaid">{fmtCount(statusBreakdown.unpaid)}</Mini>
-              <Mini label="shipped">{fmtCount(statusBreakdown.shipped)}</Mini>
-              <Mini label="not_shipped">{fmtCount(statusBreakdown.not_shipped)}</Mini>
-              <Mini label="ขายแล้ว/ทั้งหมด">{`${(kpi.soldCount || 0).toLocaleString()} / ${(kpi.totalCount || 0).toLocaleString()} (${turnoverPct}%)`}</Mini>
+              <Mini tone="ok" label="ยังไม่จ่าย">{statusBreakdown.pay_unpaid == null ? '-' : statusBreakdown.pay_unpaid.toLocaleString()}</Mini>
+              <Mini tone="warn" label="จ่ายบางส่วน">{statusBreakdown.pay_partial == null ? '-' : statusBreakdown.pay_partial.toLocaleString()}</Mini>
+              <Mini tone="good" label="จ่ายแล้ว">{statusBreakdown.pay_paid == null ? '-' : statusBreakdown.pay_paid.toLocaleString()}</Mini>
+            </div>
+
+            <div style={miniGrid2}>
+              <Mini tone="warn" label="ยังไม่ส่ง">{statusBreakdown.ship_not == null ? '-' : statusBreakdown.ship_not.toLocaleString()}</Mini>
+              <Mini tone="good" label="ส่งแล้ว">{statusBreakdown.ship_yes == null ? '-' : statusBreakdown.ship_yes.toLocaleString()}</Mini>
+            </div>
+
+            <div style={note}>
+              *ตัวเลข Breakdown อาศัย RPC: <code>get_month_status_breakdown</code>
             </div>
           </div>
         </div>
@@ -382,13 +426,14 @@ export default function DashboardPage() {
         {/* Charts */}
         <div style={twoCol}>
           <div style={panel}>
-            <div style={panelTitle}>สถานะสต๊อก (โดนัท)</div>
-            <div style={{ height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <div style={panelTitle}>สัดส่วนสต๊อก</div>
+            <div style={{ height: 250 }}>
+              <ResponsiveContainer>
                 <PieChart>
-                  <Pie data={donutData} dataKey="value" nameKey="name" innerRadius="60%" outerRadius="85%" paddingAngle={2}>
-                    <Cell fill="rgba(0,255,120,0.55)" />
-                    <Cell fill="rgba(255,60,60,0.60)" />
+                  <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
+                    {donutData.map((_, idx) => (
+                      <Cell key={idx} />
+                    ))}
                   </Pie>
                   <Tooltip />
                   <Legend />
@@ -398,192 +443,117 @@ export default function DashboardPage() {
           </div>
 
           <div style={panel}>
-            <div style={panelTitle}>ยอดขายรายวัน (เดือนนี้)</div>
-            <div style={{ height: 240 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dailySales || []}>
+            <div style={panelTitle}>ยอดขายรายวัน (14 วันล่าสุด)</div>
+            <div style={{ height: 250 }}>
+              <ResponsiveContainer>
+                <LineChart data={dailySales}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
+                  <XAxis dataKey="day" />
+                  <YAxis />
                   <Tooltip />
                   <Line type="monotone" dataKey="sales" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
-            </div></div>
+            </div>
+          </div>
         </div>
 
         {/* Latest invoices */}
         <div style={panel}>
           <div style={panelTitle}>บิลล่าสุด</div>
-          {!latestInvoices.length ? (
-            <div style={{ opacity: 0.8 }}>ยังไม่มีบิล</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
-              {latestInvoices.map((x) => (
-                <div key={x.id} style={{ ...rowCard, border: `2px solid ${borderColorFromTone(toneFromInvoice(x))}` }}>
+          <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
+            {(latestInvoices || []).length === 0 ? (
+              <div style={{ opacity: 0.75 }}>ยังไม่มีบิล</div>
+            ) : (
+              latestInvoices.map((x) => (
+                <div key={x.id} style={rowCard}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                     <div>
-                      <div style={{ fontWeight: 950 }}>{x.invoice_no || '-'}</div>
-                      <div style={{ fontSize: 12, opacity: 0.85 }}>
-                        {x.sale_date || '-'} • {x.customer_name || '-'}
+                      <div style={{ fontWeight: 950 }}>
+                        <Link href={`/receipt/${x.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {x.invoice_no || '(no invoice_no)'}
+                        </Link>
                       </div>
-                      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
-                        <span className={pillClass(toneFromInvoice(x))}>PAY: <b>{x.pay_status || '-'}</b></span>
-                        <span className={'status-pill ' + (String(x.ship_status||'').toLowerCase()==='shipped' ? 'status-success' : 'status-danger')}>SHIP: <b>{x.ship_status || '-'}</b></span>
-                        <span className="status-pill">INV: <b>{x.invoice_status || '-'}</b></span>
+                      <div style={{ fontSize: 12, opacity: 0.8 }}>
+                        {x.sale_date} • {x.customer_name || '-'}
                       </div>
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 950 }}>{Number(x.total_price || 0).toLocaleString()} บาท</div>
-                      <div style={{ fontSize: 12, opacity: 0.85 }}>กำไร: {Number(x.total_profit || 0).toLocaleString()}</div>
+                      <div style={{ fontWeight: 950 }}>{Number(x.total || 0).toLocaleString()} บาท</div>
+                      <div style={{ fontSize: 12, opacity: 0.8 }}>
+                        {x.pay_status || '-'} • {x.ship_status || '-'}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       </div>
     </AppShell>
   )
 }
 
-/* ===== UI components ===== */
-
-
-function toneFromInvoice(inv) {
-  const pay = String(inv?.pay_status || '').toLowerCase()
-  const ship = String(inv?.ship_status || '').toLowerCase()
-
-  // priority: unpaid is danger
-  if (pay === 'unpaid') return 'danger'
-  // partial or paid-but-not-shipped => warning
-  if (pay === 'partial') return 'warning'
-  if (pay === 'paid' && ship && ship !== 'shipped') return 'warning'
-  // paid + shipped (or no ship info) => success
-  if (pay === 'paid') return 'success'
-  // fallback
-  return 'warning'
-}
-
-function pillClass(tone) {
-  if (tone === 'success') return 'status-pill status-success'
-  if (tone === 'danger') return 'status-pill status-danger'
-  return 'status-pill status-warning'
-}
-
-function borderColorFromTone(tone) {
-  if (tone === 'success') return 'rgba(34,197,94,0.55)'
-  if (tone === 'danger') return 'rgba(239,68,68,0.55)'
-  return 'rgba(234,179,8,0.55)'
-}
-
-function fmtCount(n) {
-  if (n == null) return '-'
-  return Number(n || 0).toLocaleString()
-}
-
-function Banner({ type, children }) {
-  const bg = type === 'err' ? 'rgba(255,0,0,0.12)' : 'rgba(0,255,120,0.10)'
-  const bd = type === 'err' ? 'rgba(255,0,0,0.25)' : 'rgba(0,255,120,0.22)'
-  return <div style={{ background: bg, border: `1px solid ${bd}`, borderRadius: 14, padding: 12 }}>{children}</div>
+function QuickLink({ href, label }) {
+  return (
+    <Link href={href} style={quickLink}>
+      <div style={{ fontWeight: 950 }}>{label}</div>
+      <div style={{ fontSize: 12, opacity: 0.75 }}>ไปหน้า</div>
+    </Link>
+  )
 }
 
 function KpiCard({ title, value, sub }) {
   return (
     <div style={kpiCard}>
-      <div style={{ fontSize: 12, opacity: 0.85 }}>{title}</div>
-      <div style={{ fontWeight: 950, fontSize: 22, marginTop: 6 }}>{value}</div>
-      <div style={{ fontSize: 12, opacity: 0.75, marginTop: 6 }}>{sub}</div>
+      <div style={{ fontSize: 12, opacity: 0.8 }}>{title}</div>
+      <div style={{ fontSize: 24, fontWeight: 950, marginTop: 6 }}>{value}</div>
+      <div style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>{sub}</div>
     </div>
   )
 }
 
-function Mini({ label, children, tone }) {
-  const toneMap = {
-    warn: { bd: 'rgba(255,200,0,0.35)', bg: 'rgba(255,200,0,0.08)' },
-    good: { bd: 'rgba(0,255,120,0.35)', bg: 'rgba(0,255,120,0.08)' },
-    bad: { bd: 'rgba(255,60,60,0.45)', bg: 'rgba(255,60,60,0.10)' },
-    ok: { bd: 'rgba(255,255,255,0.10)', bg: 'rgba(255,255,255,0.04)' },
-  }
-  const s = toneMap[tone] || toneMap.ok
+function Mini({ tone = 'ok', label, children }) {
   return (
-    <div style={{ border: `1px solid ${s.bd}`, background: s.bg, borderRadius: 14, padding: 10 }}>
+    <div style={{ ...miniCard, borderColor: toneBorder(tone) }}>
       <div style={{ fontSize: 12, opacity: 0.85 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 950, marginTop: 4 }}>{children}</div>
+      <div style={{ fontWeight: 950, marginTop: 6 }}>{children}</div>
     </div>
   )
 }
 
-function Insight({ tone, children }) {
-  const map = {
-    good: { bd: 'rgba(0,255,120,0.35)', bg: 'rgba(0,255,120,0.08)' },
-    ok: { bd: 'rgba(255,255,255,0.16)', bg: 'rgba(255,255,255,0.05)' },
-    warn: { bd: 'rgba(255,200,0,0.35)', bg: 'rgba(255,200,0,0.08)' },
-    bad: { bd: 'rgba(255,60,60,0.45)', bg: 'rgba(255,60,60,0.10)' },
-  }
-  const s = map[tone] || map.ok
-  return <div style={{ border: `1px solid ${s.bd}`, background: s.bg, borderRadius: 14, padding: 12, fontWeight: 900 }}>{children}</div>
+function Insight({ tone = 'ok', children }) {
+  return <div style={{ ...insight, borderColor: toneBorder(tone) }}>{children}</div>
 }
 
-function QuickLink({ href, label }) {
-  return (
-    <Link
-      href={href}
-      style={{
-        textDecoration: 'none',
-        color: 'white',
-        borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.12)',
-        background: 'rgba(255,255,255,0.06)',
-        padding: 12,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 10,
-      }}
-    >
-      <span style={{ fontWeight: 950 }}>{label}</span>
-      <span style={{ opacity: 0.8 }}>›</span>
-    </Link>
-  )
+function toneBorder(tone) {
+  if (tone === 'good') return 'rgba(40, 200, 120, 0.55)'
+  if (tone === 'warn') return 'rgba(255, 200, 80, 0.55)'
+  if (tone === 'bad') return 'rgba(255, 120, 120, 0.55)'
+  return 'rgba(255,255,255,0.15)'
 }
 
-/* ===== Styles ===== */
-
-const wrap = {
-  display: 'grid',
-  gap: 12,
-  maxWidth: 1100,
-  margin: '0 auto',
-  paddingBottom: 30,
+const alertBad = {
+  borderRadius: 16,
+  padding: 12,
+  border: '1px solid rgba(255,80,80,0.45)',
+  background: 'rgba(255,80,80,0.12)',
 }
 
-const kpiGrid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-  gap: 10,
-}
-
-const kpiCard = {
-  borderRadius: 18,
-  padding: 14,
-  border: '1px solid rgba(255,255,255,0.10)',
-  background: 'rgba(255,255,255,0.06)',
-}
-
-const twoCol = {
-  display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
-  gap: 10,
+const alertGood = {
+  borderRadius: 16,
+  padding: 12,
+  border: '1px solid rgba(40,200,120,0.45)',
+  background: 'rgba(40,200,120,0.12)',
 }
 
 const panel = {
   borderRadius: 18,
   padding: 14,
   border: '1px solid rgba(255,255,255,0.10)',
-  background: 'rgba(255,255,255,0.06)',
+  background: 'rgba(255,255,255,0.05)',
 }
 
 const panelTitle = {
@@ -620,6 +590,50 @@ const quickGrid = {
   marginTop: 12,
   display: 'grid',
   gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: 10,
+}
+
+const quickLink = {
+  borderRadius: 16,
+  padding: 12,
+  border: '1px solid rgba(255,255,255,0.10)',
+  background: 'rgba(255,255,255,0.04)',
+  textDecoration: 'none',
+  color: 'inherit',
+}
+
+const kpiGrid = {
+  marginTop: 12,
+  display: 'grid',
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gap: 10,
+}
+
+const kpiCard = {
+  borderRadius: 18,
+  padding: 14,
+  border: '1px solid rgba(255,255,255,0.10)',
+  background: 'rgba(255,255,255,0.04)',
+}
+
+const miniCard = {
+  borderRadius: 16,
+  padding: 12,
+  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'rgba(255,255,255,0.04)',
+}
+
+const insight = {
+  borderRadius: 16,
+  padding: 12,
+  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'rgba(255,255,255,0.04)',
+}
+
+const twoCol = {
+  marginTop: 12,
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   gap: 10,
 }
 
