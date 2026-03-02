@@ -227,6 +227,7 @@ export default function ReceiptPage() {
             {/* Watermark */}
             <img
               src={WATERMARK_SRC}
+              crossOrigin="anonymous"
               alt=""
               style={{
                 position: 'absolute',
@@ -320,7 +321,7 @@ export default function ReceiptPage() {
               </div>
 
               <div style={{ textAlign: 'center' }}>
-                <img src={PROMPTPAY_QR_SRC} alt="PromptPay QR" style={{ width: 170 }} />
+                <img src={PROMPTPAY_QR_SRC} crossOrigin="anonymous" alt="PromptPay QR" style={{ width: 170 }} />
                 <div style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{H.scan}</div>
               </div>
             </div>
