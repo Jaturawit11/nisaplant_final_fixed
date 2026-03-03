@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { supabaseBrowser } from '@/lib/supabase/browser'
+import { Button, Pill, cx } from '@/components/ui/ui'
 
 const SELLER_EMAIL = 'nisa@acc.com'
 const ADMIN_EMAIL = 'time@acc.com'
@@ -28,7 +29,6 @@ export default function AppShell({ children, title }) {
     router.replace('/login')
   }
 
-  // โหลด user (เพื่อแสดงว่าใครล็อกอินอยู่)
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -49,7 +49,7 @@ export default function AppShell({ children, title }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ✅ Guard ฝั่ง client เพิ่มอีกชั้น (กันพลาดกรณี nav โผล่/กดลิงก์ผิด)
+  // client guard
   useEffect(() => {
     if (role !== 'seller') return
     const ok = path === '/dashboard' || path === '/sell' || path?.startsWith('/receipt')
@@ -63,7 +63,10 @@ export default function AppShell({ children, title }) {
     { href: '/edit-invoice', label: 'แก้บิล' },
     { href: '/expenses', label: 'ค่าใช้จ่าย' },
     { href: '/summary', label: 'สรุป' },
-
+    { href: '/bank', label: 'บัญชี' },
+    { href: '/salary', label: 'เงินเดือน' },
+    { href: '/closing', label: 'ปิดเดือน' },
+    { href: '/ar', label: 'ลูกหนี้' },
   ]
 
   const nav = useMemo(() => {
@@ -77,62 +80,61 @@ export default function AppShell({ children, title }) {
     return path?.startsWith(href + '/')
   }
 
+  const rolePill =
+    role === 'admin' ? (
+      <Pill tone="green">ADMIN</Pill>
+    ) : role === 'seller' ? (
+      <Pill tone="yellow">SELLER</Pill>
+    ) : (
+      <Pill tone="red">UNKNOWN</Pill>
+    )
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0b1f18', color: 'white' }}>
-      <div style={{ padding: 14, position: 'sticky', top: 0, background: '#0b1f18', borderBottom: '1px solid rgba(255,255,255,0.08)', zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>
+    <div className="min-h-dvh">
+      <div className="sticky top-0 z-20 border-b border-black/10 bg-white/85 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-3 py-3 md:px-4">
+          <div className="min-w-0">
+            <div className="text-base font-semibold text-slate-900 md:text-lg">{title}</div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-600">
               {userEmail ? (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span style={{ opacity: 0.9 }}>ล็อกอิน:</span>
-                  <b>{userEmail}</b>
-                  <span
-                    className={
-                      'status-pill ' +
-                      (role === 'admin' ? 'status-success' : role === 'seller' ? 'status-warning' : 'status-danger')
-                    }
-                    style={{ textTransform: 'uppercase' }}
-                  >
-                    {role === 'seller' ? 'SELLER' : role === 'admin' ? 'ADMIN' : 'UNKNOWN'}
-                  </span>
-                </div>
+                <>
+                  <span className="truncate">ล็อกอิน: <b className="text-slate-900">{userEmail}</b></span>
+                  {rolePill}
+                </>
               ) : (
-                <>Nisa Plant POS</>
+                <span>Nisa Plant POS</span>
               )}
             </div>
           </div>
-          <button onClick={logout} className="btn no-print" style={{ height: 40, padding: '0 14px' }}>
+          <Button variant="ghost" className="no-print" onClick={logout}>
             ออกจากระบบ
-          </button>
+          </Button>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginTop: 12 }}>
-          {nav.map((n) => {
-            const active = isActive(n.href)
-            return (
-              <Link
-                key={n.href}
-                href={n.href}
-                style={{
-                  whiteSpace: 'nowrap',
-                  textDecoration: 'none',
-                  color: 'white',
-                  padding: '10px 12px',
-                  borderRadius: 14,
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  background: active ? 'rgba(255,255,255,0.12)' : 'transparent',
-                }}
-              >
-                {n.label}
-              </Link>
-            )
-          })}
+        <div className="mx-auto w-full max-w-6xl px-3 pb-3 md:px-4">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto">
+            {nav.map((n) => {
+              const active = isActive(n.href)
+              return (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  className={cx(
+                    'whitespace-nowrap rounded-2xl border px-4 py-2 text-sm font-semibold shadow-sm',
+                    active
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-black/10 bg-white text-slate-700 hover:bg-slate-50'
+                  )}
+                >
+                  {n.label}
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      <div style={{ padding: 14 }}>{children}</div>
+      <div className="mx-auto w-full max-w-6xl px-3 pb-10 pt-4 md:px-4">{children}</div>
     </div>
   )
 }

@@ -1,13 +1,11 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+:root {
+  /* iOS Clean Light (locked) */
+  --background: #f6f7fb;
+  --foreground: #0f172a;
 }
 
 html,
@@ -35,67 +33,24 @@ a {
   text-decoration: none;
 }
 
+/* lock iOS clean */
 @media (prefers-color-scheme: dark) {
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 }
 
-/* ===== App utilities ===== */
-:root{
-  --bg-app:#0b1f18;
-  --panel:#102a21;
-  --panel2:#0f271f;
-  --border:#1f3a31;
-  --text:#eaf6ef;
-  --muted:rgba(234,246,239,0.72);
-  --shadow:0 10px 30px rgba(0,0,0,0.35);
+/* helpers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.status-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:0.2px;
-  border:1px solid rgba(255,255,255,0.14);
-  background:rgba(255,255,255,0.06);
-}
-.status-success{ border-color: rgba(22,163,74,0.55); background: rgba(22,163,74,0.12); }
-.status-warning{ border-color: rgba(234,179,8,0.55); background: rgba(234,179,8,0.12); }
-.status-danger{ border-color: rgba(239,68,68,0.55); background: rgba(239,68,68,0.12); }
-.card{
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  border:1px solid rgba(255,255,255,0.10);
-  border-radius:18px;
-  box-shadow: var(--shadow);
-}
-.btn{
-  border:1px solid rgba(255,255,255,0.16);
-  background: rgba(255,255,255,0.08);
-  color: var(--text);
-  padding:10px 14px;
-  border-radius:12px;
-  cursor:pointer;
-  font-weight:800;
-}
-.btn:hover{ background: rgba(255,255,255,0.11); }
-.btn-primary{ background: rgba(34,197,94,0.20); border-color: rgba(34,197,94,0.35); }
-.btn-danger{ background: rgba(239,68,68,0.18); border-color: rgba(239,68,68,0.35); }
-.input{
-  width:100%;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.18);
-  color: var(--text);
-  outline:none;
-}
-.input:focus{ border-color: rgba(34,197,94,0.45); box-shadow: 0 0 0 4px rgba(34,197,94,0.12); }
-
-@media print{
-  .no-print{ display:none !important; }
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }

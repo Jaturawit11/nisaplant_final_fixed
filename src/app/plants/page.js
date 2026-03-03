@@ -279,16 +279,16 @@ export default function PlantsPage() {
 
   return (
     <AppShell title="ฐานต้นไม้">
-      <div className="mx-auto w-full max-w-5xl px-3 pb-10">
+      <div className="space-y-4">
         {(err || ok) && (
-          <div className="mt-3 space-y-2">
+          <div className="space-y-2">
             {err ? (
-              <div className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 {err}
               </div>
             ) : null}
             {ok ? (
-              <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                 {ok}
               </div>
             ) : null}
@@ -296,109 +296,109 @@ export default function PlantsPage() {
         )}
 
         {/* Add form */}
-        <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm md:p-5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
             <div>
-              <div className="text-base font-semibold text-white">เพิ่มต้นไม้</div>
-              <div className="text-xs text-white/60">กรอกน้อยที่สุด • Single/Bulk ในฟอร์มเดียว • ใช้ทุนอย่างเดียว</div>
+              <div className="text-base font-semibold text-slate-900 md:text-lg">เพิ่มต้นไม้</div>
+              <div className="text-xs text-slate-500 md:text-sm">
+                กรอกน้อยที่สุด • Single/Bulk ในฟอร์มเดียว • ใช้ทุนอย่างเดียว
+              </div>
             </div>
-            <div className="text-xs text-white/60">
-              โค้ดตัวอย่าง: <span className="font-mono text-white/80">{prefix}-{dateCode}-0001</span>
+            <div className="text-xs text-slate-500">
+              โค้ดตัวอย่าง: <span className="font-mono text-slate-700">{prefix}-{dateCode}-0001</span>
             </div>
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             {/* Kind toggle */}
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-              <div className="mb-2 text-xs text-white/70">ประเภท</div>
-              <div className="flex gap-2">
+            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
+              <div className="mb-2 text-xs font-semibold text-slate-700">ประเภท</div>
+              <div className="inline-flex w-full rounded-2xl border border-black/10 bg-white p-1 shadow-sm">
                 <button
                   type="button"
                   onClick={() => setKind('NEW')}
-                  className={`flex-1 rounded-xl px-3 py-2 text-sm ${
-                    kind === 'NEW' ? 'bg-emerald-600/80 text-white' : 'bg-white/5 text-white/80 hover:bg-white/10'
-                  }`}
+                  className={
+                    (kind === 'NEW' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-100') +
+                    ' flex-1 rounded-xl px-3 py-2 text-sm font-semibold'
+                  }
                 >
                   ใหม่ (N)
                 </button>
                 <button
                   type="button"
                   onClick={() => setKind('OLD')}
-                  className={`flex-1 rounded-xl px-3 py-2 text-sm ${
-                    kind === 'OLD' ? 'bg-sky-600/80 text-white' : 'bg-white/5 text-white/80 hover:bg-white/10'
-                  }`}
+                  className={
+                    (kind === 'OLD' ? 'bg-sky-600 text-white' : 'text-slate-700 hover:bg-slate-100') +
+                    ' flex-1 rounded-xl px-3 py-2 text-sm font-semibold'
+                  }
                 >
                   เก่า (O)
                 </button>
               </div>
-              <div className="mt-2 text-[11px] text-white/55">
+              <div className="mt-2 text-[11px] text-slate-500">
                 {isNew ? '✅ จะบันทึกรายจ่ายหัก GSB อัตโนมัติ' : 'ℹ️ ไม้เก่าไม่หักเงิน'}
               </div>
             </div>
 
             {/* DateCode + Qty */}
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="mb-2 text-xs text-white/70">เดือน (YYMM)</div>
+                  <div className="mb-1 text-xs font-semibold text-slate-700">เดือน (YYMM)</div>
                   <input
                     value={dateCode}
                     onChange={(e) => setDateCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 font-mono text-sm text-white outline-none focus:border-white/20"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
                     placeholder="2603"
                     inputMode="numeric"
                   />
                 </div>
                 <div>
-                  <div className="mb-2 text-xs text-white/70">จำนวน</div>
+                  <div className="mb-1 text-xs font-semibold text-slate-700">จำนวน</div>
                   <input
                     value={qty}
                     onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
                     placeholder="1"
                     inputMode="numeric"
                   />
-                  <div className="mt-1 text-[11px] text-white/50">ใส่ 1 = เพิ่มทีละต้น</div>
+                  <div className="mt-1 text-[11px] text-slate-500">ใส่ 1 = เพิ่มทีละต้น</div>
                 </div>
               </div>
             </div>
 
             {/* Name */}
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-              <div className="mb-2 text-xs text-white/70">ชื่อไม้</div>
+            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
+              <div className="mb-1 text-xs font-semibold text-slate-700">ชื่อไม้</div>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
                 placeholder="เช่น Alocasia..."
               />
             </div>
 
             {/* Cost */}
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-              <div className="mb-2 text-xs text-white/70">ทุน (บาท)</div>
+            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
+              <div className="mb-1 text-xs font-semibold text-slate-700">ทุน (บาท)</div>
               <input
                 value={cost}
                 onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ''))}
-                className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20"
+                className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
                 placeholder="0"
                 inputMode="decimal"
               />
-              <div className="mt-1 text-[11px] text-white/50">
-                {isNew ? 'จะถูกนำไปหักออกจาก GSB อัตโนมัติ' : 'ใช้คำนวณกำไรตอนขาย'}
-              </div>
+              <div className="mt-1 text-[11px] text-slate-500">{isNew ? 'จะถูกนำไปหักออกจาก GSB อัตโนมัติ' : 'ใช้คำนวณกำไรตอนขาย'}</div>
             </div>
           </div>
 
           <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="text-xs text-white/60">
-              ระบบจะสร้างรหัสให้เองตามลำดับล่าสุดของเดือนนั้น ๆ (ไม่ต้องพิมพ์รหัส)
-            </div>
+            <div className="text-xs text-slate-500">ระบบจะสร้างรหัสให้เองตามลำดับล่าสุดของเดือนนั้น ๆ (ไม่ต้องพิมพ์รหัส)</div>
             <button
               type="button"
               disabled={saving}
               onClick={addPlants}
-              className="rounded-2xl bg-emerald-600/80 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
+              className="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
             >
               {saving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
@@ -406,24 +406,24 @@ export default function PlantsPage() {
         </div>
 
         {/* List */}
-        <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4 shadow-sm">
+        <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm md:p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="text-base font-semibold text-white">รายการต้นไม้ที่ยังมีอยู่</div>
-              <div className="text-xs text-white/60">แสดงเฉพาะ ACTIVE • เรียงจากน้อยไปมาก</div>
+              <div className="text-base font-semibold text-slate-900 md:text-lg">รายการต้นไม้ที่ยังมีอยู่</div>
+              <div className="text-xs text-slate-500 md:text-sm">แสดงเฉพาะ ACTIVE • เรียงจากน้อยไปมาก</div>
             </div>
             <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onBlur={onSearchBlur}
-                className="w-full rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-white/20 md:w-[280px]"
+                className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10 md:w-[320px]"
                 placeholder="ค้นหา (รหัส/ชื่อ) เช่น n26030001 หรือ O-2603-0042"
               />
               <button
                 type="button"
                 onClick={loadPlants}
-                className="rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/90 hover:bg-white/15"
+                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
               >
                 รีเฟรช
               </button>
@@ -431,30 +431,30 @@ export default function PlantsPage() {
           </div>
 
           {pendingResolved ? (
-            <div className="mt-2 text-xs text-emerald-200">
+            <div className="mt-2 text-xs text-emerald-700">
               แปลงรหัสเป็น: <span className="font-mono">{pendingResolved}</span>
             </div>
           ) : null}
 
           <div className="mt-4">
             {loading ? (
-              <div className="text-sm text-white/70">กำลังโหลด...</div>
+              <div className="text-sm text-slate-600">กำลังโหลด...</div>
             ) : filtered.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+              <div className="rounded-3xl border border-dashed border-black/15 bg-slate-50 p-4 text-sm text-slate-600">
                 ไม่พบรายการ (ตอนนี้แสดงเฉพาะ ACTIVE)
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {filtered.map((p) => (
-                  <div key={p.id} className="rounded-2xl border border-emerald-500/30 bg-black/20 p-3">
+                  <div key={p.id} className="rounded-3xl border border-black/10 bg-white p-3 shadow-sm">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="truncate font-mono text-sm text-white">{p.plant_code}</div>
-                        <div className="truncate text-sm text-white/85">{p.name || '-'}</div>
+                        <div className="truncate font-mono text-sm text-slate-900">{p.plant_code}</div>
+                        <div className="truncate text-sm text-slate-700">{p.name || '-'}</div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="text-[11px] text-white/55">ทุน</div>
-                        <div className="text-sm font-semibold text-white">
+                        <div className="text-[11px] text-slate-500">ทุน</div>
+                        <div className="text-sm font-semibold text-slate-900">
                           {Number(p.cost || 0).toLocaleString('th-TH')}
                         </div>
                       </div>
@@ -466,26 +466,26 @@ export default function PlantsPage() {
           </div>
         </div>
 
-        {/* Prefix modal (digits-only search) */}
+        {/* Prefix modal */}
         {needPrefixModal ? (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 md:items-center">
-            <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0b1a14] p-4">
-              <div className="text-base font-semibold text-white">เลือกว่าเป็น N หรือ O</div>
-              <div className="mt-1 text-xs text-white/70">
-                คุณพิมพ์เป็นเลขล้วน: <span className="font-mono text-white/90">{pendingDigits}</span>
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 md:items-center">
+            <div className="w-full max-w-sm rounded-3xl border border-black/10 bg-white p-4 shadow-lg">
+              <div className="text-base font-semibold text-slate-900">เลือกว่าเป็น N หรือ O</div>
+              <div className="mt-1 text-xs text-slate-500">
+                คุณพิมพ์เป็นเลขล้วน: <span className="font-mono text-slate-700">{pendingDigits}</span>
               </div>
               <div className="mt-4 flex gap-2">
                 <button
                   type="button"
                   onClick={() => choosePrefix('N')}
-                  className="flex-1 rounded-2xl bg-emerald-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
+                  className="flex-1 rounded-2xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
                 >
                   ใหม่ (N)
                 </button>
                 <button
                   type="button"
                   onClick={() => choosePrefix('O')}
-                  className="flex-1 rounded-2xl bg-sky-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+                  className="flex-1 rounded-2xl bg-sky-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
                 >
                   เก่า (O)
                 </button>
@@ -496,7 +496,7 @@ export default function PlantsPage() {
                   setNeedPrefixModal(false)
                   setPendingDigits('')
                 }}
-                className="mt-3 w-full rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/90 hover:bg-white/15"
+                className="mt-3 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
                 ยกเลิก
               </button>
@@ -507,3 +507,4 @@ export default function PlantsPage() {
     </AppShell>
   )
 }
+
