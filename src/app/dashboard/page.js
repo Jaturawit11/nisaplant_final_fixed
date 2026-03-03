@@ -80,8 +80,33 @@ function SmallStatCard({ title, value }) {
   )
 }
 
-function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom }) {
+/** ✅ แก้เฉพาะตามสั่ง: เพิ่ม option ให้โชว์ "ตัวเลขบนชิ้นวง" ได้ (ใช้เฉพาะ donut เงินแยกธนาคาร) */
+function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, showSliceValues = false }) {
   const total = data.reduce((a, b) => a + Number(b.value || 0), 0)
+
+  const RAD = Math.PI / 180
+  const renderArcValue = (props) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, value } = props
+    if (!showSliceValues) return null
+    const v = Number(value || 0)
+    if (!Number.isFinite(v) || v === 0) return null
+
+    const r = innerRadius + (outerRadius - innerRadius) * 0.62
+    const x = cx + r * Math.cos(-midAngle * RAD)
+    const y = cy + r * Math.sin(-midAngle * RAD)
+
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="fill-white text-[14px] font-extrabold"
+      >
+        {money(v)}
+      </text>
+    )
+  }
 
   return (
     <Card className="p-0">
@@ -90,7 +115,6 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom }) {
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/5 ring-1 ring-slate-900/10">
-              {/* donut icon */}
               <span className="h-3.5 w-3.5 rounded-full ring-4 ring-slate-300/70" />
             </span>
             <div className="min-w-0">
@@ -119,6 +143,8 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom }) {
                   outerRadius={108}
                   paddingAngle={3}
                   stroke="rgba(0,0,0,0.04)"
+                  label={showSliceValues ? renderArcValue : false}
+                  labelLine={false}
                 >
                   {data.map((_, i) => (
                     <Cell key={i} fill={colors[i % colors.length]} />
@@ -145,10 +171,7 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom }) {
               key={d.name}
               className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-200 shadow-sm"
             >
-              <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: colors[i % colors.length] }}
-              />
+              <span className="h-2.5 w-2.5 rounded-full" style={{ background: colors[i % colors.length] }} />
               <span className="whitespace-nowrap">{d.name}</span>
               <span className="text-slate-900">{money(d.value)}</span>
             </span>
@@ -335,7 +358,6 @@ export default function DashboardPage() {
     }
   })
 
-  // ✅ รูปอยู่ที่ public/banks/*
   const bankBg = {
     GSB: '/banks/gsb.png',
     KTB: '/banks/ktb.png',
@@ -385,13 +407,15 @@ export default function DashboardPage() {
               centerBottom="กำไรสุทธิ"
             />
 
+            {/* ✅ แก้ตามสั่ง: donut เงินแยกธนาคารมีตัวเลขบนชิ้นวง */}
             <DonutCard
               title="เงินแยกธนาคาร"
               subtitle="ยอดคงเหลือ 3 บัญชี"
               data={donutBank}
-              colors={['#ec4899', '#3b82f6', '#22c55e']} // ✅ GSB ชมพู / KTB ฟ้า / KBANK เขียว
+              colors={['#ec4899', '#3b82f6', '#22c55e']}
               centerTop={money(totalCash)}
               centerBottom="รวมทั้งหมด"
+              showSliceValues={true}
             />
 
             <DonutCard
@@ -412,7 +436,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Bank cards (soft) ✅ แก้เฉพาะ “ล็อคให้พอดีกรอบ” */}
+      {/* Bank cards (soft) */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {(['GSB', 'KTB', 'KBANK']).map((b) => (
           <Card
@@ -421,14 +445,12 @@ export default function DashboardPage() {
             style={{
               backgroundImage: `url(${bankBg[b]})`,
               backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right centerer',
-              backgroundSize: 'cover', // ✅ ล็อคพอดีกรอบเสมอ
+              backgroundPosition: 'right center', // ✅ แก้ตามสั่ง (แก้ typo centerer)
+              backgroundSize: 'cover',
             }}
           >
-            {/* overlay ใสๆ ไม่เข้ม */}
             <div className="absolute inset-0 bg-white/85" />
 
-            {/* content */}
             <div className="relative z-10 flex h-full flex-col justify-between">
               <div className="flex items-start justify-between">
                 <div>
@@ -455,12 +477,10 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Latest invoices */}
       <div className="mt-4">
         <SoftTable title="บิลล่าสุด" rightTitle="แสดง 6 รายการล่าสุด" rows={invoiceRows} />
       </div>
 
-      {/* Salary note */}
       <div className="mt-4">
         <Card>
           <div className="text-sm font-semibold text-slate-900">สรุปเงินเดือน (จากกำไรหลังภาษี)</div>
