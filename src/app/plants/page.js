@@ -93,6 +93,13 @@ export default function PlantsPage() {
   const [plants, setPlants] = useState([])
   const [q, setQ] = useState('')
 
+  // ---------- Print label (14mm x 60mm) ----------
+  const [labelQ, setLabelQ] = useState('')
+  const [labelLoading, setLabelLoading] = useState(false)
+  const [labelErr, setLabelErr] = useState('')
+  const [labelList, setLabelList] = useState([])
+  const [labelSelected, setLabelSelected] = useState(null)
+
   // ---------- Search normalize modal (digits only) ----------
   const [needPrefixModal, setNeedPrefixModal] = useState(false)
   const [pendingDigits, setPendingDigits] = useState('') // digits-only input waiting for N/O
@@ -115,8 +122,7 @@ export default function PlantsPage() {
 
     return plants.filter(
       (p) =>
-        String(p.plant_code || '').toUpperCase().includes(up) ||
-        String(p.name || '').toUpperCase().includes(up)
+        String(p.plant_code || '').toUpperCase().includes(up) || String(p.name || '').toUpperCase().includes(up)
     )
   }, [plants, q])
 
@@ -180,9 +186,10 @@ export default function PlantsPage() {
     setSaving(true)
     try {
       // 1) หาโค้ดเริ่มต้นจาก DB
-      const startCode = await getNextCode(prefix, dateCode)
-      const startRun = parseRunning(startCode)
-      if (!startRun) throw new Error('อ่านเลข running ไม่สำเร็จ')
+      let startCode = await getNextCode(prefix, dateCode)
+      // กันพัง: เดือนใหม่/ข้อมูลว่าง => เริ่ม 0001
+      if (!startCode || typeof startCode !== 'string') startCode = `${prefix}-${dateCode}-0001`
+      const startRun = parseRunning(startCode) || 1
 
       // 2) สร้างชุดโค้ดตามจำนวน
       const codes = Array.from({ length: qn }, (_, i) => `${prefix}-${dateCode}-${pad4(startRun + i)}`)
@@ -275,6 +282,95 @@ export default function PlantsPage() {
       setPendingResolved(norm)
       setTimeout(() => setPendingResolved(''), 1200)
     }
+  }
+
+  async function searchLabelPlants() {
+    const term = String(labelQ || '').trim()
+    setLabelErr('')
+    setLabelSelected(null)
+    if (!term) {
+      setLabelList([])
+      return
+    }
+    setLabelLoading(true)
+    try {
+      // ค้นหาเฉพาะ ACTIVE เพื่อกันปริ้นของที่ขาย/ปิดไปแล้ว
+      const { data, error } = await supabase
+        .from('plants')
+        .select('id, plant_code, name')
+        .eq('status', 'ACTIVE')
+        .or(`plant_code.ilike.%${term}%,name.ilike.%${term}%`)
+        .order('plant_code', { ascending: true })
+        .limit(30)
+
+      if (error) throw error
+      setLabelList(data || [])
+      if ((data || []).length === 1) setLabelSelected((data || [])[0])
+    } catch (e) {
+      setLabelErr(e?.message || 'ค้นหาไม่สำเร็จ')
+      setLabelList([])
+    } finally {
+      setLabelLoading(false)
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+  }
+
+  function printLabel(item) {
+    const p = item || labelSelected
+    if (!p?.plant_code) return toastErr('กรุณาเลือกต้นไม้ก่อนพิมพ์')
+
+    const code = escapeHtml(p.plant_code)
+    const nm = escapeHtml(p.name || '')
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Print Label</title>
+  <style>
+    @page { size: 60mm 14mm; margin: 0; }
+    html, body { margin: 0; padding: 0; }
+    .label {
+      width: 60mm;
+      height: 14mm;
+      box-sizing: border-box;
+      padding: 1mm 1.5mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Thai', 'Noto Sans', Arial;
+    }
+    .code { font-size: 12pt; font-weight: 800; line-height: 1; }
+    .name { font-size: 8pt; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+</head>
+<body>
+  <div class="label">
+    <div class="code">${code}</div>
+    <div class="name">${nm}</div>
+  </div>
+  <script>
+    window.onload = () => {
+      window.print();
+      setTimeout(() => window.close(), 300);
+    };
+  </script>
+</body>
+</html>`
+
+    const w = window.open('', '_blank', 'noopener,noreferrer,width=600,height=400')
+    if (!w) return toastErr('เบราว์เซอร์บล็อกหน้าต่างปริ้น (กรุณาอนุญาต Pop-up)')
+    w.document.open()
+    w.document.write(html)
+    w.document.close()
   }
 
   return (
@@ -466,6 +562,96 @@ export default function PlantsPage() {
           </div>
         </div>
 
+        {/* Print label */}
+        <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm md:p-5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-base font-semibold text-slate-900 md:text-lg">พิมพ์สติ๊กเกอร์โค้ด (14×60 mm)</div>
+              <div className="text-xs text-slate-500 md:text-sm">ใส่ “รหัส” หรือ “ชื่อไม้” แล้วกดค้นหา • จะพิมพ์เฉพาะ รหัส+ชื่อ</div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center">
+            <input
+              value={labelQ}
+              onChange={(e) => setLabelQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') searchLabelPlants()
+              }}
+              className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10 md:flex-1"
+              placeholder="ค้นหาเพื่อพิมพ์ เช่น N-2603-0001 หรือ Alocasia"
+            />
+            <button
+              type="button"
+              onClick={searchLabelPlants}
+              className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+              disabled={labelLoading}
+            >
+              {labelLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
+            </button>
+            <button
+              type="button"
+              onClick={() => printLabel(labelSelected)}
+              className="rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+              disabled={!labelSelected}
+            >
+              พิมพ์
+            </button>
+          </div>
+
+          {labelErr ? <div className="mt-2 text-xs text-rose-700">{labelErr}</div> : null}
+
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {/* Preview */}
+            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
+              <div className="mb-2 text-xs font-semibold text-slate-700">พรีวิวสติ๊กเกอร์</div>
+              <div className="rounded-2xl border border-dashed border-black/20 bg-white p-2" style={{ width: '60mm', height: '14mm' }}>
+                <div className="font-mono text-[14px] font-extrabold leading-none text-slate-900">
+                  {labelSelected?.plant_code || 'N-2603-0001'}
+                </div>
+                <div className="mt-1 truncate text-[10px] leading-tight text-slate-700">{labelSelected?.name || 'ชื่อไม้'}</div>
+              </div>
+              <div className="mt-2 text-[11px] text-slate-500">ถ้าชื่อยาว ระบบจะตัดท้ายเป็น … (เพื่อให้พอดีกระดาษ)</div>
+            </div>
+
+            {/* Result list */}
+            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-xs font-semibold text-slate-700">ผลลัพธ์</div>
+                <div className="text-[11px] text-slate-500">{labelList.length} รายการ</div>
+              </div>
+
+              {labelList.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-black/15 bg-white p-3 text-sm text-slate-600">ยังไม่มีผลลัพธ์</div>
+              ) : (
+                <div className="max-h-[220px] space-y-2 overflow-auto pr-1">
+                  {labelList.map((p) => {
+                    const active = labelSelected?.id === p.id
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setLabelSelected(p)}
+                        className={
+                          (active ? 'border-emerald-200 bg-emerald-50' : 'border-black/10 bg-white hover:bg-slate-50') +
+                          ' w-full rounded-2xl border p-2 text-left shadow-sm'
+                        }
+                      >
+                        <div className="truncate font-mono text-sm text-slate-900">{p.plant_code}</div>
+                        <div className="truncate text-sm text-slate-700">{p.name || '-'}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 text-[11px] text-slate-500">
+            หมายเหตุ: ตอนพิมพ์ครั้งแรก ให้เลือก Paper Size ในหน้าปริ้นให้ตรง 14×60mm (เครื่องจะจำค่าไว้)
+          </div>
+        </div>
+
         {/* Prefix modal */}
         {needPrefixModal ? (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 md:items-center">
@@ -507,4 +693,3 @@ export default function PlantsPage() {
     </AppShell>
   )
 }
-

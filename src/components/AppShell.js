@@ -22,6 +22,7 @@ export default function AppShell({ children, title }) {
   const supabase = supabaseBrowser()
 
   const [userEmail, setUserEmail] = useState('')
+  const [authChecked, setAuthChecked] = useState(false)
   const role = useMemo(() => getRoleFromEmail(userEmail), [userEmail])
 
   async function logout() {
@@ -35,11 +36,13 @@ export default function AppShell({ children, title }) {
       const { data } = await supabase.auth.getUser()
       if (!mounted) return
       setUserEmail(data?.user?.email || '')
+      setAuthChecked(true)
     }
     load()
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserEmail(session?.user?.email || '')
+      setAuthChecked(true)
     })
 
     return () => {
@@ -48,6 +51,19 @@ export default function AppShell({ children, title }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // guard: unknown role => sign out
+  useEffect(() => {
+    if (!authChecked) return
+    if (!userEmail) return
+    if (role !== 'unknown') return
+    ;(async () => {
+      try {
+        await supabase.auth.signOut()
+      } catch {}
+      router.replace('/login')
+    })()
+  }, [authChecked, userEmail, role, router, supabase])
 
   // client guard
   useEffect(() => {
@@ -98,7 +114,9 @@ export default function AppShell({ children, title }) {
             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-600">
               {userEmail ? (
                 <>
-                  <span className="truncate">ล็อกอิน: <b className="text-slate-900">{userEmail}</b></span>
+                  <span className="truncate">
+                    ล็อกอิน: <b className="text-slate-900">{userEmail}</b>
+                  </span>
                   {rolePill}
                 </>
               ) : (
