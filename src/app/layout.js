@@ -13,10 +13,7 @@ export const metadata = {
     apple: '/apple-touch-icon.png',
   },
 }
-export const viewport = {
-  // iOS Clean (Theme A)
-  themeColor: '#ffffff',
-}
+
 
 export default function RootLayout({ children }) {
   return (
