@@ -344,7 +344,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="Dashboard">
-      <PageHeader title="ศูนย์บัญชาการ" subtitle="ภาพรวมธุรกิจเดือนนี้ (iOS Clean • Donut)" loading={loading} onReload={loadDashboard} />
+      <PageHeader title="ภาพรวมธุรกิจ"  loading={loading} onReload={loadDashboard} />
 
       {(ok || err) && (
         <div className="mb-4">
