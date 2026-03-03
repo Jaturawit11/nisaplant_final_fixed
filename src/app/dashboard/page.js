@@ -392,44 +392,55 @@ export default function DashboardPage() {
       </div>
 
       {/* Bank cards (soft) */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {(['GSB', 'KTB', 'KBANK']).map((b) => {
-          const meta = bankMeta[b] || { img: '', tone: 'slate', bg: 'bg-slate-50' }
+<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+  {(['GSB', 'KTB', 'KBANK']).map((b) => {
+    const bankImages = {
+      GSB: '/banks/gsb.png',
+      KTB: '/banks/ktb.png',
+      KBANK: '/banks/kbank.png',
+    }
 
-          return (
-            <Card key={b}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-900">{b}</div>
-                  <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">{money(bankBalances[b].balance)} บาท</div>
-                </div>
+    return (
+      <Card
+        key={b}
+        style={{
+          backgroundImage: `url(${bankImages[b]})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right center',
+          backgroundSize: '55%',
+        }}
+      >
+        {/* overlay ใสๆ */}
+        <div className="absolute inset-0 bg-white/85 backdrop-blur-[1px]" />
 
-                {/* ✅ แก้ตามสั่ง: “ภาพธนาคารให้พอดีกรอบ” */}
-                <div className="flex items-start gap-2">
-                  <div className={'relative h-[72px] w-[130px] overflow-hidden rounded-xl ' + meta.bg}>
-                    <img
-                      src={meta.img}
-                      alt={b}
-                      className="h-full w-full object-contain p-2 opacity-85"
-                      draggable={false}
-                    />
-                  </div>
-                  <Pill tone={meta.tone}>Balance</Pill>
-                </div>
-              </div>
+        <div className="relative z-10 flex items-start justify-between">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">{b}</div>
+            <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+              {money(bankBalances[b].balance)} บาท
+            </div>
+          </div>
 
-              <div className="mt-3 flex items-center justify-between text-sm">
-                <span className="text-slate-500">รับเดือนนี้</span>
-                <span className="font-semibold text-slate-900">{money(bankBalances[b].income)}</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-sm">
-                <span className="text-slate-500">จ่ายเดือนนี้</span>
-                <span className="font-semibold text-slate-900">{money(bankBalances[b].expense)}</span>
-              </div>
-            </Card>
-          )
-        })}
-      </div>
+          <Pill>Balance</Pill>
+        </div>
+
+        <div className="relative z-10 mt-3 flex items-center justify-between text-sm">
+          <span className="text-slate-500">รับเดือนนี้</span>
+          <span className="font-semibold text-slate-900">
+            {money(bankBalances[b].income)}
+          </span>
+        </div>
+
+        <div className="relative z-10 mt-1 flex items-center justify-between text-sm">
+          <span className="text-slate-500">จ่ายเดือนนี้</span>
+          <span className="font-semibold text-slate-900">
+            {money(bankBalances[b].expense)}
+          </span>
+        </div>
+      </Card>
+    )
+  })}
+</div>
 
       {/* Latest invoices */}
       <div className="mt-4">
