@@ -396,8 +396,8 @@ export default function DashboardPage() {
             style={{
               backgroundImage: `url(${bankBg[b]})`,
               backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-              backgroundSize: 'contain', // ✅ ล็อคพอดีกรอบเสมอ
+              backgroundPosition: 'right centerer',
+              backgroundSize: 'cover', // ✅ ล็อคพอดีกรอบเสมอ
             }}
           >
             {/* overlay ใสๆ ไม่เข้ม */}
