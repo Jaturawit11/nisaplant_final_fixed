@@ -84,51 +84,76 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom }) {
   const total = data.reduce((a, b) => a + Number(b.value || 0), 0)
 
   return (
-    <Card>
-      <div className="flex items-start justify-between gap-2">
+    <Card className="p-0">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 px-4 pt-4">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-slate-900">{title}</div>
-          {subtitle ? <div className="mt-0.5 text-xs text-slate-500">{subtitle}</div> : null}
-        </div>
-        <Pill tone="slate">รวม {money(total)} </Pill>
-      </div>
-
-      <div className="mt-3 h-[220px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={72}
-              outerRadius={98}
-              paddingAngle={3}
-              stroke="rgba(0,0,0,0.04)"
-            >
-              {data.map((_, i) => (
-                <Cell key={i} fill={colors[i % colors.length]} />
-              ))}
-            </Pie>
-            <Tooltip formatter={(v) => money(v)} />
-          </PieChart>
-        </ResponsiveContainer>
-
-        {/* Center label overlay */}
-        <div className="pointer-events-none -mt-[180px] flex h-[180px] items-center justify-center">
-          <div className="text-center">
-            <div className="text-2xl font-bold tracking-tight text-slate-900">{centerTop}</div>
-            <div className="mt-1 text-xs font-semibold text-slate-500">{centerBottom}</div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/5 ring-1 ring-slate-900/10">
+              {/* donut icon */}
+              <span className="h-3.5 w-3.5 rounded-full ring-4 ring-slate-300/70" />
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
+              {subtitle ? <div className="mt-0.5 truncate text-xs text-slate-500">{subtitle}</div> : null}
+            </div>
           </div>
         </div>
+
+        <span className="inline-flex items-center rounded-full bg-slate-900/5 px-3 py-1 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-900/10">
+          รวม {money(total)}
+        </span>
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-2">
-        {data.map((d, i) => (
-          <Pill key={d.name} tone="slate">
-            <span className="mr-2 inline-block h-2 w-2 rounded-full" style={{ background: colors[i % colors.length] }} />
-            {d.name}: {money(d.value)}
-          </Pill>
-        ))}
+      {/* Chart area */}
+      <div className="px-4 pb-4 pt-3">
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-50 to-white ring-1 ring-slate-900/10">
+          <div className="h-[250px] p-3">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={78}
+                  outerRadius={108}
+                  paddingAngle={3}
+                  stroke="rgba(0,0,0,0.04)"
+                >
+                  {data.map((_, i) => (
+                    <Cell key={i} fill={colors[i % colors.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => money(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Center label overlay */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="rounded-2xl bg-white/80 px-5 py-3 text-center ring-1 ring-slate-900/10 backdrop-blur">
+              <div className="text-3xl font-extrabold tracking-tight text-slate-900">{centerTop}</div>
+              <div className="mt-1 text-xs font-semibold text-slate-500">{centerBottom}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Legend chips */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {data.map((d, i) => (
+            <span
+              key={d.name}
+              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-200 shadow-sm"
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ background: colors[i % colors.length] }}
+              />
+              <span className="whitespace-nowrap">{d.name}</span>
+              <span className="text-slate-900">{money(d.value)}</span>
+            </span>
+          ))}
+        </div>
       </div>
     </Card>
   )
