@@ -72,6 +72,7 @@ export default function AppShell({ children, title }) {
     if (!ok) router.replace('/dashboard')
   }, [role, path, router])
 
+  // ✅ ยุบเมนูกลุ่ม Finance เป็น "การเงิน" หน้าเดียว
   const navAll = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/sell', label: 'ขาย' },
@@ -79,10 +80,7 @@ export default function AppShell({ children, title }) {
     { href: '/edit-invoice', label: 'แก้บิล' },
     { href: '/expenses', label: 'ค่าใช้จ่าย' },
     { href: '/summary', label: 'สรุป' },
-    { href: '/bank', label: 'บัญชี' },
-    { href: '/salary', label: 'เงินเดือน' },
-    { href: '/closing', label: 'ปิดเดือน' },
-    { href: '/ar', label: 'ลูกหนี้' },
+    { href: '/finance', label: 'การเงิน' }, // ✅ ใหม่
   ]
 
   const nav = useMemo(() => {
