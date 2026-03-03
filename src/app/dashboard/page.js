@@ -24,19 +24,21 @@ function Pill({ tone = 'slate', children }) {
     teal: 'bg-teal-100 text-teal-800 ring-teal-200',
   }
   return (
-    <span
-      className={
-        'inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ' +
-        (map[tone] || map.slate)
-      }
-    >
+    <span className={'inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ' + (map[tone] || map.slate)}>
       {children}
     </span>
   )
 }
 
-function Card({ children, className = '' }) {
-  return <div className={'rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm ' + className}>{children}</div>
+function Card({ children, className = '', style }) {
+  return (
+    <div
+      style={style}
+      className={'relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm ' + className}
+    >
+      {children}
+    </div>
+  )
 }
 
 function PageHeader({ title, subtitle, loading, onReload }) {
@@ -165,7 +167,6 @@ function SoftTable({ title, rows, rightTitle }) {
 export default function DashboardPage() {
   const supabase = supabaseBrowser()
 
-  // ✅ กัน Recharts เตือนตอน build/prerender (ResponsiveContainer วัดขนาดไม่ได้บน server)
   const [mounted, setMounted] = useState(false)
 
   const [loading, setLoading] = useState(true)
@@ -178,7 +179,7 @@ export default function DashboardPage() {
     totalCount: 0,
     activeCostSum: 0,
     monthSales: 0,
-    monthProfit: 0, // gross
+    monthProfit: 0,
     monthExpenses: 0,
     monthNet: 0,
   })
@@ -190,13 +191,6 @@ export default function DashboardPage() {
     KTB: { balance: 0, income: 0, expense: 0 },
     KBANK: { balance: 0, income: 0, expense: 0 },
   })
-
-  // ✅ เพิ่มแค่ meta สำหรับ “ภาพธนาคารให้พอดีกรอบ”
-  const bankMeta = {
-    GSB: { img: '/banks/gsb.png', tone: 'rose', bg: 'bg-rose-50' },
-    KTB: { img: '/banks/ktb.png', tone: 'teal', bg: 'bg-sky-50' },
-    KBANK: { img: '/banks/kbank.png', tone: 'emerald', bg: 'bg-emerald-50' },
-  }
 
   function toastOk(msg) {
     setOk(msg)
@@ -263,7 +257,6 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ===== Calculations (เหมือนเดิม แต่โชว์สวยขึ้น) =====
   const tax15 = Math.max(0, Math.floor(kpi.monthNet * 0.15))
   const afterTax = Math.max(0, kpi.monthNet - tax15)
   const salaryTotal = Math.min(Math.floor(afterTax * 0.3), 60000)
@@ -273,7 +266,6 @@ export default function DashboardPage() {
 
   const totalCash = bankBalances.GSB.balance + bankBalances.KTB.balance + bankBalances.KBANK.balance
 
-  // ===== Donut datasets =====
   const donutProfit = [
     { name: 'กำไรขั้นต้น', value: kpi.monthProfit },
     { name: 'ค่าใช้จ่าย', value: kpi.monthExpenses },
@@ -286,7 +278,6 @@ export default function DashboardPage() {
     { name: 'KBANK', value: bankBalances.KBANK.balance },
   ]
 
-  // สถานะจ่ายจาก invoice ล่าสุด (สรุปแบบเร็ว)
   const payAgg = useMemo(() => {
     let paid = 0
     let partial = 0
@@ -319,11 +310,17 @@ export default function DashboardPage() {
     }
   })
 
+  // ✅ รูปอยู่ที่ public/banks/*
+  const bankBg = {
+    GSB: '/banks/gsb.png',
+    KTB: '/banks/ktb.png',
+    KBANK: '/banks/kbank.png',
+  }
+
   return (
     <AppShell title="Dashboard">
       <PageHeader title="ศูนย์บัญชาการ" subtitle="ภาพรวมธุรกิจเดือนนี้ (iOS Clean • Donut)" loading={loading} onReload={loadDashboard} />
 
-      {/* Toast */}
       {(ok || err) && (
         <div className="mb-4">
           {ok ? (
@@ -367,8 +364,7 @@ export default function DashboardPage() {
               title="เงินแยกธนาคาร"
               subtitle="ยอดคงเหลือ 3 บัญชี"
               data={donutBank}
-              // ✅ สีตามธนาคาร (GSB ชมพู / KTB ฟ้า / KBANK เขียว)
-              colors={['#ec4899', '#3b82f6', '#22c55e']}
+              colors={['#ec4899', '#3b82f6', '#22c55e']} // ✅ GSB ชมพู / KTB ฟ้า / KBANK เขียว
               centerTop={money(totalCash)}
               centerBottom="รวมทั้งหมด"
             />
@@ -391,63 +387,52 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Bank cards (soft) */}
-<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-  {(['GSB', 'KTB', 'KBANK']).map((b) => {
-    const bankImages = {
-      GSB: '/banks/gsb.png',
-      KTB: '/banks/ktb.png',
-      KBANK: '/banks/kbank.png',
-    }
+      {/* Bank cards (soft) ✅ แก้ตรงนี้อย่างเดียว: โลโก้เป็นพื้นหลังใสๆเต็มกรอบ */}
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {(['GSB', 'KTB', 'KBANK']).map((b) => (
+          <Card
+            key={b}
+            style={{
+              backgroundImage: `url(${bankBg[b]})`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right center',
+              backgroundSize: '70%', // ปรับให้ “เต็มกรอบ” มากขึ้น (จะเอา 80% ก็ได้)
+            }}
+          >
+            {/* overlay ใสๆ ไม่เข้ม */}
+            <div className="absolute inset-0 bg-white/80" />
 
-    return (
-      <Card
-        key={b}
-        style={{
-          backgroundImage: `url(${bankImages[b]})`,
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right center',
-          backgroundSize: '55%',
-        }}
-      >
-        {/* overlay ใสๆ */}
-        <div className="absolute inset-0 bg-white/85 backdrop-blur-[1px]" />
+            {/* content ต้องอยู่บน overlay */}
+            <div className="relative z-10">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">{b}</div>
+                  <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
+                    {money(bankBalances[b].balance)} บาท
+                  </div>
+                </div>
+                <Pill tone={b === 'GSB' ? 'rose' : b === 'KTB' ? 'teal' : 'emerald'}>Balance</Pill>
+              </div>
 
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <div className="text-sm font-semibold text-slate-900">{b}</div>
-            <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-              {money(bankBalances[b].balance)} บาท
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <span className="text-slate-500">รับเดือนนี้</span>
+                <span className="font-semibold text-slate-900">{money(bankBalances[b].income)}</span>
+              </div>
+              <div className="mt-1 flex items-center justify-between text-sm">
+                <span className="text-slate-500">จ่ายเดือนนี้</span>
+                <span className="font-semibold text-slate-900">{money(bankBalances[b].expense)}</span>
+              </div>
             </div>
-          </div>
-
-          <Pill>Balance</Pill>
-        </div>
-
-        <div className="relative z-10 mt-3 flex items-center justify-between text-sm">
-          <span className="text-slate-500">รับเดือนนี้</span>
-          <span className="font-semibold text-slate-900">
-            {money(bankBalances[b].income)}
-          </span>
-        </div>
-
-        <div className="relative z-10 mt-1 flex items-center justify-between text-sm">
-          <span className="text-slate-500">จ่ายเดือนนี้</span>
-          <span className="font-semibold text-slate-900">
-            {money(bankBalances[b].expense)}
-          </span>
-        </div>
-      </Card>
-    )
-  })}
-</div>
+          </Card>
+        ))}
+      </div>
 
       {/* Latest invoices */}
       <div className="mt-4">
         <SoftTable title="บิลล่าสุด" rightTitle="แสดง 6 รายการล่าสุด" rows={invoiceRows} />
       </div>
 
-      {/* Salary note (ไม่บังคับ แต่ช่วยจำ) */}
+      {/* Salary note */}
       <div className="mt-4">
         <Card>
           <div className="text-sm font-semibold text-slate-900">สรุปเงินเดือน (จากกำไรหลังภาษี)</div>
