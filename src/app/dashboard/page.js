@@ -179,7 +179,7 @@ export default function DashboardPage() {
     totalCount: 0,
     activeCostSum: 0,
     monthSales: 0,
-    monthProfit: 0,
+    monthProfit: 0, // gross
     monthExpenses: 0,
     monthNet: 0,
   })
@@ -387,23 +387,24 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Bank cards (soft) ✅ แก้ตรงนี้อย่างเดียว: โลโก้เป็นพื้นหลังใสๆเต็มกรอบ */}
+      {/* Bank cards (soft) ✅ แก้เฉพาะ “ล็อคให้พอดีกรอบ” */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         {(['GSB', 'KTB', 'KBANK']).map((b) => (
           <Card
             key={b}
+            className="h-[170px]"
             style={{
               backgroundImage: `url(${bankBg[b]})`,
               backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right center',
-              backgroundSize: '70%', // ปรับให้ “เต็มกรอบ” มากขึ้น (จะเอา 80% ก็ได้)
+              backgroundPosition: 'center',
+              backgroundSize: 'contain', // ✅ ล็อคพอดีกรอบเสมอ
             }}
           >
             {/* overlay ใสๆ ไม่เข้ม */}
-            <div className="absolute inset-0 bg-white/80" />
+            <div className="absolute inset-0 bg-white/85" />
 
-            {/* content ต้องอยู่บน overlay */}
-            <div className="relative z-10">
+            {/* content */}
+            <div className="relative z-10 flex h-full flex-col justify-between">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="text-sm font-semibold text-slate-900">{b}</div>
@@ -414,13 +415,15 @@ export default function DashboardPage() {
                 <Pill tone={b === 'GSB' ? 'rose' : b === 'KTB' ? 'teal' : 'emerald'}>Balance</Pill>
               </div>
 
-              <div className="mt-3 flex items-center justify-between text-sm">
-                <span className="text-slate-500">รับเดือนนี้</span>
-                <span className="font-semibold text-slate-900">{money(bankBalances[b].income)}</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-sm">
-                <span className="text-slate-500">จ่ายเดือนนี้</span>
-                <span className="font-semibold text-slate-900">{money(bankBalances[b].expense)}</span>
+              <div>
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <span className="text-slate-500">รับเดือนนี้</span>
+                  <span className="font-semibold text-slate-900">{money(bankBalances[b].income)}</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between text-sm">
+                  <span className="text-slate-500">จ่ายเดือนนี้</span>
+                  <span className="font-semibold text-slate-900">{money(bankBalances[b].expense)}</span>
+                </div>
               </div>
             </div>
           </Card>
