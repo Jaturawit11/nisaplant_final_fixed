@@ -4,11 +4,14 @@ export const metadata = {
   title: 'Nisa Plant POS',
   description: 'Locked Blueprint - Mobile First',
   manifest: '/manifest.json',
-  themeColor: '#0b1f14',
   icons: {
     icon: '/icon-192.png',
     apple: '/apple-touch-icon.png',
   },
+}
+export const viewport = {
+  // iOS Clean (Theme A)
+  themeColor: '#ffffff',
 }
 
 export default function RootLayout({ children }) {

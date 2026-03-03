@@ -172,6 +172,9 @@ function SoftTable({ title, rows, rightTitle }) {
 export default function DashboardPage() {
   const supabase = supabaseBrowser()
 
+  // ✅ กัน Recharts เตือนตอน build/prerender (ResponsiveContainer วัดขนาดไม่ได้บน server)
+  const [mounted, setMounted] = useState(false)
+
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState('')
   const [ok, setOk] = useState('')
@@ -255,6 +258,7 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    setMounted(true)
     loadDashboard()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -358,32 +362,42 @@ export default function DashboardPage() {
 
       {/* Donuts */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <DonutCard
-          title="ภาพรวมกำไร"
-          subtitle="กำไรขั้นต้น / ค่าใช้จ่าย / กำไรสุทธิ"
-          data={donutProfit}
-          colors={['#10b981', '#f59e0b', '#0ea5e9']}
-          centerTop={money(kpi.monthNet)}
-          centerBottom="กำไรสุทธิ"
-        />
+        {mounted ? (
+          <>
+            <DonutCard
+              title="ภาพรวมกำไร"
+              subtitle="กำไรขั้นต้น / ค่าใช้จ่าย / กำไรสุทธิ"
+              data={donutProfit}
+              colors={['#10b981', '#f59e0b', '#0ea5e9']}
+              centerTop={money(kpi.monthNet)}
+              centerBottom="กำไรสุทธิ"
+            />
 
-        <DonutCard
-          title="เงินแยกธนาคาร"
-          subtitle="ยอดคงเหลือ 3 บัญชี"
-          data={donutBank}
-          colors={['#0ea5e9', '#10b981', '#64748b']}
-          centerTop={money(totalCash)}
-          centerBottom="รวมทั้งหมด"
-        />
+            <DonutCard
+              title="เงินแยกธนาคาร"
+              subtitle="ยอดคงเหลือ 3 บัญชี"
+              data={donutBank}
+              colors={['#0ea5e9', '#10b981', '#64748b']}
+              centerTop={money(totalCash)}
+              centerBottom="รวมทั้งหมด"
+            />
 
-        <DonutCard
-          title="สถานะการชำระ"
-          subtitle="ดูจากบิลล่าสุด"
-          data={payAgg}
-          colors={['#10b981', '#f59e0b', '#94a3b8']}
-          centerTop={String((latestInvoices || []).length)}
-          centerBottom="บิลล่าสุด"
-        />
+            <DonutCard
+              title="สถานะการชำระ"
+              subtitle="ดูจากบิลล่าสุด"
+              data={payAgg}
+              colors={['#10b981', '#f59e0b', '#94a3b8']}
+              centerTop={String((latestInvoices || []).length)}
+              centerBottom="บิลล่าสุด"
+            />
+          </>
+        ) : (
+          <>
+            <Card className="h-[320px] animate-pulse" />
+            <Card className="h-[320px] animate-pulse" />
+            <Card className="h-[320px] animate-pulse" />
+          </>
+        )}
       </div>
 
       {/* Bank cards (soft) */}
