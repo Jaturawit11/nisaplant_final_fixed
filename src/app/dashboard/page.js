@@ -467,8 +467,8 @@ export default function DashboardPage() {
           <div className="mt-2 flex flex-wrap gap-2 text-sm">
             <Pill tone="slate">หลังภาษี: {money(afterTax)}</Pill>
             <Pill tone="emerald">เงินเดือนรวม: {money(salaryTotal)} (Max 60,000)</Pill>
-            <Pill tone="slate">ผัว: {money(salaryHusband)}</Pill>
-            <Pill tone="slate">เมีย: {money(salaryWife)}</Pill>
+            <Pill tone="slate">Time: {money(salaryHusband)}</Pill>
+            <Pill tone="slate">Nisa: {money(salaryWife)}</Pill>
           </div>
         </Card>
       </div>
