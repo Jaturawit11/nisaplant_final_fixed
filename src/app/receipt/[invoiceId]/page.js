@@ -10,12 +10,10 @@ function isUuid(v) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''))
 }
 
-// ✅ วางไฟล์ไว้ใน public/brand/...
+// ✅ ปรับ 2 รูปนี้ให้ตรง path ในโปรเจกต์นาย
+// แนะนำวางไฟล์ไว้ใน public/brand/...
 const WATERMARK_SRC = '/brand/nisa-leaf.png'
 const PROMPTPAY_QR_SRC = '/brand/promptpay.png'
-
-// ✅ จำกัดจำนวนรายการบนใบเสร็จ (กันสลิปขาดบนมือถือ)
-const MAX_SLIP_ITEMS = 20
 
 const PAYMENT_INFO = {
   bank_th: 'ธนาคารออมสิน',
@@ -31,25 +29,8 @@ function fmtMoney(n, lang) {
 }
 
 function fmtDate(d) {
+  // inv.sale_date มักเป็น 'YYYY-MM-DD' อยู่แล้ว
   return String(d || '-')
-}
-
-// ✅ โหลดรูปแล้วแปลงเป็น dataURL (กัน export แล้วรูปหายบน iPhone/Safari)
-async function toDataUrl(src) {
-  try {
-    const url = src.startsWith('http') ? src : `${window.location.origin}${src}`
-    const res = await fetch(url, { cache: 'no-store' })
-    const blob = await res.blob()
-    const dataUrl = await new Promise((resolve) => {
-      const r = new FileReader()
-      r.onload = () => resolve(String(r.result || ''))
-      r.onerror = () => resolve('')
-      r.readAsDataURL(blob)
-    })
-    return dataUrl
-  } catch {
-    return ''
-  }
 }
 
 export default function ReceiptPage() {
@@ -64,28 +45,6 @@ export default function ReceiptPage() {
   const [err, setErr] = useState('')
 
   const printRef = useRef(null)
-
-  // ✅ dataURL ของรูป (สำคัญมากสำหรับ export)
-  const [wmData, setWmData] = useState('')
-  const [qrData, setQrData] = useState('')
-
-  // ✅ สำหรับ preview ให้พอดีจอมือถือ (scale แค่ตอนแสดง ไม่กระทบ export)
-  const [scale, setScale] = useState(1)
-
-  useEffect(() => {
-    function onResize() {
-      // ใบเสร็จจริงเราล็อค maxWidth 760 ใน node ที่ export
-      // preview บนมือถือให้ scale ลงให้พอดีจอ
-      const w = typeof window !== 'undefined' ? window.innerWidth : 9999
-      const max = 760
-      const pad = 24
-      const s = Math.min(1, (w - pad) / max)
-      setScale(Number.isFinite(s) && s > 0 ? s : 1)
-    }
-    onResize()
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -141,14 +100,9 @@ export default function ReceiptPage() {
         return
       }
 
-      // ✅ โหลดรูปเป็น dataURL กัน export แล้วรูปหาย
-      const [wm, qr] = await Promise.all([toDataUrl(WATERMARK_SRC), toDataUrl(PROMPTPAY_QR_SRC)])
-
       if (mounted) {
         setInv(invoiceRow)
         setItems(saleItems || [])
-        setWmData(wm || '')
-        setQrData(qr || '')
         setLoading(false)
       }
     }
@@ -164,8 +118,6 @@ export default function ReceiptPage() {
     const total = items.reduce((s, x) => s + Number(x.price || 0), 0)
     return { qty, total }
   }, [items])
-
-  const slipItems = useMemo(() => items.slice(0, MAX_SLIP_ITEMS), [items])
 
   const H = useMemo(() => {
     const th = lang === 'TH'
@@ -187,46 +139,70 @@ export default function ReceiptPage() {
       scan: th ? 'สแกน QR เพื่อโอนเงินเข้าบัญชี' : 'Scan QR to transfer',
     }
   }, [lang])
-
   async function exportImage() {
     if (!printRef.current) return
 
-    try {
-      // ✅ รอฟอนต์ + รอ layout 2 เฟรม (กัน iPhone export ตัดบางอย่าง)
-      await document.fonts?.ready
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    const node = printRef.current
 
-      // ✅ รอให้รูปใน node พร้อม (เผื่อ dataURL ยังไม่ทัน)
-      const images = printRef.current.querySelectorAll('img')
-      await Promise.all(
-        Array.from(images).map((img) => {
-          if (img.complete) return Promise.resolve()
-          return new Promise((resolve) => {
-            img.onload = resolve
-            img.onerror = resolve
-          })
+    // 1) รอให้รูปทั้งหมดโหลดก่อน (กันรูปไม่ขึ้นในไฟล์ export)
+    const images = node.querySelectorAll('img')
+    await Promise.all(
+      Array.from(images).map((img) => {
+        if (img.complete) return Promise.resolve()
+        return new Promise((resolve) => {
+          img.onload = resolve
+          img.onerror = resolve
         })
-      )
+      })
+    )
 
-      const dataUrl = await htmlToImage.toJpeg(printRef.current, {
+    // 2) อินไลน์รูปเป็น base64 ชั่วคราว (กัน Safari/Canvas บางเคสทำรูปหาย)
+    const restore = []
+    async function imgToDataUrl(src) {
+      try {
+        const res = await fetch(src, { cache: 'no-store' })
+        const blob = await res.blob()
+        return await new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result)
+          reader.onerror = () => resolve(null)
+          reader.readAsDataURL(blob)
+        })
+      } catch {
+        return null
+      }
+    }
+
+    for (const img of Array.from(images)) {
+      const src = img.getAttribute('src') || ''
+      if (!src) continue
+      if (src.startsWith('data:')) continue
+      // เก็บไว้ restore
+      restore.push([img, src])
+      const abs = src.startsWith('http') ? src : `${window.location.origin}${src.startsWith('/') ? '' : '/'}${src}`
+      const dataUrl = await imgToDataUrl(abs)
+      if (dataUrl) img.setAttribute('src', dataUrl)
+    }
+
+    try {
+      const dataUrl = await htmlToImage.toPng(node, {
         cacheBust: true,
         pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        // iOS บางเครื่อง useCORS ไม่จำเป็นถ้าเป็น dataURL แล้ว แต่ใส่ไว้ไม่เสียหาย
         useCORS: true,
+        backgroundColor: '#ffffff',
       })
 
       const a = document.createElement('a')
       a.href = dataUrl
-      a.download = `${inv?.invoice_no || 'receipt'}.jpg`
+      a.download = `${inv?.invoice_no || 'receipt'}.png`
       a.click()
-    } catch (e) {
-      // เงียบไว้ตามสไตล์เดิม แต่ถ้าอยากให้โชว์ error ก็บอกได้
-      console.error(e)
+    } finally {
+      // restore src กลับเหมือนเดิม
+      for (const [img, src] of restore) img.setAttribute('src', src)
     }
   }
 
-  function printNow() {
+  function printNow() {() {
     window.print()
   }
 
@@ -245,9 +221,6 @@ export default function ReceiptPage() {
           .print-wrap {
             margin: 0 !important;
             padding: 0 !important;
-          }
-          .preview-scale {
-            transform: none !important;
           }
         }
       `}</style>
@@ -275,140 +248,119 @@ export default function ReceiptPage() {
             </div>
           </div>
 
-          {/* ✅ preview ให้พอดีจอมือถือ ด้วย scale (ไม่กระทบ export เพราะ ref อยู่ “ข้างใน”) */}
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div className="preview-scale" style={{ transform: `scale(${scale})`, transformOrigin: 'top center' }}>
-              {/* ✅ ใบเสร็จจริง (node ที่ export) */}
-              <div
-                ref={printRef}
-                style={{
-                  ...paper,
-                  width: 760,
-                  maxWidth: 760,
-                  margin: '0 auto',
-                  fontFamily: "'Mali', sans-serif",
-                }}
-              >
-                {/* Watermark (ใช้ dataURL กัน export หาย) */}
-                <img
-                  src={wmData || WATERMARK_SRC}
-                  alt=""
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    margin: 'auto',
-                    width: 420,
-                    opacity: 0.15,
-                    transform: 'rotate(-10deg)',
-                    pointerEvents: 'none',
-                  }}
-                />
+          {/* ✅ ใบเสร็จ: เกือบจตุรัส + ไม่ยืดเป็นผืนผ้า */}
+          <div
+            ref={printRef}
+            style={{
+              ...paper,
+              width: 760, // ✅ บีบลง ไม่ให้กว้างยืด
+              aspectRatio: '1 / 1', // ✅ เกือบจตุรัส
+              margin: '0 auto',
+              fontFamily: "'Mali', sans-serif",
+            }}
+          >
+            {/* Watermark */}
+            <img
+              src={WATERMARK_SRC}
+              crossOrigin="anonymous"
+              alt=""
+              style={{
+                position: 'absolute',
+                inset: 0,
+                margin: 'auto',
+                width: 420,
+                opacity: 0.15,
+                transform: 'rotate(-10deg)',
+                pointerEvents: 'none',
+              }}
+            />
 
-                {/* HEADER */}
-                <div style={headerBlock}>
-                  <div style={headerTitle}>{H.title}</div>
+            {/* =========================
+                ✅ HEADER (สูงขึ้น + ตามฟอร์ม)
+                ใบเสร็จรับเงิน (กลาง)
+                เลขที่บิล (ซ้าย) | วันที่ (ขวา)
+                ลูกค้า (ซ้าย ใต้เลขบิล)
+               ========================= */}
+            <div style={headerBlock}>
+              <div style={headerTitle}>{H.title}</div>
 
-                  <div style={headerRow2}>
-                    <div style={headerLeft}>
-                      {H.billNo}: <b>{inv.invoice_no || '-'}</b>
-                    </div>
-                    <div style={headerRight}>
-                      {H.date}: <b>{fmtDate(inv.sale_date)}</b>
-                    </div>
-                  </div>
-
-                  <div style={headerRow3}>
-                    <div style={headerLeft}>
-                      {H.customer}: <b>{inv.customer_name || '-'}</b>
-                    </div>
-                  </div>
+              <div style={headerRow2}>
+                <div style={headerLeft}>
+                  {H.billNo}: <b>{inv.invoice_no || '-'}</b>
                 </div>
-
-                <hr style={hr} />
-
-                {/* TABLE HEADER */}
-                <div style={tableHead}>
-                  <div>{H.code}</div>
-                  <div>{H.list}</div>
-                  <div style={{ textAlign: 'center' }}>{H.amount}</div>
-                  <div style={{ textAlign: 'right' }}>{H.price}</div>
+                <div style={headerRight}>
+                  {H.date}: <b>{fmtDate(inv.sale_date)}</b>
                 </div>
+              </div>
 
-                {/* TABLE ROWS */}
-                <div style={{ marginTop: 6 }}>
-                  {slipItems.map((x) => (
-                    <div key={x.id} style={tableRow}>
-                      <div style={{ fontWeight: 700 }}>{x.plant_code}</div>
-                      <div style={{ opacity: 0.95 }}>{x.plant_name}</div>
-                      <div style={{ textAlign: 'center' }}>1</div>
-                      <div style={{ textAlign: 'right', fontWeight: 700 }}>{fmtMoney(x.price, lang)}</div>
-                    </div>
-                  ))}
-                  {!items.length ? <div style={{ marginTop: 10, color: '#666' }}>ไม่มีรายการ</div> : null}
-
-                  {items.length > MAX_SLIP_ITEMS ? (
-                    <div
-                      style={{
-                        marginTop: 10,
-                        padding: '10px 12px',
-                        borderRadius: 14,
-                        background: '#fff7ed',
-                        border: '1px solid #fde68a',
-                        color: '#92400e',
-                        fontWeight: 800,
-                        fontSize: 12,
-                      }}
-                    >
-                      บิลนี้มี {items.length} รายการ — ใบเสร็จแสดงสูงสุด {MAX_SLIP_ITEMS} รายการเท่านั้น (แนะนำแยกบิล)
-                    </div>
-                  ) : null}
-                </div>
-
-                <hr style={{ ...hr, marginTop: 18 }} />
-
-                {/* SUMMARY */}
-                <div style={summaryRow}>
-                  <div style={{ fontWeight: 700 }}>รวม</div>
-                  <div style={{ textAlign: 'right' }}>
-                    {H.totalQty}: <b>{totals.qty}</b> &nbsp;&nbsp; {H.total}:{' '}
-                    <b style={{ fontSize: 18 }}>{fmtMoney(totals.total, lang)}</b>
-                  </div>
-                </div>
-
-                {/* PAYMENT + QR */}
-                <div style={bottomGrid}>
-                  <div>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>{H.paymentTitle}</div>
-
-                    <div style={payLine}>
-                      <div style={payK}>{H.bank}:</div>
-                      <div style={payV}>{lang === 'TH' ? PAYMENT_INFO.bank_th : PAYMENT_INFO.bank_en}</div>
-                    </div>
-
-                    <div style={payLine}>
-                      <div style={payK}>{H.acc}:</div>
-                      <div style={payV}>{PAYMENT_INFO.account_no}</div>
-                    </div>
-
-                    <div style={payLine}>
-                      <div style={payK}>{H.name}:</div>
-                      <div style={payV}>{lang === 'TH' ? PAYMENT_INFO.name_th : PAYMENT_INFO.name_en}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ textAlign: 'center' }}>
-                    <img
-                      src={qrData || PROMPTPAY_QR_SRC}
-                      alt="PromptPay QR"
-                      style={{ width: 170 }}
-                    />
-                    <div style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{H.scan}</div>
-                  </div>
+              <div style={headerRow3}>
+                <div style={headerLeft}>
+                  {H.customer}: <b>{inv.customer_name || '-'}</b>
                 </div>
               </div>
             </div>
-          </div>
 
+            <hr style={hr} />
+
+            {/* TABLE HEADER */}
+            <div style={tableHead}>
+              <div>{H.code}</div>
+              <div>{H.list}</div>
+              <div style={{ textAlign: 'center' }}>{H.amount}</div>
+              <div style={{ textAlign: 'right' }}>{H.price}</div>
+            </div>
+
+            {/* TABLE ROWS */}
+            <div style={{ marginTop: 6 }}>
+              {items.map((x) => (
+                <div key={x.id} style={tableRow}>
+                  <div style={{ fontWeight: 700 }}>{x.plant_code}</div>
+                  <div style={{ opacity: 0.95 }}>{x.plant_name}</div>
+                  <div style={{ textAlign: 'center' }}>1</div>
+                  <div style={{ textAlign: 'right', fontWeight: 700 }}>{fmtMoney(x.price, lang)}</div>
+                </div>
+              ))}
+              {!items.length ? <div style={{ marginTop: 10, color: '#666' }}>ไม่มีรายการ</div> : null}
+            </div>
+
+            <hr style={{ ...hr, marginTop: 18 }} />
+
+            {/* ✅ SUMMARY: รวมจำนวน + ยอดรวม */}
+            <div style={summaryRow}>
+              <div style={{ fontWeight: 700 }}>รวม</div>
+              <div style={{ textAlign: 'right' }}>
+                {H.totalQty}: <b>{totals.qty}</b> &nbsp;&nbsp; {H.total}:{' '}
+                <b style={{ fontSize: 18 }}>{fmtMoney(totals.total, lang)}</b>
+              </div>
+            </div>
+
+            {/* PAYMENT + QR */}
+            <div style={bottomGrid}>
+              <div>
+                <div style={{ fontWeight: 800, marginBottom: 8 }}>{H.paymentTitle}</div>
+
+                <div style={payLine}>
+                  <div style={payK}>{H.bank}:</div>
+                  <div style={payV}>{lang === 'TH' ? PAYMENT_INFO.bank_th : PAYMENT_INFO.bank_en}</div>
+                </div>
+
+                <div style={payLine}>
+                  <div style={payK}>{H.acc}:</div>
+                  <div style={payV}>{PAYMENT_INFO.account_no}</div>
+                </div>
+
+                <div style={payLine}>
+                  <div style={payK}>{H.name}:</div>
+                  <div style={payV}>{lang === 'TH' ? PAYMENT_INFO.name_th : PAYMENT_INFO.name_en}</div>
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'center' }}>
+                <img src={PROMPTPAY_QR_SRC} crossOrigin="anonymous" alt="PromptPay QR" style={{ width: 170 }} />
+                <div style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{H.scan}</div>
+              </div>
+            </div>
+          </div>
         </div>
       ) : null}
     </AppShell>
@@ -424,7 +376,7 @@ const paper = {
   background: '#fff',
   color: '#111',
   borderRadius: 22,
-  padding: 34,
+  padding: 34, // ✅ ช่วยให้หัวสูงขึ้นดูแพง
   overflow: 'hidden',
 }
 
@@ -432,7 +384,7 @@ const headerBlock = {
   display: 'grid',
   gap: 10,
   paddingTop: 6,
-  paddingBottom: 18,
+  paddingBottom: 18, // ✅ หัวบิลสูงขึ้น
 }
 
 const headerTitle = {
