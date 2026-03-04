@@ -15,6 +15,14 @@ function num(n) {
   return Number.isFinite(x) ? x.toLocaleString('th-TH') : '0'
 }
 
+function monthRange(date = new Date()) {
+  const d = new Date(date)
+  const start = new Date(d.getFullYear(), d.getMonth(), 1)
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 1)
+  const toISO = (x) => x.toISOString().slice(0, 10)
+  return { start: toISO(start), end: toISO(end) }
+}
+
 function Pill({ tone = 'slate', children }) {
   const map = {
     emerald: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
@@ -230,6 +238,7 @@ export default function DashboardPage() {
   async function loadDashboard() {
     setLoading(true)
     try {
+      const { start, end } = monthRange(new Date())
       const { data: plantsAgg } = await supabase.rpc('dashboard_plants_agg')
       const { data: monthSum } = await supabase.rpc('get_month_summary')
 
@@ -239,14 +248,15 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false })
         .limit(6)
 
-      const { data: bank } = await supabase.rpc('get_bank_balances')
+      const { data: bank } = await supabase.rpc('get_bank_balances', { p_start: start, p_end: end })
 
       const mapped = {}
       for (const b of bank || []) {
         mapped[b.bank] = {
           balance: Number(b.balance || 0),
-          income: Number(b.income || 0),
-          expense: Number(b.expense || 0),
+          // ฟังก์ชันคืนค่าเป็น month_in / month_out
+          income: Number(b.month_in ?? b.income ?? 0),
+          expense: Number(b.month_out ?? b.expense ?? 0),
         }
       }
 

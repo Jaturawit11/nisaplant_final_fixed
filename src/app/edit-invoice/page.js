@@ -24,6 +24,7 @@ export default function EditInvoicePage() {
   const [bank, setBank] = useState('GSB')
   const [paymentMethod, setPaymentMethod] = useState('transfer')
   const [paidDate, setPaidDate] = useState('')
+  const [customerName, setCustomerName] = useState('')
 
   const [selectedItemIds, setSelectedItemIds] = useState(new Set())
   const [refundAmount, setRefundAmount] = useState('')
@@ -117,6 +118,7 @@ export default function EditInvoicePage() {
     setBank(inv.bank || 'GSB')
     setPaymentMethod(inv.payment_method || 'transfer')
     setPaidDate(inv.paid_date || '')
+    setCustomerName(inv.customer_name || '')
 
     // reset refund inputs when opening a new invoice
     setRefundAmount('')
@@ -226,6 +228,7 @@ export default function EditInvoicePage() {
         p_bank: bank,
         p_payment_method: paymentMethod,
         p_paid_date: paidDate ? paidDate : null,
+        p_customer_name: String(customerName || '').trim() || null,
       })
       if (error) throw error
 
@@ -448,6 +451,15 @@ export default function EditInvoicePage() {
             {!isCancelled ? (
               <Card title="อัปเดตสถานะ (ไทย)">
                 <div style={{ display: 'grid', gap: 10 }}>
+                  <Field label="ชื่อลูกค้า">
+                    <input
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="พิมพ์ชื่อลูกค้า..."
+                      style={input}
+                    />
+                  </Field>
+
                   <Field label="การชำระเงิน">
                     <select value={payStatus} onChange={(e) => setPayStatus(e.target.value)} style={input}>
                       <option value="unpaid">{PAY_THAI.unpaid}</option>

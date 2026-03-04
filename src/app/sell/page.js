@@ -24,6 +24,14 @@ function digitsOnly(s) {
   return /^[0-9]+$/.test(String(s || ''))
 }
 
+function parseMoneyInput(v) {
+  // รองรับเลขที่มี comma/เว้นวรรค (เช่น 1,000)
+  if (v === null || v === undefined) return 0
+  const s = String(v).replace(/[,\s]/g, '')
+  const n = Number(s)
+  return Number.isFinite(n) ? n : 0
+}
+
 /**
  * Normalize Plant Code ให้เป็นมาตรฐานเดียวกันก่อน query
  * รองรับ:
@@ -112,7 +120,7 @@ export default function SellPage() {
 
   const totals = useMemo(() => {
     const totalCost = items.reduce((s, x) => s + Number(x.cost || 0), 0)
-    const totalPrice = items.reduce((s, x) => s + Number(x.price || 0), 0)
+    const totalPrice = items.reduce((s, x) => s + parseMoneyInput(x.price), 0)
     const profit = totalPrice - totalCost
     return { totalCost, totalPrice, profit }
   }, [items])
@@ -410,7 +418,7 @@ export default function SellPage() {
     if (payStatus === 'paid') {
       amt = total
     } else if (payStatus === 'partial') {
-      amt = Number(receivedAmount || 0)
+      amt = parseMoneyInput(receivedAmount || 0)
       if (!amt || amt <= 0) throw new Error('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
       if (amt > total) throw new Error('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
     }
@@ -432,19 +440,19 @@ export default function SellPage() {
     setErr('')
     if (!items.length) return setErr('ยังไม่มีรายการขาย')
 
-    const bad = items.find((x) => Number(x.price) <= 0)
+    const bad = items.find((x) => parseMoneyInput(x.price) <= 0)
     if (bad) return setErr(`กรุณาใส่ราคาขายให้ครบ: ${bad.plant_code}`)
 
     // ✅ partial ต้องกรอกยอดรับจริง
     if (payStatus === 'partial') {
-      const ra = Number(receivedAmount || 0)
+      const ra = parseMoneyInput(receivedAmount || 0)
       if (!ra || ra <= 0) return setErr('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
       if (ra > Number(totals.totalPrice || 0)) return setErr('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
     }
 
     setLoading(true)
 
-    const payloadItems = items.map((x) => ({ plant_code: x.plant_code, price: Number(x.price) }))
+    const payloadItems = items.map((x) => ({ plant_code: x.plant_code, price: parseMoneyInput(x.price) }))
 
     const { data, error } = await supabase.rpc('create_sale_invoice', {
       p_sale_date: saleDate,

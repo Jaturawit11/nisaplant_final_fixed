@@ -15,6 +15,9 @@ function isUuid(v) {
 const WATERMARK_SRC = '/brand/nisa-leaf.png'
 const PROMPTPAY_QR_SRC = '/brand/promptpay.png'
 
+// ✅ จำกัดจำนวนรายการบนใบเสร็จ (กันสลิปขาดบนมือถือ)
+const MAX_SLIP_ITEMS = 20
+
 const PAYMENT_INFO = {
   bank_th: 'ธนาคารออมสิน',
   bank_en: 'Government Savings Bank(GSBATHBK)',
@@ -119,6 +122,8 @@ export default function ReceiptPage() {
     return { qty, total }
   }, [items])
 
+  const slipItems = useMemo(() => items.slice(0, MAX_SLIP_ITEMS), [items])
+
   const H = useMemo(() => {
     const th = lang === 'TH'
     return {
@@ -218,8 +223,8 @@ export default function ReceiptPage() {
             ref={printRef}
             style={{
               ...paper,
-              width: 760, // ✅ บีบลง ไม่ให้กว้างยืด
-              aspectRatio: '1 / 1', // ✅ เกือบจตุรัส
+              width: '100%',
+              maxWidth: 760,
               margin: '0 auto',
               fontFamily: "'Mali', sans-serif",
             }}
@@ -277,7 +282,7 @@ export default function ReceiptPage() {
 
             {/* TABLE ROWS */}
             <div style={{ marginTop: 6 }}>
-              {items.map((x) => (
+              {slipItems.map((x) => (
                 <div key={x.id} style={tableRow}>
                   <div style={{ fontWeight: 700 }}>{x.plant_code}</div>
                   <div style={{ opacity: 0.95 }}>{x.plant_name}</div>
@@ -286,6 +291,23 @@ export default function ReceiptPage() {
                 </div>
               ))}
               {!items.length ? <div style={{ marginTop: 10, color: '#666' }}>ไม่มีรายการ</div> : null}
+
+              {items.length > MAX_SLIP_ITEMS ? (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: '10px 12px',
+                    borderRadius: 14,
+                    background: '#fff7ed',
+                    border: '1px solid #fde68a',
+                    color: '#92400e',
+                    fontWeight: 800,
+                    fontSize: 12,
+                  }}
+                >
+                  บิลนี้มี {items.length} รายการ — ใบเสร็จแสดงสูงสุด {MAX_SLIP_ITEMS} รายการเท่านั้น (แนะนำแยกบิล)
+                </div>
+              ) : null}
             </div>
 
             <hr style={{ ...hr, marginTop: 18 }} />
