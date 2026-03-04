@@ -146,9 +146,9 @@ function Mini({ label, children }) {
 }
 
 const wrap = { display: 'grid', gap: 12, maxWidth: 1100, margin: '0 auto', paddingBottom: 30 }
-const panel = { borderRadius: 18, padding: 14, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.06)' }
-const rowCard = { borderRadius: 14, padding: 12, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.04)' }
+const panel = { borderRadius: 18, padding: 14, border: '1px solid rgba(15,23,42,0.12)', background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
+const rowCard = { borderRadius: 16, padding: 12, border: '1px solid rgba(15,23,42,0.12)', background: 'white', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }
 const primaryBtn = { height: 44, padding: '0 16px', borderRadius: 14, border: 'none', background: '#1f8a5b', color: 'white', fontWeight: 950, cursor: 'pointer' }
-const miniBox = { borderRadius: 14, padding: 12, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.04)' }
+const miniBox = { borderRadius: 16, padding: 12, border: '1px solid rgba(15,23,42,0.12)', background: 'white' }
 const kpiRow = { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 12 }
 const kpiRow2 = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 10 }

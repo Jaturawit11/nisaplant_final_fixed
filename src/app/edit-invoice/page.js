@@ -341,7 +341,7 @@ export default function EditInvoicePage() {
           {err ? <pre style={errBox}>{err}</pre> : null}
 
           {results.length ? (
-            <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+            <div className="mt-3 grid gap-2">
               {results.map((r) => (
                 <button
                   key={r.id}

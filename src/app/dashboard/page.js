@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { supabaseBrowser } from '@/lib/supabase/browser'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
@@ -240,7 +240,7 @@ export default function DashboardPage() {
     try {
       const { start, end } = monthRange(new Date())
       const { data: plantsAgg } = await supabase.rpc('dashboard_plants_agg')
-      const { data: monthSum } = await supabase.rpc('get_month_summary')
+      const { data: monthSum } = await supabase.rpc('get_month_summary', { p_start: start, p_end: end })
 
       const { data: inv } = await supabase
         .from('invoices')
@@ -285,6 +285,71 @@ export default function DashboardPage() {
       setLoading(false)
     }
   }
+
+  const loadRef = useRef(null)
+  useEffect(() => {
+    loadRef.current = loadDashboard
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  })
+
+  useEffect(() => {
+    // Realtime refresh (and fallback polling)
+    let timer = null
+    let disposed = false
+
+    const trigger = () => {
+      if (disposed) return
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        try {
+          loadRef.current && loadRef.current()
+        } catch {}
+      }, 350)
+    }
+
+    const ch = supabase
+      .channel('dash-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invoices' },
+        () => trigger()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sale_items' },
+        () => trigger()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses' },
+        () => trigger()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments' },
+        () => trigger()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'plants' },
+        () => trigger()
+      )
+      .subscribe()
+
+    const poll = setInterval(() => {
+      if (document.visibilityState === 'visible') trigger()
+    }, 10000)
+
+    return () => {
+      disposed = true
+      if (timer) clearTimeout(timer)
+      clearInterval(poll)
+      try {
+        supabase.removeChannel(ch)
+      } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     setMounted(true)

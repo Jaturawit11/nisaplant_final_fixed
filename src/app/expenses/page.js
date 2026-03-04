@@ -145,7 +145,7 @@ export default function ExpensesPage() {
         {/* รายการ */}
         <div style={card}>
           <div style={{ fontWeight: 900 }}>รายการล่าสุด</div>
-          <div style={{ marginTop: 10 }}>
+          <div className="mt-3 grid gap-2">
             รวมทั้งหมด: {money(total)} บาท
           </div>
 
@@ -195,8 +195,12 @@ const btn = {
 const row = {
   display: 'flex',
   justifyContent: 'space-between',
-  padding: 8,
-  borderBottom: '1px solid rgba(255,255,255,0.1)'
+  alignItems: 'center',
+  padding: 12,
+  border: '1px solid rgba(15,23,42,0.12)',
+  borderRadius: 16,
+  background: 'white',
+  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
 }
 
 const delBtn = {
