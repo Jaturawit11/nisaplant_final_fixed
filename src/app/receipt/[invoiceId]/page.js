@@ -10,7 +10,6 @@ function isUuid(v) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''))
 }
 
-// ✅ ปรับ 2 รูปนี้ให้ตรง path ในโปรเจกต์นาย
 // แนะนำวางไฟล์ไว้ใน public/brand/...
 const WATERMARK_SRC = '/brand/nisa-leaf.png'
 const PROMPTPAY_QR_SRC = '/brand/promptpay.png'
@@ -29,7 +28,6 @@ function fmtMoney(n, lang) {
 }
 
 function fmtDate(d) {
-  // inv.sale_date มักเป็น 'YYYY-MM-DD' อยู่แล้ว
   return String(d || '-')
 }
 
@@ -87,7 +85,6 @@ export default function ReceiptPage() {
         return
       }
 
-      // ดึงรายการขาย
       const { data: saleItems, error: e2 } = await supabase
         .from('sale_items')
         .select('*')
@@ -111,7 +108,7 @@ export default function ReceiptPage() {
     return () => {
       mounted = false
     }
-  }, [invoiceKey])
+  }, [invoiceKey, supabase])
 
   const totals = useMemo(() => {
     const qty = items.length
@@ -139,28 +136,34 @@ export default function ReceiptPage() {
       scan: th ? 'สแกน QR เพื่อโอนเงินเข้าบัญชี' : 'Scan QR to transfer',
     }
   }, [lang])
+
   async function exportImage() {
     if (!printRef.current) return
-
     const node = printRef.current
 
-    // 1) รอให้รูปทั้งหมดโหลดก่อน (กันรูปไม่ขึ้นในไฟล์ export)
+    // ✅ รอฟอนต์โหลดก่อน (กัน export แล้ว layout/รูปหลุด)
+    try {
+      if (document?.fonts?.ready) await document.fonts.ready
+    } catch {}
+
+    // 1) รอให้รูปทั้งหมดโหลดก่อน
     const images = node.querySelectorAll('img')
     await Promise.all(
       Array.from(images).map((img) => {
-        if (img.complete) return Promise.resolve()
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve()
         return new Promise((resolve) => {
-          img.onload = resolve
-          img.onerror = resolve
+          img.onload = () => resolve()
+          img.onerror = () => resolve()
         })
       })
     )
 
-    // 2) อินไลน์รูปเป็น base64 ชั่วคราว (กัน Safari/Canvas บางเคสทำรูปหาย)
+    // 2) อินไลน์รูปเป็น base64 ชั่วคราว (กัน Safari/Canvas ทำรูปหาย)
     const restore = []
-    async function imgToDataUrl(src) {
+
+    async function imgToDataUrl(absUrl) {
       try {
-        const res = await fetch(src, { cache: 'no-store' })
+        const res = await fetch(absUrl, { cache: 'no-store' })
         const blob = await res.blob()
         return await new Promise((resolve) => {
           const reader = new FileReader()
@@ -174,12 +177,21 @@ export default function ReceiptPage() {
     }
 
     for (const img of Array.from(images)) {
-      const src = img.getAttribute('src') || ''
+      // ✅ ใช้ currentSrc เผื่อ browser เลือก srcset ให้
+      const src = img.currentSrc || img.getAttribute('src') || ''
       if (!src) continue
       if (src.startsWith('data:')) continue
-      // เก็บไว้ restore
-      restore.push([img, src])
-      const abs = src.startsWith('http') ? src : `${window.location.origin}${src.startsWith('/') ? '' : '/'}${src}`
+
+      restore.push([img, img.getAttribute('src') || ''])
+
+      // ✅ ทำ absolute URL แบบถูกต้องเสมอ
+      let abs = ''
+      try {
+        abs = new URL(src, window.location.href).toString()
+      } catch {
+        abs = src.startsWith('http') ? src : `${window.location.origin}${src.startsWith('/') ? '' : '/'}${src}`
+      }
+
       const dataUrl = await imgToDataUrl(abs)
       if (dataUrl) img.setAttribute('src', dataUrl)
     }
@@ -188,7 +200,6 @@ export default function ReceiptPage() {
       const dataUrl = await htmlToImage.toPng(node, {
         cacheBust: true,
         pixelRatio: 2,
-        useCORS: true,
         backgroundColor: '#ffffff',
       })
 
@@ -198,19 +209,22 @@ export default function ReceiptPage() {
       a.click()
     } finally {
       // restore src กลับเหมือนเดิม
-      for (const [img, src] of restore) img.setAttribute('src', src)
+      for (const [img, src] of restore) {
+        if (src) img.setAttribute('src', src)
+      }
     }
   }
 
   const printNow = () => {
-  window.print()
-}
+    window.print()
+  }
 
   return (
     <AppShell title={H.title}>
-      {/* โหลดฟอนต์ Mali */}
+      {/* โหลดฟอนต์ Mali + Responsive + Print */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Mali:wght@300;400;500;600;700&display=swap');
+
         @media print {
           body {
             background: white !important;
@@ -222,6 +236,46 @@ export default function ReceiptPage() {
             margin: 0 !important;
             padding: 0 !important;
           }
+          .receipt-paper {
+            width: 100% !important;
+            max-width: 860px !important;
+            border-radius: 0 !important;
+            padding: 24px !important;
+          }
+        }
+
+        /* ✅ มือถือ: ให้พอดีจอ + ไม่ล้น + ตารางยุบ */
+        .receipt-paper {
+          width: 100%;
+          max-width: 760px;
+          margin: 0 auto;
+          font-family: 'Mali', sans-serif;
+        }
+
+        @media (max-width: 520px) {
+          .receipt-paper {
+            padding: 18px !important;
+            border-radius: 18px !important;
+          }
+          .receipt-title {
+            font-size: 26px !important;
+          }
+          .receipt-table-head,
+          .receipt-table-row {
+            grid-template-columns: 120px 1fr 60px 90px !important;
+            font-size: 13px !important;
+          }
+          .receipt-bottom-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+          .receipt-qr img {
+            width: 150px !important;
+          }
+          .receipt-summary {
+            grid-template-columns: 1fr !important;
+            gap: 8px !important;
+          }
         }
       `}</style>
 
@@ -231,7 +285,10 @@ export default function ReceiptPage() {
       {inv ? (
         <div className="print-wrap" style={{ maxWidth: 860, margin: '0 auto', padding: '14px 12px' }}>
           {/* ปุ่ม (ไม่ออกตอนพิมพ์) */}
-          <div className="no-print" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 10 }}>
+          <div
+            className="no-print"
+            style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 10 }}
+          >
             <button onClick={exportImage} style={btnDark}>
               Export
             </button>
@@ -248,21 +305,17 @@ export default function ReceiptPage() {
             </div>
           </div>
 
-          {/* ✅ ใบเสร็จ: เกือบจตุรัส + ไม่ยืดเป็นผืนผ้า */}
+          {/* ✅ ใบเสร็จ Responsive */}
           <div
             ref={printRef}
+            className="receipt-paper"
             style={{
               ...paper,
-              width: 760, // ✅ บีบลง ไม่ให้กว้างยืด
-              aspectRatio: '1 / 1', // ✅ เกือบจตุรัส
-              margin: '0 auto',
-              fontFamily: "'Mali', sans-serif",
             }}
           >
-            {/* Watermark */}
+            {/* Watermark (✅ ถอด crossOrigin ออก กัน Safari งอแงตอน export) */}
             <img
               src={WATERMARK_SRC}
-              crossOrigin="anonymous"
               alt=""
               style={{
                 position: 'absolute',
@@ -275,14 +328,11 @@ export default function ReceiptPage() {
               }}
             />
 
-            {/* =========================
-                ✅ HEADER (สูงขึ้น + ตามฟอร์ม)
-                ใบเสร็จรับเงิน (กลาง)
-                เลขที่บิล (ซ้าย) | วันที่ (ขวา)
-                ลูกค้า (ซ้าย ใต้เลขบิล)
-               ========================= */}
+            {/* HEADER */}
             <div style={headerBlock}>
-              <div style={headerTitle}>{H.title}</div>
+              <div className="receipt-title" style={headerTitle}>
+                {H.title}
+              </div>
 
               <div style={headerRow2}>
                 <div style={headerLeft}>
@@ -303,7 +353,7 @@ export default function ReceiptPage() {
             <hr style={hr} />
 
             {/* TABLE HEADER */}
-            <div style={tableHead}>
+            <div className="receipt-table-head" style={tableHead}>
               <div>{H.code}</div>
               <div>{H.list}</div>
               <div style={{ textAlign: 'center' }}>{H.amount}</div>
@@ -313,7 +363,7 @@ export default function ReceiptPage() {
             {/* TABLE ROWS */}
             <div style={{ marginTop: 6 }}>
               {items.map((x) => (
-                <div key={x.id} style={tableRow}>
+                <div key={x.id} className="receipt-table-row" style={tableRow}>
                   <div style={{ fontWeight: 700 }}>{x.plant_code}</div>
                   <div style={{ opacity: 0.95 }}>{x.plant_name}</div>
                   <div style={{ textAlign: 'center' }}>1</div>
@@ -325,8 +375,8 @@ export default function ReceiptPage() {
 
             <hr style={{ ...hr, marginTop: 18 }} />
 
-            {/* ✅ SUMMARY: รวมจำนวน + ยอดรวม */}
-            <div style={summaryRow}>
+            {/* SUMMARY */}
+            <div className="receipt-summary" style={summaryRow}>
               <div style={{ fontWeight: 700 }}>รวม</div>
               <div style={{ textAlign: 'right' }}>
                 {H.totalQty}: <b>{totals.qty}</b> &nbsp;&nbsp; {H.total}:{' '}
@@ -335,7 +385,7 @@ export default function ReceiptPage() {
             </div>
 
             {/* PAYMENT + QR */}
-            <div style={bottomGrid}>
+            <div className="receipt-bottom-grid" style={bottomGrid}>
               <div>
                 <div style={{ fontWeight: 800, marginBottom: 8 }}>{H.paymentTitle}</div>
 
@@ -355,8 +405,8 @@ export default function ReceiptPage() {
                 </div>
               </div>
 
-              <div style={{ textAlign: 'center' }}>
-                <img src={PROMPTPAY_QR_SRC} crossOrigin="anonymous" alt="PromptPay QR" style={{ width: 170 }} />
+              <div className="receipt-qr" style={{ textAlign: 'center' }}>
+                <img src={PROMPTPAY_QR_SRC} alt="PromptPay QR" style={{ width: 170 }} />
                 <div style={{ fontSize: 12, marginTop: 6, opacity: 0.85 }}>{H.scan}</div>
               </div>
             </div>
@@ -376,7 +426,7 @@ const paper = {
   background: '#fff',
   color: '#111',
   borderRadius: 22,
-  padding: 34, // ✅ ช่วยให้หัวสูงขึ้นดูแพง
+  padding: 34,
   overflow: 'hidden',
 }
 
@@ -384,7 +434,7 @@ const headerBlock = {
   display: 'grid',
   gap: 10,
   paddingTop: 6,
-  paddingBottom: 18, // ✅ หัวบิลสูงขึ้น
+  paddingBottom: 18,
 }
 
 const headerTitle = {
