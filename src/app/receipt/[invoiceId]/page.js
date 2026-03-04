@@ -202,9 +202,9 @@ export default function ReceiptPage() {
     }
   }
 
-  function printNow() {() {
-    window.print()
-  }
+  const printNow = () => {
+  window.print()
+}
 
   return (
     <AppShell title={H.title}>
