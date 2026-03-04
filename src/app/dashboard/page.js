@@ -239,8 +239,12 @@ export default function DashboardPage() {
     setLoading(true)
     try {
       const { start, end } = monthRange(new Date())
-      const { data: plantsAgg } = await supabase.rpc('dashboard_plants_agg')
-      const { data: monthSum } = await supabase.rpc('get_month_summary', { p_start: start, p_end: end })
+      const { data: plantsAggRaw } = await supabase.rpc('dashboard_plants_agg')
+      const { data: monthSumRaw } = await supabase.rpc('get_month_summary', { p_start: start, p_end: end })
+
+      // ✅ Supabase RPC ที่เป็น RETURNS TABLE จะได้ array เสมอ (แม้มี 1 แถว)
+      const plantsAgg = Array.isArray(plantsAggRaw) ? plantsAggRaw[0] : plantsAggRaw
+      const monthSum = Array.isArray(monthSumRaw) ? monthSumRaw[0] : monthSumRaw
 
       const { data: inv } = await supabase
         .from('invoices')
