@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { supabaseBrowser } from '@/lib/supabase/browser'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
@@ -286,70 +286,7 @@ export default function DashboardPage() {
     }
   }
 
-  const loadRef = useRef(null)
-  useEffect(() => {
-    loadRef.current = loadDashboard
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  })
-
-  useEffect(() => {
-    // Realtime refresh (and fallback polling)
-    let timer = null
-    let disposed = false
-
-    const trigger = () => {
-      if (disposed) return
-      if (timer) clearTimeout(timer)
-      timer = setTimeout(() => {
-        try {
-          loadRef.current && loadRef.current()
-        } catch {}
-      }, 350)
-    }
-
-    const ch = supabase
-      .channel('dash-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'invoices' },
-        () => trigger()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'sale_items' },
-        () => trigger()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'expenses' },
-        () => trigger()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'payments' },
-        () => trigger()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'plants' },
-        () => trigger()
-      )
-      .subscribe()
-
-    const poll = setInterval(() => {
-      if (document.visibilityState === 'visible') trigger()
-    }, 10000)
-
-    return () => {
-      disposed = true
-      if (timer) clearTimeout(timer)
-      clearInterval(poll)
-      try {
-        supabase.removeChannel(ch)
-      } catch {}
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // ✅ ตั้งใจให้รีเฟรช “แบบกดเอง” เท่านั้น (ไม่ realtime / ไม่ polling)
 
   useEffect(() => {
     setMounted(true)
