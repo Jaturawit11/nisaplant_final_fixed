@@ -357,37 +357,51 @@ export default function DashboardPage() {
 
   <div className="grid grid-cols-3 gap-4 mt-4">
 
-  {['GSB','KTB','KBANK'].map(b=>{
+{['GSB','KTB','KBANK'].map(b=>{
 
-    const bank = banks[b]
+const bank = banks[b]
 
-    return(
+const bg = {
+GSB:'/banks/gsb.png',
+KTB:'/banks/ktb.png',
+KBANK:'/banks/kbank.png'
+}
 
-    <div key={b} className="bg-white p-4 rounded-xl border">
+return(
 
-    <div className="text-sm text-gray-500">
-    {b}
-    </div>
+<div
+key={b}
+className="p-4 rounded-xl border relative overflow-hidden bg-white"
+>
 
-    <div className="text-2xl font-bold mt-2">
-    {money(bank.balance)} บาท
-    </div>
+<img
+src={bg[b]}
+className="absolute opacity-10 right-2 bottom-2 w-40 pointer-events-none"
+/>
 
-    <div className="text-sm mt-3">
-    รับเดือนนี้ {money(bank.income)}
-    </div>
+<div className="text-sm text-gray-500 relative z-10">
+{b}
+</div>
 
-    <div className="text-sm">
-    จ่ายเดือนนี้ {money(bank.expense)}
-    </div>
+<div className="text-2xl font-bold mt-2 relative z-10">
+{money(bank.balance)} บาท
+</div>
 
-    </div>
+<div className="text-sm mt-3 relative z-10">
+รับเดือนนี้ {money(bank.income)}
+</div>
 
-    )
+<div className="text-sm relative z-10">
+จ่ายเดือนนี้ {money(bank.expense)}
+</div>
 
-  })}
+</div>
 
-  </div>
+)
+
+})}
+
+</div>
 
   {/* ==========================
   ROW 5
@@ -460,7 +474,9 @@ return(
 {title}
 </div>
 
-<div className="text-3xl font-bold mt-2">
+<div className={text 
+  ? "text-lg font-semibold mt-2 leading-snug"
+  : "text-3xl font-bold mt-2"}>
 
 {text ? value : money(value)}
 
