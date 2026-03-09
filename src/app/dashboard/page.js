@@ -309,7 +309,7 @@ function BankCard({ bankCode, bankData, bgImage }) {
   return (
     <Card tint={tint} className="min-h-[194px] sm:min-h-[206px]">
       <div
-        className="absolute inset-0 bg-no-repeat opacity-[0.09]"
+        className="absolute inset-0 bg-no-repeat opacity-[0.05] blur-[1px]"
         style={{
           backgroundImage: `url(${bgImage})`,
           backgroundPosition: 'center right',
