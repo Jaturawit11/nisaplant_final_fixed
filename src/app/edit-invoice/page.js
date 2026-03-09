@@ -17,6 +17,158 @@ function daysAgoISO(days) {
   return d.toISOString().slice(0, 10)
 }
 
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ')
+}
+
+function Pill({ tone = 'slate', children }) {
+  const map = {
+    emerald: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
+    amber: 'border border-amber-200/90 bg-amber-50 text-amber-700',
+    rose: 'border border-rose-200/90 bg-rose-50 text-rose-700',
+    slate: 'border border-slate-200/90 bg-white text-slate-600',
+    sky: 'border border-sky-200/90 bg-sky-50 text-sky-700',
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight',
+        map[tone] || map.slate
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function ShellCard({ title, subtitle, tint = 'default', right, children, className = '' }) {
+  const tintMap = {
+    default:
+      'border border-white/80 bg-white/92 shadow-[0_8px_24px_rgba(15,23,42,0.05)]',
+    rose:
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,244,247,0.96)_46%,rgba(252,231,243,0.92)_100%)] shadow-[0_8px_24px_rgba(244,63,94,0.06)]',
+    sky:
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,250,255,0.96)_46%,rgba(224,242,254,0.92)_100%)] shadow-[0_8px_24px_rgba(59,130,246,0.06)]',
+    emerald:
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
+    cream:
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
+    lilac:
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
+  }
+
+  return (
+    <section
+      className={cn(
+        'relative overflow-hidden rounded-[30px] p-4 sm:p-5',
+        tintMap[tint] || tintMap.default,
+        className
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_38%)]" />
+      <div className="relative z-10">
+        {(title || subtitle || right) && (
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {title ? (
+                <div className="text-[15px] font-semibold tracking-tight text-slate-900">
+                  {title}
+                </div>
+              ) : null}
+              {subtitle ? (
+                <div className="mt-1 text-xs leading-relaxed text-slate-500">{subtitle}</div>
+              ) : null}
+            </div>
+            {right}
+          </div>
+        )}
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function Field({ label, children, hint }) {
+  return (
+    <label className="block">
+      <div className="mb-2 text-xs font-semibold tracking-tight text-slate-500">{label}</div>
+      {children}
+      {hint ? <div className="mt-1 text-[11px] text-slate-400">{hint}</div> : null}
+    </label>
+  )
+}
+
+function MiniStat({ label, value, tone = 'default' }) {
+  const toneMap = {
+    default: 'border-white/85 bg-white/82',
+    rose: 'border-rose-100/90 bg-white/72',
+    sky: 'border-sky-100/90 bg-white/72',
+    emerald: 'border-emerald-100/90 bg-white/72',
+    cream: 'border-amber-100/90 bg-white/72',
+  }
+
+  return (
+    <div
+      className={cn(
+        'rounded-[22px] border p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
+        toneMap[tone] || toneMap.default
+      )}
+    >
+      <div className="text-xs font-semibold text-slate-500">{label}</div>
+      <div className="mt-2 text-[26px] font-bold tracking-tight text-slate-900">{value}</div>
+    </div>
+  )
+}
+
+function StatusChip({ tone = 'gray', children }) {
+  const map = {
+    green: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
+    yellow: 'border border-amber-200/90 bg-amber-50 text-amber-700',
+    red: 'border border-rose-200/90 bg-rose-50 text-rose-700',
+    gray: 'border border-slate-200/90 bg-white text-slate-600',
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex h-7 items-center rounded-full px-3 text-xs font-semibold whitespace-nowrap',
+        map[tone] || map.gray
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function payTone(status) {
+  const s = String(status || '').toLowerCase()
+  if (s === 'paid') return 'green'
+  if (s === 'partial') return 'yellow'
+  return 'red'
+}
+
+function shipTone(status) {
+  const s = String(status || '').toLowerCase()
+  if (s === 'shipped') return 'green'
+  return 'gray'
+}
+
+const inputClass =
+  'h-11 w-full rounded-2xl border border-slate-200/90 bg-white/85 px-4 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100'
+
+const primaryBtnClass =
+  'inline-flex h-11 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(16,185,129,0.16)] transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60'
+
+const ghostBtnClass =
+  'inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60'
+
+const warnBtnClass =
+  'inline-flex h-11 items-center justify-center rounded-full border border-amber-200/80 bg-amber-500 px-5 text-sm font-semibold text-white transition hover:bg-amber-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60'
+
+const dangerBtnClass =
+  'inline-flex h-11 items-center justify-center rounded-full border border-rose-200/80 bg-rose-500 px-5 text-sm font-semibold text-white transition hover:bg-rose-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60'
+
 export default function EditInvoicePage() {
   const supabase = supabaseBrowser()
 
@@ -348,534 +500,448 @@ export default function EditInvoicePage() {
 
   return (
     <AppShell title="แก้บิล (Edit Invoice)">
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gap: 12 }}>
-        <Card title="ค้นหาบิล / ตัวกรอง">
-          <div style={filterGrid}>
-            <Field label="ค้นหาเลขบิล / ชื่อลูกค้า">
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="พิมพ์เลขบิล เช่น B26020006 หรือชื่อลูกค้า"
-                style={input}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    loadInvoices()
-                  }
-                }}
-              />
-            </Field>
-
-            <Field label="จากวันที่">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                style={input}
-              />
-            </Field>
-
-            <Field label="ถึงวันที่">
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                style={input}
-              />
-            </Field>
-
-            <Field label="สถานะการชำระ">
-              <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} style={input}>
-                <option value="open">ยังไม่จ่าย + จ่ายบางส่วน</option>
-                <option value="unpaid">ยังไม่จ่าย</option>
-                <option value="partial">จ่ายบางส่วน</option>
-                <option value="paid">จ่ายแล้ว</option>
-                <option value="all">ทั้งหมด</option>
-              </select>
-            </Field>
-
-            <Field label="ธนาคาร">
-              <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={input}>
-                <option value="all">ทั้งหมด</option>
-                <option value="GSB">GSB</option>
-                <option value="KTB">KTB</option>
-                <option value="KBANK">KBANK</option>
-              </select>
-            </Field>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
-            <button onClick={loadInvoices} style={btnPrimary} disabled={loading}>
-              {loading ? 'กำลังโหลด...' : 'ค้นหา'}
-            </button>
-
-            <button
-              onClick={() => resetPageForm({ keepFilters: false })}
-              style={btnGhost}
-              disabled={loading}
-            >
-              ล้างฟอร์ม
-            </button>
-          </div>
-
-          {err ? <pre style={errBox}>{err}</pre> : null}
-        </Card>
-
-        <Card title={`รายการบิล (${results.length})`}>
-          {!results.length ? (
-            <div style={{ opacity: 0.8 }}>ไม่พบบิลตามเงื่อนไข</div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={table}>
-                <thead>
-                  <tr>
-                    <th style={th}>เลขบิล</th>
-                    <th style={th}>วันที่</th>
-                    <th style={th}>ลูกค้า</th>
-                    <th style={thRight}>ยอดรวม</th>
-                    <th style={th}>ชำระเงิน</th>
-                    <th style={th}>จัดส่ง</th>
-                    <th style={th}>ธนาคาร</th>
-                    <th style={th}>จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((r) => (
-                    <tr
-                      key={r.id}
-                      style={{
-                        ...tr,
-                        background:
-                          selected?.id === r.id ? 'rgba(31,138,91,0.12)' : 'transparent',
-                      }}
-                    >
-                      <td style={tdStrong}>{r.invoice_no}</td>
-                      <td style={td}>{r.sale_date}</td>
-                      <td style={td}>{r.customer_name || '-'}</td>
-                      <td style={tdRight}>{money(r.total_price)}</td>
-                      <td style={td}>
-                        <StatusChip tone={payTone(r.pay_status)}>
-                          {PAY_THAI[r.pay_status] || r.pay_status}
-                        </StatusChip>
-                      </td>
-                      <td style={td}>
-                        <StatusChip tone={shipTone(r.ship_status)}>
-                          {SHIP_THAI[r.ship_status] || r.ship_status}
-                        </StatusChip>
-                      </td>
-                      <td style={td}>{r.bank || '-'}</td>
-                      <td style={td}>
-                        <button onClick={() => openInvoice(r)} style={btnSmall}>
-                          แก้ไข
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-
-        {selected ? (
-          <>
-            <Card title={`รายละเอียดบิล: ${selected.invoice_no}`}>
-              {isCancelled ? (
-                <div style={badgeCancelled}>
-                  บิลนี้ถูกยกเลิกแล้ว (CANCELLED) — โหมดดูอย่างเดียว
-                </div>
-              ) : null}
-
-              <div style={{ display: 'grid', gap: 8, marginTop: isCancelled ? 10 : 0 }}>
-                <Row k="วันที่ขาย" v={selected.sale_date} />
-                <Row k="ลูกค้า" v={selected.customer_name || '-'} />
-                <Row k="ธนาคาร" v={selected.bank || '-'} />
-                <Row k="สถานะชำระเงิน" v={PAY_THAI[selected.pay_status] || selected.pay_status} />
-                <Row k="สถานะจัดส่ง" v={SHIP_THAI[selected.ship_status] || selected.ship_status} />
-                <Row k="invoice_status" v={selected.invoice_status || '-'} />
+      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+        <div className="mx-auto grid max-w-6xl gap-3 sm:gap-4">
+          <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                NisaPlant Edit Invoice
               </div>
+              <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
+                แก้ไขบิล
+              </div>
+              <div className="mt-1 text-sm leading-relaxed text-slate-500">
+                ธีมเดียวกับทุกหน้า เน้นมือถือ อ่านง่าย และคง logic เดิมไว้
+              </div>
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 12 }}>
-                <Mini label="ต้นทุนรวม">{money(totals.totalCost)}</Mini>
-                <Mini label="ยอดรวม">{money(totals.totalPrice)}</Mini>
-                <Mini label="กำไร">{money(totals.totalProfit)}</Mini>
+            <div className="flex flex-wrap gap-2">
+              <Pill tone="sky">ผลลัพธ์ {results.length}</Pill>
+              {selected ? (
+                <Pill tone={isCancelled ? 'rose' : 'emerald'}>
+                  {selected.invoice_no}
+                </Pill>
+              ) : null}
+            </div>
+          </div>
+
+          <ShellCard
+            title="ค้นหาบิล / ตัวกรอง"
+            subtitle="ค้นหาจากเลขบิล ชื่อลูกค้า ช่วงวันที่ สถานะ และธนาคาร"
+            tint="default"
+          >
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <Field label="ค้นหาเลขบิล / ชื่อลูกค้า">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="เช่น B26020006 หรือชื่อลูกค้า"
+                  className={inputClass}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      loadInvoices()
+                    }
+                  }}
+                />
+              </Field>
+
+              <Field label="จากวันที่">
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="ถึงวันที่">
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="สถานะการชำระ">
+                <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} className={inputClass}>
+                  <option value="open">ยังไม่จ่าย + จ่ายบางส่วน</option>
+                  <option value="unpaid">ยังไม่จ่าย</option>
+                  <option value="partial">จ่ายบางส่วน</option>
+                  <option value="paid">จ่ายแล้ว</option>
+                  <option value="all">ทั้งหมด</option>
+                </select>
+              </Field>
+
+              <Field label="ธนาคาร">
+                <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} className={inputClass}>
+                  <option value="all">ทั้งหมด</option>
+                  <option value="GSB">GSB</option>
+                  <option value="KTB">KTB</option>
+                  <option value="KBANK">KBANK</option>
+                </select>
+              </Field>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={loadInvoices} className={primaryBtnClass} disabled={loading}>
+                {loading ? 'กำลังโหลด...' : 'ค้นหา'}
+              </button>
+
+              <button
+                onClick={() => resetPageForm({ keepFilters: false })}
+                className={ghostBtnClass}
+                disabled={loading}
+              >
+                ล้างฟอร์ม
+              </button>
+            </div>
+
+            {err ? (
+              <div className="mt-4 rounded-[22px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 whitespace-pre-wrap">
+                {err}
+              </div>
+            ) : null}
+          </ShellCard>
+
+          <ShellCard
+            title={`รายการบิล (${results.length})`}
+            subtitle="แตะเลือกบิลเพื่อดูรายละเอียดและแก้ไข"
+            tint="sky"
+          >
+            {!results.length ? (
+              <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
+                ไม่พบบิลตามเงื่อนไข
+              </div>
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto xl:block">
+                  <table className="w-full border-separate border-spacing-0">
+                    <thead>
+                      <tr>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">เลขบิล</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">วันที่</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">ลูกค้า</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-right text-xs font-semibold text-slate-400">ยอดรวม</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">ชำระเงิน</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">จัดส่ง</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">ธนาคาร</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.map((r) => (
+                        <tr
+                          key={r.id}
+                          className={cn(
+                            'transition',
+                            selected?.id === r.id ? 'bg-emerald-50/70' : ''
+                          )}
+                        >
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm font-extrabold text-slate-900">
+                            {r.invoice_no}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm text-slate-600">
+                            {r.sale_date}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm text-slate-600">
+                            {r.customer_name || '-'}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-right text-sm font-bold text-slate-900">
+                            {money(r.total_price)}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm">
+                            <StatusChip tone={payTone(r.pay_status)}>
+                              {PAY_THAI[r.pay_status] || r.pay_status}
+                            </StatusChip>
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm">
+                            <StatusChip tone={shipTone(r.ship_status)}>
+                              {SHIP_THAI[r.ship_status] || r.ship_status}
+                            </StatusChip>
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm text-slate-600">
+                            {r.bank || '-'}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm">
+                            <button onClick={() => openInvoice(r)} className={primaryBtnClass.replace('h-11', 'h-9').replace('px-5', 'px-4')}>
+                              แก้ไข
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid gap-2 xl:hidden">
+                  {results.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => openInvoice(r)}
+                      className={cn(
+                        'rounded-[22px] border px-4 py-4 text-left shadow-[0_4px_14px_rgba(15,23,42,0.04)] transition',
+                        selected?.id === r.id
+                          ? 'border-emerald-200 bg-emerald-50'
+                          : 'border-white/85 bg-white/82 hover:bg-slate-50'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
+                            {r.invoice_no}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {r.sale_date} • {r.customer_name || '-'}
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <StatusChip tone={payTone(r.pay_status)}>
+                              {PAY_THAI[r.pay_status] || r.pay_status}
+                            </StatusChip>
+                            <StatusChip tone={shipTone(r.ship_status)}>
+                              {SHIP_THAI[r.ship_status] || r.ship_status}
+                            </StatusChip>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <div className="text-sm font-bold text-slate-900">
+                            {money(r.total_price)}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">{r.bank || '-'}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </ShellCard>
+
+          {selected ? (
+            <>
+              <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1fr_1fr]">
+                <ShellCard
+                  title={`รายละเอียดบิล: ${selected.invoice_no}`}
+                  subtitle="ข้อมูลสรุปของบิลที่เลือก"
+                  tint="rose"
+                >
+                  {isCancelled ? (
+                    <div className="mb-4 rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+                      บิลนี้ถูกยกเลิกแล้ว (CANCELLED) — โหมดดูอย่างเดียว
+                    </div>
+                  ) : null}
+
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white/70 px-4 py-3">
+                      <span className="text-sm text-slate-500">วันที่ขาย</span>
+                      <span className="text-sm font-bold text-slate-900">{selected.sale_date}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white/70 px-4 py-3">
+                      <span className="text-sm text-slate-500">ลูกค้า</span>
+                      <span className="text-sm font-bold text-slate-900">{selected.customer_name || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white/70 px-4 py-3">
+                      <span className="text-sm text-slate-500">ธนาคาร</span>
+                      <span className="text-sm font-bold text-slate-900">{selected.bank || '-'}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white/70 px-4 py-3">
+                      <span className="text-sm text-slate-500">สถานะชำระเงิน</span>
+                      <StatusChip tone={payTone(selected.pay_status)}>
+                        {PAY_THAI[selected.pay_status] || selected.pay_status}
+                      </StatusChip>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white/70 px-4 py-3">
+                      <span className="text-sm text-slate-500">สถานะจัดส่ง</span>
+                      <StatusChip tone={shipTone(selected.ship_status)}>
+                        {SHIP_THAI[selected.ship_status] || selected.ship_status}
+                      </StatusChip>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[18px] bg-white/70 px-4 py-3">
+                      <span className="text-sm text-slate-500">invoice_status</span>
+                      <span className="text-sm font-bold text-slate-900">{selected.invoice_status || '-'}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                    <MiniStat label="ต้นทุนรวม" value={money(totals.totalCost)} tone="default" />
+                    <MiniStat label="ยอดรวม" value={money(totals.totalPrice)} tone="sky" />
+                    <MiniStat label="กำไร" value={money(totals.totalProfit)} tone="emerald" />
+                  </div>
+
+                  {!isCancelled ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button onClick={rpcCancelInvoice} className={dangerBtnClass} disabled={loading}>
+                        ยกเลิกทั้งบิล (คืนสต๊อก)
+                      </button>
+                      <button onClick={rpcRemoveItems} className={warnBtnClass} disabled={loading}>
+                        ยกเลิกรายการที่เลือก
+                      </button>
+                    </div>
+                  ) : null}
+                </ShellCard>
+
+                <ShellCard
+                  title="รายการในบิล"
+                  subtitle="เลือกรายการเพื่อลบออกจากบิลและคืนสต๊อก"
+                  tint="default"
+                  right={<Pill tone="slate">{items.length} รายการ</Pill>}
+                >
+                  {!items.length ? (
+                    <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
+                      ไม่มี sale_items (หรือถูกยกเลิกหมดแล้ว)
+                    </div>
+                  ) : (
+                    <div className="grid gap-2">
+                      {items.map((it) => (
+                        <label
+                          key={it.id}
+                          className={cn(
+                            'flex items-center gap-3 rounded-[22px] border px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
+                            isCancelled
+                              ? 'border-slate-200 bg-slate-50 opacity-65'
+                              : selectedItemIds.has(it.id)
+                              ? 'border-amber-200 bg-amber-50'
+                              : 'border-white/85 bg-white/82'
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            disabled={isCancelled}
+                            checked={selectedItemIds.has(it.id)}
+                            onChange={() => toggleItem(it.id)}
+                            className="h-4 w-4"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
+                              {it.plant_code}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-500">{it.plant_name}</div>
+                          </div>
+
+                          <div className="shrink-0 text-right">
+                            <div className="text-sm font-bold text-slate-900">{money(it.price)}</div>
+                            <div className="mt-1 text-[11px] text-slate-500">
+                              ทุน {money(it.cost)} • กำไร {money(it.profit)}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </ShellCard>
               </div>
 
               {!isCancelled ? (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-                  <button onClick={rpcCancelInvoice} style={btnDanger} disabled={loading}>
-                    ยกเลิกทั้งบิล (คืนสต๊อก)
-                  </button>
-                  <button onClick={rpcRemoveItems} style={btnWarn} disabled={loading}>
-                    ยกเลิกรายการที่เลือก
-                  </button>
+                <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1fr_1fr]">
+                  <ShellCard
+                    title="อัปเดตสถานะ"
+                    subtitle="แก้ข้อมูลลูกค้า การชำระ การจัดส่ง ธนาคาร และวิธีรับเงิน"
+                    tint="emerald"
+                  >
+                    <div className="grid gap-3">
+                      <Field label="ชื่อลูกค้า">
+                        <input
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                          placeholder="พิมพ์ชื่อลูกค้า..."
+                          className={inputClass}
+                        />
+                      </Field>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Field label="การชำระเงิน">
+                          <select value={payStatus} onChange={(e) => setPayStatus(e.target.value)} className={inputClass}>
+                            <option value="unpaid">{PAY_THAI.unpaid}</option>
+                            <option value="partial">{PAY_THAI.partial}</option>
+                            <option value="paid">{PAY_THAI.paid}</option>
+                          </select>
+                        </Field>
+
+                        <Field label="การจัดส่ง">
+                          <select value={shipStatus} onChange={(e) => setShipStatus(e.target.value)} className={inputClass}>
+                            <option value="not_shipped">{SHIP_THAI.not_shipped}</option>
+                            <option value="shipped">{SHIP_THAI.shipped}</option>
+                          </select>
+                        </Field>
+
+                        <Field label="ธนาคารรับเงิน">
+                          <select value={bank} onChange={(e) => setBank(e.target.value)} className={inputClass}>
+                            <option value="GSB">GSB (ธุรกิจ)</option>
+                            <option value="KTB">KTB (ส่วนตัว)</option>
+                            <option value="KBANK">KBANK (เก็บกำไร)</option>
+                          </select>
+                        </Field>
+
+                        <Field label="วิธีรับเงิน">
+                          <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className={inputClass}>
+                            <option value="transfer">โอน</option>
+                            <option value="cash">เงินสด</option>
+                            <option value="qr">สแกน QR</option>
+                          </select>
+                        </Field>
+                      </div>
+
+                      <Field label="วันที่รับเงิน (ถ้ามี)">
+                        <input
+                          value={paidDate}
+                          onChange={(e) => setPaidDate(e.target.value)}
+                          type="date"
+                          className={inputClass}
+                        />
+                      </Field>
+
+                      <button onClick={rpcUpdateStatus} className={primaryBtnClass} disabled={loading}>
+                        บันทึกสถานะ
+                      </button>
+                    </div>
+                  </ShellCard>
+
+                  <ShellCard
+                    title="เคลมเงิน"
+                    subtitle="รองรับการคืนเงินบางส่วนหรือเต็มจำนวน"
+                    tint="cream"
+                  >
+                    <div className="grid gap-3">
+                      <Field label="ประเภทการคืนเงิน">
+                        <select value={refundType} onChange={(e) => setRefundType(e.target.value)} className={inputClass}>
+                          <option value="partial">เคลมบางส่วน</option>
+                          <option value="full">เคลมเต็มจำนวน</option>
+                        </select>
+                      </Field>
+
+                      <Field label="ยอดคืนเงิน (บาท)">
+                        <input
+                          value={refundAmount}
+                          onChange={(e) => setRefundAmount(e.target.value)}
+                          inputMode="numeric"
+                          placeholder="เช่น 100"
+                          className={inputClass}
+                        />
+                      </Field>
+
+                      <button onClick={rpcRefund} className={warnBtnClass} disabled={loading}>
+                        บันทึกเคลมเงิน
+                      </button>
+
+                      <div className="rounded-[20px] border border-white/85 bg-white/70 px-4 py-3 text-xs leading-6 text-slate-500">
+                        * ตอนนี้ระบบจะปรับ pay_status อัตโนมัติ
+                        <br />
+                        full → ยังไม่จ่าย
+                        <br />
+                        partial → จ่ายบางส่วน
+                      </div>
+                    </div>
+                  </ShellCard>
                 </div>
               ) : null}
-            </Card>
-
-            <Card title="รายการในบิล (เลือกเพื่อลบ/คืนสต๊อก)">
-              {!items.length ? (
-                <div style={{ opacity: 0.8 }}>ไม่มี sale_items (หรือถูกยกเลิกหมดแล้ว)</div>
-              ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
-                  {items.map((it) => (
-                    <label
-                      key={it.id}
-                      style={{
-                        display: 'flex',
-                        gap: 10,
-                        alignItems: 'center',
-                        padding: 12,
-                        borderRadius: 16,
-                        border: '1px solid rgba(255,255,255,0.12)',
-                        background: 'rgba(255,255,255,0.04)',
-                        opacity: isCancelled ? 0.65 : 1,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        disabled={isCancelled}
-                        checked={selectedItemIds.has(it.id)}
-                        onChange={() => toggleItem(it.id)}
-                        style={{ width: 18, height: 18 }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 900 }}>{it.plant_code}</div>
-                        <div style={{ fontSize: 13, opacity: 0.85 }}>{it.plant_name}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 900 }}>{money(it.price)}</div>
-                        <div style={{ fontSize: 12, opacity: 0.8 }}>
-                          ทุน {money(it.cost)} • กำไร {money(it.profit)}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </Card>
-
-            {!isCancelled ? (
-              <Card title="อัปเดตสถานะ (ไทย)">
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <Field label="ชื่อลูกค้า">
-                    <input
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="พิมพ์ชื่อลูกค้า..."
-                      style={input}
-                    />
-                  </Field>
-
-                  <Field label="การชำระเงิน">
-                    <select value={payStatus} onChange={(e) => setPayStatus(e.target.value)} style={input}>
-                      <option value="unpaid">{PAY_THAI.unpaid}</option>
-                      <option value="partial">{PAY_THAI.partial}</option>
-                      <option value="paid">{PAY_THAI.paid}</option>
-                    </select>
-                  </Field>
-
-                  <Field label="การจัดส่ง">
-                    <select value={shipStatus} onChange={(e) => setShipStatus(e.target.value)} style={input}>
-                      <option value="not_shipped">{SHIP_THAI.not_shipped}</option>
-                      <option value="shipped">{SHIP_THAI.shipped}</option>
-                    </select>
-                  </Field>
-
-                  <Field label="ธนาคารรับเงิน">
-                    <select value={bank} onChange={(e) => setBank(e.target.value)} style={input}>
-                      <option value="GSB">GSB (ธุรกิจ)</option>
-                      <option value="KTB">KTB (ส่วนตัว)</option>
-                      <option value="KBANK">KBANK (เก็บกำไร)</option>
-                    </select>
-                  </Field>
-
-                  <Field label="วิธีรับเงิน">
-                    <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={input}>
-                      <option value="transfer">โอน</option>
-                      <option value="cash">เงินสด</option>
-                      <option value="qr">สแกน QR</option>
-                    </select>
-                  </Field>
-
-                  <Field label="วันที่รับเงิน (ถ้ามี)">
-                    <input
-                      value={paidDate}
-                      onChange={(e) => setPaidDate(e.target.value)}
-                      type="date"
-                      style={input}
-                    />
-                  </Field>
-
-                  <button onClick={rpcUpdateStatus} style={btnPrimary} disabled={loading}>
-                    บันทึกสถานะ
-                  </button>
-                </div>
-              </Card>
-            ) : null}
-
-            {!isCancelled ? (
-              <Card title="เคลมเงิน (บางส่วน/เต็มจำนวน)">
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <Field label="ประเภทการคืนเงิน">
-                    <select value={refundType} onChange={(e) => setRefundType(e.target.value)} style={input}>
-                      <option value="partial">เคลมบางส่วน</option>
-                      <option value="full">เคลมเต็มจำนวน</option>
-                    </select>
-                  </Field>
-
-                  <Field label="ยอดคืนเงิน (บาท)">
-                    <input
-                      value={refundAmount}
-                      onChange={(e) => setRefundAmount(e.target.value)}
-                      inputMode="numeric"
-                      placeholder="เช่น 100"
-                      style={input}
-                    />
-                  </Field>
-
-                  <button onClick={rpcRefund} style={btnWarn} disabled={loading}>
-                    บันทึกเคลมเงิน
-                  </button>
-
-                  <div style={{ fontSize: 12, opacity: 0.75 }}>
-                    * ตอนนี้ระบบจะปรับ pay_status อัตโนมัติ (full → ยังไม่จ่าย, partial → จ่ายบางส่วน)
-                  </div>
-                </div>
-              </Card>
-            ) : null}
-          </>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
     </AppShell>
   )
-}
-
-function payTone(status) {
-  const s = String(status || '').toLowerCase()
-  if (s === 'paid') return 'green'
-  if (s === 'partial') return 'yellow'
-  return 'red'
-}
-
-function shipTone(status) {
-  const s = String(status || '').toLowerCase()
-  if (s === 'shipped') return 'green'
-  return 'gray'
-}
-
-function StatusChip({ tone = 'gray', children }) {
-  const map = {
-    green: {
-      background: 'rgba(16,185,129,0.15)',
-      border: '1px solid rgba(16,185,129,0.28)',
-      color: '#b7f7dd',
-    },
-    yellow: {
-      background: 'rgba(245,158,11,0.15)',
-      border: '1px solid rgba(245,158,11,0.28)',
-      color: '#ffe3a1',
-    },
-    red: {
-      background: 'rgba(239,68,68,0.15)',
-      border: '1px solid rgba(239,68,68,0.28)',
-      color: '#ffc2c2',
-    },
-    gray: {
-      background: 'rgba(255,255,255,0.08)',
-      border: '1px solid rgba(255,255,255,0.14)',
-      color: 'white',
-    },
-  }
-
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 28,
-        padding: '0 10px',
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 900,
-        whiteSpace: 'nowrap',
-        ...(map[tone] || map.gray),
-      }}
-    >
-      {children}
-    </span>
-  )
-}
-
-function Card({ title, children }) {
-  return (
-    <div
-      style={{
-        background: 'rgba(255,255,255,0.06)',
-        border: '1px solid rgba(255,255,255,0.10)',
-        borderRadius: 18,
-        padding: 14,
-      }}
-    >
-      <div style={{ fontWeight: 900, marginBottom: 10 }}>{title}</div>
-      {children}
-    </div>
-  )
-}
-
-function Field({ label, children }) {
-  return (
-    <label style={{ display: 'block' }}>
-      <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>{label}</div>
-      {children}
-    </label>
-  )
-}
-
-function Row({ k, v }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-      <div style={{ opacity: 0.8 }}>{k}</div>
-      <div style={{ fontWeight: 900 }}>{v}</div>
-    </div>
-  )
-}
-
-function Mini({ label, children }) {
-  return (
-    <div style={{ border: '1px solid rgba(255,255,255,0.10)', borderRadius: 16, padding: 12 }}>
-      <div style={{ fontSize: 12, opacity: 0.85 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 900 }}>{children}</div>
-    </div>
-  )
-}
-
-const filterGrid = {
-  display: 'grid',
-  gap: 10,
-  gridTemplateColumns: 'minmax(260px,2fr) repeat(4, minmax(160px,1fr))',
-}
-
-const input = {
-  width: '100%',
-  height: 44,
-  padding: '0 12px',
-  borderRadius: 14,
-  border: '1px solid rgba(0,0,0,0.2)',
-}
-
-const btnPrimary = {
-  height: 44,
-  padding: '0 14px',
-  borderRadius: 14,
-  border: 'none',
-  background: '#1f8a5b',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const btnWarn = {
-  height: 44,
-  padding: '0 14px',
-  borderRadius: 14,
-  border: 'none',
-  background: '#a67c00',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const btnDanger = {
-  height: 44,
-  padding: '0 14px',
-  borderRadius: 14,
-  border: 'none',
-  background: '#b02a2a',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const btnGhost = {
-  height: 44,
-  padding: '0 14px',
-  borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.20)',
-  background: 'transparent',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const btnSmall = {
-  height: 34,
-  padding: '0 12px',
-  borderRadius: 12,
-  border: 'none',
-  background: '#1f8a5b',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const badgeCancelled = {
-  border: '1px solid rgba(255,60,60,0.45)',
-  background: 'rgba(255,60,60,0.10)',
-  color: 'white',
-  borderRadius: 14,
-  padding: '10px 12px',
-  fontWeight: 900,
-}
-
-const errBox = {
-  marginTop: 10,
-  color: '#ffb4b4',
-  whiteSpace: 'pre-wrap',
-  background: 'rgba(0,0,0,0.25)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: 14,
-  padding: 10,
-}
-
-const table = {
-  width: '100%',
-  borderCollapse: 'separate',
-  borderSpacing: 0,
-}
-
-const th = {
-  textAlign: 'left',
-  fontSize: 12,
-  opacity: 0.8,
-  padding: '10px 10px',
-  borderBottom: '1px solid rgba(255,255,255,0.12)',
-  whiteSpace: 'nowrap',
-}
-
-const thRight = {
-  ...th,
-  textAlign: 'right',
-}
-
-const tr = {
-  borderBottom: '1px solid rgba(255,255,255,0.06)',
-}
-
-const td = {
-  padding: '12px 10px',
-  borderBottom: '1px solid rgba(255,255,255,0.06)',
-  fontSize: 13,
-  verticalAlign: 'middle',
-}
-
-const tdStrong = {
-  ...td,
-  fontWeight: 900,
-}
-
-const tdRight = {
-  ...td,
-  textAlign: 'right',
-  fontWeight: 900,
 }
