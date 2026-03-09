@@ -20,24 +20,18 @@ function monthRange(date = new Date()) {
 
 function Pill({ tone = 'slate', children }) {
   const map = {
-    emerald:
-      'border border-emerald-200/80 bg-emerald-50/95 text-emerald-700 shadow-[0_1px_2px_rgba(16,185,129,0.08)]',
-    amber:
-      'border border-amber-200/80 bg-amber-50/95 text-amber-700 shadow-[0_1px_2px_rgba(245,158,11,0.08)]',
-    rose:
-      'border border-rose-200/80 bg-rose-50/95 text-rose-700 shadow-[0_1px_2px_rgba(244,63,94,0.08)]',
-    slate:
-      'border border-slate-200/80 bg-white/90 text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)]',
-    teal:
-      'border border-teal-200/80 bg-teal-50/95 text-teal-700 shadow-[0_1px_2px_rgba(20,184,166,0.08)]',
-    sky:
-      'border border-sky-200/80 bg-sky-50/95 text-sky-700 shadow-[0_1px_2px_rgba(14,165,233,0.08)]',
+    emerald: 'border border-emerald-200/80 bg-emerald-50 text-emerald-700',
+    amber: 'border border-amber-200/80 bg-amber-50 text-amber-700',
+    rose: 'border border-rose-200/80 bg-rose-50 text-rose-700',
+    slate: 'border border-slate-200/80 bg-white text-slate-600',
+    teal: 'border border-teal-200/80 bg-teal-50 text-teal-700',
+    sky: 'border border-sky-200/80 bg-sky-50 text-sky-700',
   }
 
   return (
     <span
       className={
-        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight backdrop-blur-sm ' +
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight ' +
         (map[tone] || map.slate)
       }
     >
@@ -49,17 +43,17 @@ function Pill({ tone = 'slate', children }) {
 function Card({ children, className = '', style, tint = 'default' }) {
   const tintMap = {
     default:
-      'border border-white/75 bg-white/84 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl',
+      'border border-white/80 bg-white/92 shadow-[0_8px_24px_rgba(15,23,42,0.05)]',
     rose:
-      'border border-rose-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(255,244,247,0.95)_45%,rgba(252,231,243,0.86)_100%)] shadow-[0_12px_32px_rgba(244,63,94,0.08)] backdrop-blur-xl',
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,244,247,0.96)_46%,rgba(252,231,243,0.92)_100%)] shadow-[0_8px_24px_rgba(244,63,94,0.06)]',
     sky:
-      'border border-sky-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(245,250,255,0.95)_42%,rgba(224,242,254,0.88)_100%)] shadow-[0_12px_32px_rgba(59,130,246,0.08)] backdrop-blur-xl',
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,250,255,0.96)_46%,rgba(224,242,254,0.92)_100%)] shadow-[0_8px_24px_rgba(59,130,246,0.06)]',
     emerald:
-      'border border-emerald-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(245,255,250,0.95)_42%,rgba(209,250,229,0.88)_100%)] shadow-[0_12px_32px_rgba(16,185,129,0.08)] backdrop-blur-xl',
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
     cream:
-      'border border-amber-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(255,251,245,0.95)_42%,rgba(255,247,237,0.88)_100%)] shadow-[0_12px_32px_rgba(245,158,11,0.08)] backdrop-blur-xl',
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
     lilac:
-      'border border-violet-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(249,247,255,0.95)_42%,rgba(243,232,255,0.88)_100%)] shadow-[0_12px_32px_rgba(139,92,246,0.08)] backdrop-blur-xl',
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
   }
 
   return (
@@ -72,8 +66,8 @@ function Card({ children, className = '', style, tint = 'default' }) {
         className
       }
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.72),transparent_38%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.14)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_38%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.12)_100%)]" />
       {children}
     </div>
   )
@@ -97,7 +91,7 @@ function PageHeader({ title, loading, onReload }) {
 
         <button
           onClick={onReload}
-          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(16,185,129,0.18)] transition hover:bg-emerald-600 active:scale-[0.99]"
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(16,185,129,0.16)] transition hover:bg-emerald-600 active:scale-[0.99]"
         >
           {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
         </button>
@@ -148,11 +142,20 @@ function SmallStatCard({ title, value, suffix = '', tint = 'default' }) {
   )
 }
 
-function TextCard({ title, text, tint = 'default' }) {
+function TextCard({ title, text, tint = 'default', icon = '✦' }) {
   return (
     <Card tint={tint} className="min-h-[150px] sm:min-h-[162px]">
-      <div className="relative z-10">
+      <div className="pointer-events-none absolute right-5 top-4 text-[42px] font-light text-slate-300/35">
+        {icon}
+      </div>
+
+      <div className="relative z-10 flex h-full flex-col">
         <div className="text-sm font-medium text-slate-500">{title}</div>
+
+        <div className="mt-3 inline-flex w-fit rounded-full border border-white/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-slate-500">
+          Insight
+        </div>
+
         <div className="mt-4 text-base font-semibold leading-7 tracking-tight text-slate-900 sm:text-[17px]">
           {text || '-'}
         </div>
@@ -167,7 +170,7 @@ function SalaryCard({ title, total, time, nisa, tint = 'default' }) {
       <div className="relative z-10">
         <div className="text-sm font-medium text-slate-500">{title}</div>
 
-        <div className="mt-2 inline-flex rounded-full border border-white/80 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm backdrop-blur">
+        <div className="mt-2 inline-flex rounded-full border border-white/80 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-500">
           Time {money(time)} / Nisa {money(nisa)}
         </div>
 
@@ -201,13 +204,13 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
             ) : null}
           </div>
 
-          <span className="inline-flex items-center rounded-full border border-white/85 bg-white/82 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm backdrop-blur">
+          <span className="inline-flex items-center rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600">
             รวม {money(total)}
           </span>
         </div>
 
         <div className="mt-4">
-          <div className="relative overflow-hidden rounded-[26px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.66)_100%)] ring-1 ring-slate-900/5">
+          <div className="relative overflow-hidden rounded-[26px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.9)_0%,rgba(255,255,255,0.72)_100%)] ring-1 ring-slate-900/5">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),transparent_55%)]" />
             <div className="relative h-[250px] p-3 sm:h-[275px] sm:p-4">
               <ResponsiveContainer width="100%" height="100%">
@@ -235,7 +238,7 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
             </div>
 
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-5">
-              <div className="rounded-[24px] border border-white/85 bg-white/82 px-5 py-3 text-center shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+              <div className="rounded-[24px] border border-white/88 bg-white/88 px-5 py-3 text-center shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
                 <div className="text-[30px] font-extrabold leading-none tracking-tight text-slate-900 sm:text-[34px]">
                   {centerTop}
                 </div>
@@ -250,7 +253,7 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
             {data.map((d, i) => (
               <span
                 key={d.name}
-                className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur sm:text-[12px]"
+                className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/86 px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm sm:text-[12px]"
               >
                 <span
                   className="h-2.5 w-2.5 rounded-full"
@@ -267,10 +270,18 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
   )
 }
 
-function UnpaidCard({ amount, unpaidCount, partialCount }) {
+function UnpaidCard({ amount, unpaidCount, partialCount, monthSales }) {
+  const percent =
+    Number(monthSales) > 0
+      ? Math.min(100, Math.round((Number(amount || 0) / Number(monthSales || 0)) * 100))
+      : 0
+
   return (
     <Card tint="rose" className="min-h-[250px] lg:min-h-full">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-[radial-gradient(circle_at_bottom_right,rgba(244,63,94,0.10),transparent_55%)]" />
+      <div className="pointer-events-none absolute right-5 top-5 text-[56px] text-rose-200/30">
+        ₿
+      </div>
+
       <div className="relative z-10 flex h-full flex-col">
         <div className="text-sm font-medium text-slate-500">ยอดค้างชำระ</div>
 
@@ -286,7 +297,20 @@ function UnpaidCard({ amount, unpaidCount, partialCount }) {
           <Pill tone="amber">partial {money(partialCount)}</Pill>
         </div>
 
-        <div className="mt-auto pt-8 text-xs leading-relaxed text-slate-400">
+        <div className="mt-5">
+          <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold">
+            <span className="text-slate-500">สัดส่วนเทียบยอดขายเดือนนี้</span>
+            <span className="text-slate-700">{percent}%</span>
+          </div>
+          <div className="h-2.5 w-full overflow-hidden rounded-full bg-rose-100">
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#fb7185_0%,#f43f5e_100%)]"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[20px] border border-white/85 bg-white/70 px-4 py-3 text-sm leading-6 text-slate-500">
           ติดตามยอดค้างชำระก่อนซื้อเพิ่ม จะช่วยลดความเสี่ยงของ cashflow
         </div>
       </div>
@@ -317,7 +341,7 @@ function BankCard({ bankCode, bankData, bgImage }) {
         }}
       />
 
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92),transparent_42%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.9),transparent_42%)]" />
 
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
@@ -335,7 +359,7 @@ function BankCard({ bankCode, bankData, bgImage }) {
           <Pill tone={tone}>Balance</Pill>
         </div>
 
-        <div className="mt-5 space-y-2 rounded-[22px] border border-white/78 bg-white/58 p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur">
+        <div className="mt-5 space-y-2 rounded-[22px] border border-white/82 bg-white/62 p-3">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-slate-500">รับเดือนนี้</span>
             <span className="font-semibold text-slate-900">{money(bankData.income)}</span>
@@ -607,13 +631,13 @@ export default function DashboardPage() {
         {(ok || err) && (
           <div className="mb-4 sm:mb-5">
             {ok ? (
-              <div className="rounded-[24px] border border-emerald-100/90 bg-emerald-50/90 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm backdrop-blur">
+              <div className="rounded-[24px] border border-emerald-100/90 bg-emerald-50/92 px-4 py-3 text-sm font-semibold text-emerald-700">
                 {ok}
               </div>
             ) : null}
 
             {err ? (
-              <div className="rounded-[24px] border border-rose-100/90 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-700 shadow-sm backdrop-blur">
+              <div className="rounded-[24px] border border-rose-100/90 bg-rose-50/92 px-4 py-3 text-sm font-semibold text-rose-700">
                 {err}
               </div>
             ) : null}
@@ -636,8 +660,8 @@ export default function DashboardPage() {
             nisa={salaryNisa}
             tint="lilac"
           />
-          <TextCard title="AI แนะนำการซื้อไม้" text={aiBuyAdvice} tint="rose" />
-          <TextCard title="AI วิเคราะห์ธุรกิจ" text={aiBusinessAnalysis} tint="sky" />
+          <TextCard title="AI แนะนำการซื้อไม้" text={aiBuyAdvice} tint="rose" icon="✿" />
+          <TextCard title="AI วิเคราะห์ธุรกิจ" text={aiBusinessAnalysis} tint="sky" icon="◎" />
         </div>
 
         <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-3">
@@ -665,6 +689,7 @@ export default function DashboardPage() {
             amount={unpaidStats.amount}
             unpaidCount={unpaidStats.unpaid}
             partialCount={unpaidStats.partial}
+            monthSales={kpi.monthSales}
           />
         </div>
 
@@ -690,17 +715,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="p-2 sm:p-3">
+            <div className="p-2.5 sm:p-3">
               {latestInvoices.length === 0 ? (
                 <div className="rounded-[22px] px-4 py-8 text-sm text-slate-500">
                   ยังไม่มีรายการ
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {latestInvoices.map((inv) => (
                     <div
                       key={inv.id}
-                      className="flex flex-col gap-3 rounded-[22px] border border-white/85 bg-white/78 px-4 py-4 shadow-[0_6px_20px_rgba(15,23,42,0.04)] backdrop-blur md:flex-row md:items-center md:justify-between"
+                      className="flex flex-col gap-3 rounded-[22px] border border-white/85 bg-white/82 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)] md:flex-row md:items-center md:justify-between"
                     >
                       <div className="min-w-0">
                         <div className="truncate text-sm font-semibold tracking-tight text-slate-900 sm:text-[15px]">
