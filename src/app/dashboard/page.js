@@ -20,18 +20,24 @@ function monthRange(date = new Date()) {
 
 function Pill({ tone = 'slate', children }) {
   const map = {
-    emerald: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
-    amber: 'bg-amber-100 text-amber-800 ring-amber-200',
-    rose: 'bg-rose-100 text-rose-800 ring-rose-200',
-    slate: 'bg-slate-100 text-slate-700 ring-slate-200',
-    teal: 'bg-teal-100 text-teal-800 ring-teal-200',
-    sky: 'bg-sky-100 text-sky-800 ring-sky-200',
+    emerald:
+      'border border-emerald-200/80 bg-emerald-50/95 text-emerald-700 shadow-[0_1px_2px_rgba(16,185,129,0.08)]',
+    amber:
+      'border border-amber-200/80 bg-amber-50/95 text-amber-700 shadow-[0_1px_2px_rgba(245,158,11,0.08)]',
+    rose:
+      'border border-rose-200/80 bg-rose-50/95 text-rose-700 shadow-[0_1px_2px_rgba(244,63,94,0.08)]',
+    slate:
+      'border border-slate-200/80 bg-white/90 text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)]',
+    teal:
+      'border border-teal-200/80 bg-teal-50/95 text-teal-700 shadow-[0_1px_2px_rgba(20,184,166,0.08)]',
+    sky:
+      'border border-sky-200/80 bg-sky-50/95 text-sky-700 shadow-[0_1px_2px_rgba(14,165,233,0.08)]',
   }
 
   return (
     <span
       className={
-        'inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold ring-1 ' +
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight backdrop-blur-sm ' +
         (map[tone] || map.slate)
       }
     >
@@ -40,15 +46,34 @@ function Pill({ tone = 'slate', children }) {
   )
 }
 
-function Card({ children, className = '', style }) {
+function Card({ children, className = '', style, tint = 'default' }) {
+  const tintMap = {
+    default:
+      'border border-white/75 bg-white/84 shadow-[0_12px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl',
+    rose:
+      'border border-rose-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(255,244,247,0.95)_45%,rgba(252,231,243,0.86)_100%)] shadow-[0_12px_32px_rgba(244,63,94,0.08)] backdrop-blur-xl',
+    sky:
+      'border border-sky-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(245,250,255,0.95)_42%,rgba(224,242,254,0.88)_100%)] shadow-[0_12px_32px_rgba(59,130,246,0.08)] backdrop-blur-xl',
+    emerald:
+      'border border-emerald-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(245,255,250,0.95)_42%,rgba(209,250,229,0.88)_100%)] shadow-[0_12px_32px_rgba(16,185,129,0.08)] backdrop-blur-xl',
+    cream:
+      'border border-amber-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(255,251,245,0.95)_42%,rgba(255,247,237,0.88)_100%)] shadow-[0_12px_32px_rgba(245,158,11,0.08)] backdrop-blur-xl',
+    lilac:
+      'border border-violet-100/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.92)_0%,rgba(249,247,255,0.95)_42%,rgba(243,232,255,0.88)_100%)] shadow-[0_12px_32px_rgba(139,92,246,0.08)] backdrop-blur-xl',
+  }
+
   return (
     <div
       style={style}
       className={
-        'relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 shadow-sm ' +
+        'relative overflow-hidden rounded-[30px] p-4 sm:p-5 ' +
+        (tintMap[tint] || tintMap.default) +
+        ' ' +
         className
       }
     >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.72),transparent_38%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.14)_100%)]" />
       {children}
     </div>
   )
@@ -56,134 +81,186 @@ function Card({ children, className = '', style }) {
 
 function PageHeader({ title, loading, onReload }) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-3">
-      <div>
-        <div className="text-xl font-semibold tracking-tight text-slate-900">{title}</div>
-      </div>
+    <div className="mb-5 sm:mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+            NisaPlant Dashboard
+          </div>
+          <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
+            {title}
+          </div>
+          <div className="mt-1 text-sm leading-relaxed text-slate-500">
+            มินิมอล สะอาดตา อ่านง่าย และรองรับ iPhone
+          </div>
+        </div>
 
-      <button
-        onClick={onReload}
-        className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
-      >
-        {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
-      </button>
+        <button
+          onClick={onReload}
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(16,185,129,0.18)] transition hover:bg-emerald-600 active:scale-[0.99]"
+        >
+          {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+        </button>
+      </div>
     </div>
   )
 }
 
-function StatCard({ title, value, suffix = 'บาท' }) {
+function StatCard({ title, value, suffix = 'บาท', tint = 'default' }) {
   return (
-    <Card>
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-        {money(value)}
-        {suffix ? <span className="ml-2 text-sm font-semibold text-slate-500">{suffix}</span> : null}
+    <Card tint={tint} className="min-h-[132px] sm:min-h-[142px]">
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <div className="text-sm font-medium text-slate-500">{title}</div>
+
+        <div className="mt-4">
+          <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+            <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900 sm:text-[36px]">
+              {money(value)}
+            </span>
+            {suffix ? (
+              <span className="mb-1 text-sm font-semibold text-slate-400">{suffix}</span>
+            ) : null}
+          </div>
+        </div>
       </div>
     </Card>
   )
 }
 
-function SmallStatCard({ title, value, suffix = '' }) {
+function SmallStatCard({ title, value, suffix = '', tint = 'default' }) {
   return (
-    <Card>
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-        {money(value)}
-        {suffix ? <span className="ml-2 text-sm font-semibold text-slate-500">{suffix}</span> : null}
+    <Card tint={tint} className="min-h-[132px] sm:min-h-[142px]">
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <div className="text-sm font-medium text-slate-500">{title}</div>
+
+        <div className="mt-4">
+          <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
+            <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900 sm:text-[36px]">
+              {money(value)}
+            </span>
+            {suffix ? (
+              <span className="mb-1 text-sm font-semibold text-slate-400">{suffix}</span>
+            ) : null}
+          </div>
+        </div>
       </div>
     </Card>
   )
 }
 
-function TextCard({ title, text }) {
+function TextCard({ title, text, tint = 'default' }) {
   return (
-    <Card>
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-3 text-lg font-semibold leading-snug text-slate-900">{text || '-'}</div>
-    </Card>
-  )
-}
-
-function SalaryCard({ title, total, time, nisa }) {
-  return (
-    <Card>
-      <div className="text-sm text-slate-500">{title}</div>
-      <div className="mt-1 text-sm text-slate-500">
-        Time {money(time)} / Nisa {money(nisa)}
-      </div>
-      <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-        {money(total)}
-        <span className="ml-2 text-sm font-semibold text-slate-500">บาท</span>
+    <Card tint={tint} className="min-h-[150px] sm:min-h-[162px]">
+      <div className="relative z-10">
+        <div className="text-sm font-medium text-slate-500">{title}</div>
+        <div className="mt-4 text-base font-semibold leading-7 tracking-tight text-slate-900 sm:text-[17px]">
+          {text || '-'}
+        </div>
       </div>
     </Card>
   )
 }
 
-function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom }) {
+function SalaryCard({ title, total, time, nisa, tint = 'default' }) {
+  return (
+    <Card tint={tint} className="min-h-[150px] sm:min-h-[162px]">
+      <div className="relative z-10">
+        <div className="text-sm font-medium text-slate-500">{title}</div>
+
+        <div className="mt-2 inline-flex rounded-full border border-white/80 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-500 shadow-sm backdrop-blur">
+          Time {money(time)} / Nisa {money(nisa)}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
+          <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900 sm:text-[36px]">
+            {money(total)}
+          </span>
+          <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tint = 'default' }) {
   const total = data.reduce((a, b) => a + Number(b.value || 0), 0)
   const safeData = total > 0 ? data : [{ name: 'ไม่มีข้อมูล', value: 1 }]
 
   return (
-    <Card className="p-0">
-      <div className="flex items-start justify-between gap-3 px-4 pt-4">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-slate-900">{title}</div>
-          {subtitle ? <div className="mt-0.5 truncate text-xs text-slate-500">{subtitle}</div> : null}
-        </div>
-
-        <span className="inline-flex items-center rounded-full bg-slate-900/5 px-3 py-1 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-900/10">
-          รวม {money(total)}
-        </span>
-      </div>
-
-      <div className="px-4 pb-4 pt-3">
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-50 to-white ring-1 ring-slate-900/10">
-          <div className="h-[250px] p-3">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={safeData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={72}
-                  outerRadius={104}
-                  paddingAngle={3}
-                  stroke="rgba(0,0,0,0.04)"
-                >
-                  {safeData.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={total > 0 ? colors[i % colors.length] : '#e2e8f0'}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v) => money(v)} />
-              </PieChart>
-            </ResponsiveContainer>
+    <Card tint={tint} className="p-0">
+      <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="truncate text-[15px] font-semibold tracking-tight text-slate-900">
+              {title}
+            </div>
+            {subtitle ? (
+              <div className="mt-1 truncate text-xs leading-relaxed text-slate-500">
+                {subtitle}
+              </div>
+            ) : null}
           </div>
 
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="rounded-2xl bg-white/85 px-5 py-3 text-center ring-1 ring-slate-900/10 backdrop-blur">
-              <div className="text-3xl font-extrabold tracking-tight text-slate-900">{centerTop}</div>
-              <div className="mt-1 text-xs font-semibold text-slate-500">{centerBottom}</div>
+          <span className="inline-flex items-center rounded-full border border-white/85 bg-white/82 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-sm backdrop-blur">
+            รวม {money(total)}
+          </span>
+        </div>
+
+        <div className="mt-4">
+          <div className="relative overflow-hidden rounded-[26px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.66)_100%)] ring-1 ring-slate-900/5">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),transparent_55%)]" />
+            <div className="relative h-[250px] p-3 sm:h-[275px] sm:p-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={safeData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={72}
+                    outerRadius={104}
+                    paddingAngle={3}
+                    stroke="rgba(255,255,255,0.96)"
+                    strokeWidth={3}
+                  >
+                    {safeData.map((_, i) => (
+                      <Cell
+                        key={i}
+                        fill={total > 0 ? colors[i % colors.length] : '#e2e8f0'}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => money(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-5">
+              <div className="rounded-[24px] border border-white/85 bg-white/82 px-5 py-3 text-center shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+                <div className="text-[30px] font-extrabold leading-none tracking-tight text-slate-900 sm:text-[34px]">
+                  {centerTop}
+                </div>
+                <div className="mt-1 text-[11px] font-semibold text-slate-500 sm:text-xs">
+                  {centerBottom}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {data.map((d, i) => (
-            <span
-              key={d.name}
-              className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[12px] font-semibold text-slate-700 ring-1 ring-slate-200 shadow-sm"
-            >
+          <div className="mt-3 flex flex-wrap gap-2">
+            {data.map((d, i) => (
               <span
-                className="h-2.5 w-2.5 rounded-full"
-                style={{ background: colors[i % colors.length] }}
-              />
-              <span className="whitespace-nowrap">{d.name}</span>
-              <span className="text-slate-900">{money(d.value)}</span>
-            </span>
-          ))}
+                key={d.name}
+                className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur sm:text-[12px]"
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: colors[i % colors.length] }}
+                />
+                <span className="whitespace-nowrap">{d.name}</span>
+                <span className="text-slate-900">{money(d.value)}</span>
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </Card>
@@ -192,12 +269,26 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom }) {
 
 function UnpaidCard({ amount, unpaidCount, partialCount }) {
   return (
-    <Card>
-      <div className="text-sm text-slate-500">ยอดค้างชำระ</div>
-      <div className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{money(amount)}</div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Pill tone="rose">unpaid {money(unpaidCount)}</Pill>
-        <Pill tone="amber">partial {money(partialCount)}</Pill>
+    <Card tint="rose" className="min-h-[250px] lg:min-h-full">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-[radial-gradient(circle_at_bottom_right,rgba(244,63,94,0.10),transparent_55%)]" />
+      <div className="relative z-10 flex h-full flex-col">
+        <div className="text-sm font-medium text-slate-500">ยอดค้างชำระ</div>
+
+        <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
+          <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900 sm:text-[38px]">
+            {money(amount)}
+          </span>
+          <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Pill tone="rose">unpaid {money(unpaidCount)}</Pill>
+          <Pill tone="amber">partial {money(partialCount)}</Pill>
+        </div>
+
+        <div className="mt-auto pt-8 text-xs leading-relaxed text-slate-400">
+          ติดตามยอดค้างชำระก่อนซื้อเพิ่ม จะช่วยลดความเสี่ยงของ cashflow
+        </div>
       </div>
     </Card>
   )
@@ -212,37 +303,45 @@ function InvoiceStatusPill({ status }) {
 }
 
 function BankCard({ bankCode, bankData, bgImage }) {
-  const tone =
-    bankCode === 'GSB' ? 'rose' : bankCode === 'KTB' ? 'sky' : 'emerald'
+  const tone = bankCode === 'GSB' ? 'rose' : bankCode === 'KTB' ? 'sky' : 'emerald'
+  const tint = bankCode === 'GSB' ? 'rose' : bankCode === 'KTB' ? 'sky' : 'emerald'
 
   return (
-    <Card className="h-[170px]">
+    <Card tint={tint} className="min-h-[194px] sm:min-h-[206px]">
       <div
-        className="absolute inset-0 bg-no-repeat opacity-10"
+        className="absolute inset-0 bg-no-repeat opacity-[0.09]"
         style={{
           backgroundImage: `url(${bgImage})`,
-          backgroundPosition: 'right center',
+          backgroundPosition: 'center right',
           backgroundSize: 'cover',
         }}
       />
 
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.92),transparent_42%)]" />
+
       <div className="relative z-10 flex h-full flex-col justify-between">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-sm font-semibold text-slate-900">{bankCode}</div>
-            <div className="mt-2 text-2xl font-bold tracking-tight text-slate-900">
-              {money(bankData.balance)} บาท
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold tracking-[0.16em] text-slate-700">{bankCode}</div>
+
+            <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
+              <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900 sm:text-[38px]">
+                {money(bankData.balance)}
+              </span>
+              <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
             </div>
           </div>
+
           <Pill tone={tone}>Balance</Pill>
         </div>
 
-        <div>
-          <div className="mt-3 flex items-center justify-between text-sm">
+        <div className="mt-5 space-y-2 rounded-[22px] border border-white/78 bg-white/58 p-3 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur">
+          <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-slate-500">รับเดือนนี้</span>
             <span className="font-semibold text-slate-900">{money(bankData.income)}</span>
           </div>
-          <div className="mt-1 flex items-center justify-between text-sm">
+
+          <div className="flex items-center justify-between gap-3 text-sm">
             <span className="text-slate-500">จ่ายเดือนนี้</span>
             <span className="font-semibold text-slate-900">{money(bankData.expense)}</span>
           </div>
@@ -502,120 +601,129 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="Dashboard">
-      <PageHeader title="ภาพรวมธุรกิจ" loading={loading} onReload={loadDashboard} />
+      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+        <PageHeader title="ภาพรวมธุรกิจ" loading={loading} onReload={loadDashboard} />
 
-      {(ok || err) && (
-        <div className="mb-4">
-          {ok ? (
-            <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-100">
-              {ok}
-            </div>
-          ) : null}
-          {err ? (
-            <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 ring-1 ring-rose-100">
-              {err}
-            </div>
-          ) : null}
+        {(ok || err) && (
+          <div className="mb-4 sm:mb-5">
+            {ok ? (
+              <div className="rounded-[24px] border border-emerald-100/90 bg-emerald-50/90 px-4 py-3 text-sm font-semibold text-emerald-700 shadow-sm backdrop-blur">
+                {ok}
+              </div>
+            ) : null}
+
+            {err ? (
+              <div className="rounded-[24px] border border-rose-100/90 bg-rose-50/90 px-4 py-3 text-sm font-semibold text-rose-700 shadow-sm backdrop-blur">
+                {err}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} tint="rose" />
+          <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthNetBusiness} tint="sky" />
+          <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" />
+          <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} tint="emerald" />
         </div>
-      )}
 
-      {/* Row 1 */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} />
-        <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthNetBusiness} />
-        <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" />
-        <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} />
-      </div>
-
-      {/* Row 2 */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="ภาษี 15%" value={tax15} />
-        <SalaryCard
-          title="เงินเดือน"
-          total={salaryTotal}
-          time={salaryTime}
-          nisa={salaryNisa}
-        />
-        <TextCard title="AI แนะนำการซื้อไม้" text={aiBuyAdvice} />
-        <TextCard title="AI วิเคราะห์ธุรกิจ" text={aiBusinessAnalysis} />
-      </div>
-
-      {/* Row 3 */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <DonutCard
-          title="รายรับ / รายจ่าย"
-          subtitle="ดูจากหน้า รายรับ/รายจ่าย ของเดือนนี้"
-          data={donutIncomeExpense}
-          colors={['#10b981', '#ef4444']}
-          centerTop={money(kpi.monthIncome - kpi.monthExpenses)}
-          centerBottom="สุทธิเดือนนี้"
-        />
-
-        <DonutCard
-          title="ยอดขาย / ทุนคงเหลือ"
-          subtitle="ยอดขายเดือนนี้ เทียบกับมูลค่าทุนคงเหลือ"
-          data={donutSalesCost}
-          colors={['#3b82f6', '#f59e0b']}
-          centerTop={money(kpi.monthSales)}
-          centerBottom="ยอดขายเดือนนี้"
-        />
-
-        <UnpaidCard
-          amount={unpaidStats.amount}
-          unpaidCount={unpaidStats.unpaid}
-          partialCount={unpaidStats.partial}
-        />
-      </div>
-
-      {/* Row 4 */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {(['GSB', 'KTB', 'KBANK']).map((bankCode) => (
-          <BankCard
-            key={bankCode}
-            bankCode={bankCode}
-            bankData={bankBalances[bankCode]}
-            bgImage={bankBg[bankCode]}
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <StatCard title="ภาษี 15%" value={tax15} tint="cream" />
+          <SalaryCard
+            title="เงินเดือน"
+            total={salaryTotal}
+            time={salaryTime}
+            nisa={salaryNisa}
+            tint="lilac"
           />
-        ))}
-      </div>
+          <TextCard title="AI แนะนำการซื้อไม้" text={aiBuyAdvice} tint="rose" />
+          <TextCard title="AI วิเคราะห์ธุรกิจ" text={aiBusinessAnalysis} tint="sky" />
+        </div>
 
-      {/* Row 5 */}
-      <div className="mt-4">
-        <Card className="p-0">
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <div className="text-sm font-semibold text-slate-900">10 บิลล่าสุด</div>
-            <div className="text-xs text-slate-500">ซ่อน paid ที่เกิน 1 วัน</div>
-          </div>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-3">
+          <DonutCard
+            title="รายรับ / รายจ่าย"
+            subtitle="ดูจากหน้า รายรับ/รายจ่าย ของเดือนนี้"
+            data={donutIncomeExpense}
+            colors={['#34d399', '#fb7185']}
+            centerTop={money(kpi.monthIncome - kpi.monthExpenses)}
+            centerBottom="สุทธิเดือนนี้"
+            tint="emerald"
+          />
 
-          <div className="divide-y divide-slate-100">
-            {latestInvoices.length === 0 ? (
-              <div className="px-4 py-6 text-sm text-slate-500">ยังไม่มีรายการ</div>
-            ) : (
-              latestInvoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-slate-900">
-                      {inv.invoice_no || '(no invoice)'}
-                    </div>
-                    <div className="truncate text-xs text-slate-500">
-                      {inv.sale_date || '-'} • {inv.customer_name || '-'}
-                    </div>
-                  </div>
+          <DonutCard
+            title="ยอดขาย / ทุนคงเหลือ"
+            subtitle="ยอดขายเดือนนี้ เทียบกับมูลค่าทุนคงเหลือ"
+            data={donutSalesCost}
+            colors={['#60a5fa', '#fbbf24']}
+            centerTop={money(kpi.monthSales)}
+            centerBottom="ยอดขายเดือนนี้"
+            tint="sky"
+          />
 
-                  <div className="flex items-center gap-3">
-                    <InvoiceStatusPill status={inv.pay_status} />
-                    <div className="text-right text-sm font-semibold text-slate-900">
-                      {money(inv.total_price)} บาท
-                    </div>
-                  </div>
+          <UnpaidCard
+            amount={unpaidStats.amount}
+            unpaidCount={unpaidStats.unpaid}
+            partialCount={unpaidStats.partial}
+          />
+        </div>
+
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-3">
+          {(['GSB', 'KTB', 'KBANK']).map((bankCode) => (
+            <BankCard
+              key={bankCode}
+              bankCode={bankCode}
+              bankData={bankBalances[bankCode]}
+              bgImage={bankBg[bankCode]}
+            />
+          ))}
+        </div>
+
+        <div className="mt-3 sm:mt-4">
+          <Card tint="default" className="p-0">
+            <div className="flex flex-col gap-2 border-b border-slate-100/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <div>
+                <div className="text-[15px] font-semibold tracking-tight text-slate-900">
+                  10 บิลล่าสุด
                 </div>
-              ))
-            )}
-          </div>
-        </Card>
+                <div className="mt-1 text-xs text-slate-500">ซ่อน paid ที่เกิน 1 วัน</div>
+              </div>
+            </div>
+
+            <div className="p-2 sm:p-3">
+              {latestInvoices.length === 0 ? (
+                <div className="rounded-[22px] px-4 py-8 text-sm text-slate-500">
+                  ยังไม่มีรายการ
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {latestInvoices.map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="flex flex-col gap-3 rounded-[22px] border border-white/85 bg-white/78 px-4 py-4 shadow-[0_6px_20px_rgba(15,23,42,0.04)] backdrop-blur md:flex-row md:items-center md:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold tracking-tight text-slate-900 sm:text-[15px]">
+                          {inv.invoice_no || '(no invoice)'}
+                        </div>
+                        <div className="mt-1 truncate text-xs text-slate-500 sm:text-sm">
+                          {inv.sale_date || '-'} • {inv.customer_name || '-'}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 md:justify-end">
+                        <InvoiceStatusPill status={inv.pay_status} />
+                        <div className="text-right text-sm font-semibold text-slate-900 sm:text-[15px]">
+                          {money(inv.total_price)} บาท
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
       </div>
     </AppShell>
   )
