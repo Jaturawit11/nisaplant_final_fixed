@@ -25,7 +25,6 @@ function digitsOnly(s) {
 }
 
 function parseMoneyInput(v) {
-  // รองรับเลขที่มี comma/เว้นวรรค (เช่น 1,000)
   if (v === null || v === undefined) return 0
   const s = String(v).replace(/[,\s]/g, '')
   const n = Number(s)
@@ -40,38 +39,26 @@ function parseMoneyInput(v) {
  *  - n 2602 0010 -> N-2602-0010
  *  - o26030042 -> O-2603-0042
  *
- * หมายเหตุ: ถ้าเป็นเลขล้วน (ไม่มี N/O) จะคืนค่าเป็นเลขล้วนไว้ก่อน
- * แล้วให้ UI เด้ง popup เลือก N/O เพื่อ normalize ต่อ
+ * ถ้าเป็นเลขล้วน (ไม่มี N/O) จะคืนค่าเลขล้วนไว้ก่อน
  */
 function normalizeCode(input) {
   const raw = String(input || '').trim().toUpperCase()
   if (!raw) return ''
 
-  // เอาเฉพาะ A-Z 0-9 และ -
   const cleaned = raw.replace(/[^A-Z0-9-]/g, '')
 
-  // เลขล้วน (ยังไม่รู้ N/O) -> ปล่อยให้ popup จัดการ
   const compact = cleaned.replace(/-/g, '')
-  if (compact && digitsOnly(compact) && !compact.startsWith('N') && !compact.startsWith('O')) return compact
+  if (compact && digitsOnly(compact) && !compact.startsWith('N') && !compact.startsWith('O')) {
+    return compact
+  }
 
-  // แบบไม่มีขีด: N26020010 (1 + 4 + 4)
   let m = cleaned.match(/^([NO])(\d{4})(\d{1,4})$/)
   if (m) return `${m[1]}-${m[2]}-${pad4(m[3])}`
 
-  // แบบมี/ไม่มีขีดปนกัน: N-2602-0010, N2602-0010, N-26020010
   m = cleaned.match(/^([NO])\-?(\d{4})\-?(\d{1,4})$/)
   if (m) return `${m[1]}-${m[2]}-${pad4(m[3])}`
 
   return cleaned
-}
-
-/** รับโค้ดหลายรูปแบบ: newline / space / comma / ; / tab แล้ว normalize ทุกตัว */
-function parseCodes(input) {
-  return String(input || '')
-    .replace(/\r/g, '\n')
-    .split(/[\n,\t; ]+/g)
-    .map((s) => normalizeCode(s))
-    .filter(Boolean)
 }
 
 function parseParts(code /* N-2603-0002 */) {
@@ -79,6 +66,92 @@ function parseParts(code /* N-2603-0002 */) {
   const m = s.match(/^([NO])-(\d{4})-(\d{4})$/)
   if (!m) return null
   return { prefix: m[1], yymm: m[2], run: parseInt(m[3], 10) || 0 }
+}
+
+/**
+ * รองรับ 1 ช่อง แต่พิมพ์ได้หลายแบบ
+ * - ทีละรหัส
+ * - หลายรหัสคั่นด้วย newline / comma / ; / tab
+ * - ช่วงรหัส เช่น N-2603-0005 ถึง N-2603-0015
+ */
+function parseUnifiedInput(input) {
+  const raw = String(input || '').replace(/\r/g, '\n').trim()
+  if (!raw) {
+    return {
+      codes: [],
+      unresolvedDigits: [],
+      invalidRanges: [],
+      tooLongRange: false,
+    }
+  }
+
+  const pieces = raw
+    .split(/[\n,;\t]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  const codes = []
+  const unresolvedDigits = []
+  const invalidRanges = []
+  let tooLongRange = false
+  const seen = new Set()
+
+  function pushCode(code) {
+    if (!code) return
+    if (!seen.has(code)) {
+      seen.add(code)
+      codes.push(code)
+    }
+  }
+
+  for (const piece of pieces) {
+    const rangeMatch = piece.match(/(.+?)\s*(?:ถึง|TO|to|~|>)\s*(.+)/)
+    if (rangeMatch) {
+      const left = normalizeCode(rangeMatch[1])
+      const right = normalizeCode(rangeMatch[2])
+
+      if (digitsOnly(left) || digitsOnly(right)) {
+        invalidRanges.push(piece)
+        continue
+      }
+
+      const ps = parseParts(left)
+      const pe = parseParts(right)
+
+      if (!ps || !pe) {
+        invalidRanges.push(piece)
+        continue
+      }
+
+      if (ps.prefix !== pe.prefix || ps.yymm !== pe.yymm || ps.run > pe.run) {
+        invalidRanges.push(piece)
+        continue
+      }
+
+      const count = pe.run - ps.run + 1
+      if (count > 220) {
+        tooLongRange = true
+        continue
+      }
+
+      for (let i = 0; i < count; i++) {
+        pushCode(`${ps.prefix}-${ps.yymm}-${pad4(ps.run + i)}`)
+      }
+      continue
+    }
+
+    const norm = normalizeCode(piece)
+    if (!norm) continue
+
+    if (digitsOnly(norm)) {
+      unresolvedDigits.push(norm)
+      continue
+    }
+
+    pushCode(norm)
+  }
+
+  return { codes, unresolvedDigits, invalidRanges, tooLongRange }
 }
 
 export default function SellPage() {
@@ -96,12 +169,8 @@ export default function SellPage() {
   // ✅ ใช้เมื่อ payStatus = partial
   const [receivedAmount, setReceivedAmount] = useState('')
 
-  const [plantCode, setPlantCode] = useState('')
-  const [bulkText, setBulkText] = useState('')
-
-  // ✅ Range
-  const [rangeStart, setRangeStart] = useState('')
-  const [rangeEnd, setRangeEnd] = useState('')
+  // ✅ เหลือช่องเดียว
+  const [codeInput, setCodeInput] = useState('')
 
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
@@ -110,13 +179,13 @@ export default function SellPage() {
   // realtime lookup
   const [lookupErr, setLookupErr] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
-  const [lookupMap, setLookupMap] = useState({}) // normalizedCode -> { found, plant_code, name, cost, status }
+  const [lookupMap, setLookupMap] = useState({})
   const lastLookupKeyRef = useRef('')
 
-  // ✅ Digits-only popup (ไม่เดา N/O)
+  // ✅ Digits-only popup
   const [needPrefixModal, setNeedPrefixModal] = useState(false)
   const [pendingDigits, setPendingDigits] = useState('')
-  const pendingSetterRef = useRef(null) // function(norm) => void
+  const pendingSetterRef = useRef(null)
 
   const totals = useMemo(() => {
     const totalCost = items.reduce((s, x) => s + Number(x.cost || 0), 0)
@@ -127,24 +196,9 @@ export default function SellPage() {
 
   const existingSet = useMemo(() => new Set(items.map((x) => normalizeCode(x.plant_code))), [items])
 
-  const previewCodes = useMemo(() => {
-    const single = parseCodes(plantCode)
-    const bulk = parseCodes(bulkText)
+  const parsedInput = useMemo(() => parseUnifiedInput(codeInput), [codeInput])
 
-    const uniq = []
-    const seen = new Set()
-    for (const c of [...single, ...bulk]) {
-      // ข้ามเลขล้วนใน preview (เพราะยังไม่รู้ N/O)
-      if (digitsOnly(String(c).replace(/-/g, ''))) continue
-
-      if (!seen.has(c)) {
-        seen.add(c)
-        uniq.push(c)
-      }
-      if (uniq.length >= 120) break
-    }
-    return uniq
-  }, [plantCode, bulkText])
+  const previewCodes = useMemo(() => parsedInput.codes.slice(0, 220), [parsedInput.codes])
 
   function openPrefixModal(digits, setterFn) {
     setPendingDigits(digits)
@@ -164,7 +218,6 @@ export default function SellPage() {
     if (typeof fn === 'function') fn(norm)
   }
 
-  // --- Realtime Lookup (debounce) ---
   useEffect(() => {
     setLookupErr('')
     if (!previewCodes.length) {
@@ -183,7 +236,7 @@ export default function SellPage() {
           .from('plants')
           .select('plant_code,name,cost,status')
           .in('plant_code', previewCodes)
-          .limit(200)
+          .limit(300)
 
         if (error) throw error
 
@@ -206,41 +259,84 @@ export default function SellPage() {
     }, 250)
 
     return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewCodes.join('|')])
+  }, [previewCodes, supabase])
 
-  async function addOne(codeRaw) {
+  function replaceOneDigitsOnlyWithPrefix(normCode) {
+    setCodeInput((prev) => {
+      const parts = String(prev || '')
+        .replace(/\r/g, '\n')
+        .split(/([\n,;\t]+)/g)
+
+      let done = false
+      const next = parts.map((part) => {
+        if (done) return part
+        const cleaned = String(part).trim()
+        if (!cleaned) return part
+        const normalized = normalizeCode(cleaned)
+        if (digitsOnly(normalized)) {
+          done = true
+          return part.replace(cleaned, normCode)
+        }
+        return part
+      })
+
+      return next.join('')
+    })
+  }
+
+  async function addParsed() {
     setErr('')
-    const code0 = normalizeCode(codeRaw)
 
-    // เลขล้วน -> popup เลือก N/O
-    if (code0 && digitsOnly(code0)) {
-      return openPrefixModal(code0, (norm) => addOne(norm))
+    if (parsedInput.tooLongRange) {
+      return setErr('ช่วงรหัสยาวเกินไป จำกัดไม่เกิน 220 รายการต่อครั้ง')
     }
 
-    const code = code0
-    if (!code) return
-
-    const cached = lookupMap?.[code]
-    if (cached && cached.found === false) return setErr('ไม่พบรหัสต้นไม้นี้')
-    if (existingSet.has(code)) return setErr('เพิ่มรหัสนี้แล้ว')
-
-    if (cached && cached.found) {
-      if (cached.status !== 'ACTIVE') return setErr('ต้นไม้นี้ไม่อยู่สถานะขายได้ (ACTIVE)')
-      setItems((prev) => [...prev, { plant_code: cached.plant_code, name: cached.name, cost: cached.cost, price: '' }])
-      setPlantCode('')
-      return
+    if (parsedInput.invalidRanges.length) {
+      return setErr(`ช่วงรหัสไม่ถูกต้อง: ${parsedInput.invalidRanges[0]}`)
     }
 
-    // fallback query
-    const { data, error } = await supabase.from('plants').select('plant_code,name,cost,status').eq('plant_code', code).limit(1)
-    if (error) return setErr(error.message)
-    if (!data?.length) return setErr('ไม่พบรหัสต้นไม้นี้')
-    if (data[0].status !== 'ACTIVE') return setErr('ต้นไม้นี้ไม่อยู่สถานะขายได้ (ACTIVE)')
-    if (existingSet.has(code)) return setErr('เพิ่มรหัสนี้แล้ว')
+    if (parsedInput.unresolvedDigits.length === 1) {
+      return openPrefixModal(parsedInput.unresolvedDigits[0], (norm) => {
+        replaceOneDigitsOnlyWithPrefix(norm)
+      })
+    }
 
-    setItems((prev) => [...prev, { plant_code: data[0].plant_code, name: data[0].name, cost: data[0].cost, price: '' }])
-    setPlantCode('')
+    if (parsedInput.unresolvedDigits.length > 1) {
+      return setErr('มีรหัสเลขล้วนหลายตัว กรุณาใส่ N หรือ O ให้รหัสเหล่านั้นก่อน')
+    }
+
+    if (!previewCodes.length) {
+      return setErr('ยังไม่มีรหัสที่พร้อมเพิ่ม')
+    }
+
+    const canAdd = []
+    for (const code of previewCodes) {
+      if (existingSet.has(code)) continue
+      const info = lookupMap?.[code]
+      if (info?.found && info.status === 'ACTIVE') {
+        canAdd.push({
+          plant_code: info.plant_code,
+          name: info.name,
+          cost: info.cost,
+          price: '',
+        })
+      }
+    }
+
+    if (!canAdd.length) return setErr('ไม่มีรหัสที่ขายได้ (ACTIVE) ให้เพิ่ม')
+
+    const seen = new Set(items.map((x) => normalizeCode(x.plant_code)))
+    const merged = []
+    for (const it of canAdd) {
+      const k = normalizeCode(it.plant_code)
+      if (!seen.has(k)) {
+        seen.add(k)
+        merged.push(it)
+      }
+    }
+
+    setItems((prev) => [...prev, ...merged])
+    setCodeInput('')
   }
 
   function updatePrice(idx, v) {
@@ -275,7 +371,11 @@ export default function SellPage() {
   }
 
   async function getLatestInvoiceIdSafe() {
-    const { data, error } = await supabase.from('invoices').select('id,created_at').order('created_at', { ascending: false }).limit(1)
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('id,created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
     if (error) return null
     const id = data?.[0]?.id
     return isUuid(id) ? id : null
@@ -285,7 +385,12 @@ export default function SellPage() {
     if (isUuid(candidate)) return candidate
 
     if (typeof candidate === 'string' && candidate.startsWith('B')) {
-      const { data, error } = await supabase.from('invoices').select('id,invoice_no').eq('invoice_no', candidate).limit(1)
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id,invoice_no')
+        .eq('invoice_no', candidate)
+        .limit(1)
+
       if (!error) {
         const id = data?.[0]?.id
         if (isUuid(id)) return id
@@ -295,120 +400,7 @@ export default function SellPage() {
     return await getLatestInvoiceIdSafe()
   }
 
-  async function addBulkValid() {
-    setErr('')
-    const codes = parseCodes(bulkText)
-    if (!codes.length) return
-
-    const canAdd = []
-    for (const code of codes) {
-      // ข้ามเลขล้วนใน bulk (ไม่รู้ N/O) ให้ผู้ใช้ใส่ N/O เองใน bulk
-      if (digitsOnly(code)) continue
-
-      if (existingSet.has(code)) continue
-      const info = lookupMap?.[code]
-      if (info?.found && info.status === 'ACTIVE') {
-        canAdd.push({ plant_code: info.plant_code, name: info.name, cost: info.cost, price: '' })
-      }
-    }
-
-    if (!canAdd.length) return setErr('ไม่มีรหัสที่ขายได้ (ACTIVE) ให้เพิ่ม')
-
-    const seen = new Set(items.map((x) => normalizeCode(x.plant_code)))
-    const merged = []
-    for (const it of canAdd) {
-      const k = normalizeCode(it.plant_code)
-      if (!seen.has(k)) {
-        seen.add(k)
-        merged.push(it)
-      }
-    }
-
-    setItems((prev) => [...prev, ...merged])
-    setBulkText('')
-  }
-
-  // ✅ Add range (A: prefix+เดือนเดียวกันเท่านั้น)
-  async function addRange() {
-    setErr('')
-
-    const s0 = normalizeCode(rangeStart)
-    const e0 = normalizeCode(rangeEnd)
-
-    // digits-only -> popup
-    if (s0 && digitsOnly(s0)) return openPrefixModal(s0, (norm) => setRangeStart(norm))
-    if (e0 && digitsOnly(e0)) return openPrefixModal(e0, (norm) => setRangeEnd(norm))
-
-    const start = s0
-    const end = e0
-
-    const ps = parseParts(start)
-    const pe = parseParts(end)
-    if (!ps || !pe) return setErr('รูปแบบรหัสไม่ถูกต้อง (ตัวอย่าง: O-2603-0042 หรือ O26030042)')
-    if (ps.prefix !== pe.prefix) return setErr('ช่วงต้องเป็นประเภทเดียวกัน (N กับ N หรือ O กับ O)')
-    if (ps.yymm !== pe.yymm) return setErr('ช่วงต้องอยู่เดือนเดียวกัน (YYMM เดียวกัน)')
-    if (ps.run <= 0 || pe.run <= 0) return setErr('เลขรันต้องมากกว่า 0')
-    if (ps.run > pe.run) return setErr('รหัสเริ่มต้นต้องน้อยกว่าหรือเท่ารหัสสิ้นสุด')
-
-    const count = pe.run - ps.run + 1
-    const MAX = 220
-    if (count > MAX) return setErr(`ช่วงยาวเกินไป (${count} รายการ) จำกัดไม่เกิน ${MAX} รายการต่อครั้ง`)
-
-    const codes = Array.from({ length: count }, (_, i) => `${ps.prefix}-${ps.yymm}-${pad4(ps.run + i)}`)
-
-    const { data, error } = await supabase
-      .from('plants')
-      .select('plant_code,name,cost,status')
-      .in('plant_code', codes)
-      .limit(500)
-
-    if (error) return setErr(error.message)
-
-    const map = new Map()
-    for (const r of data || []) {
-      map.set(normalizeCode(r.plant_code), r)
-    }
-
-    let added = 0
-    let missing = 0
-    let notActive = 0
-    let dup = 0
-
-    const toAdd = []
-    for (const code of codes) {
-      if (existingSet.has(code)) {
-        dup++
-        continue
-      }
-      const r = map.get(code)
-      if (!r) {
-        missing++
-        continue
-      }
-      if (r.status !== 'ACTIVE') {
-        notActive++
-        continue
-      }
-      toAdd.push({ plant_code: r.plant_code, name: r.name, cost: r.cost, price: '' })
-      added++
-    }
-
-    if (!toAdd.length) {
-      return setErr(`เพิ่มไม่ได้ • ไม่พบ ${missing} • ไม่ ACTIVE ${notActive} • ซ้ำ ${dup}`)
-    }
-
-    setItems((prev) => [...prev, ...toAdd])
-    setRangeStart('')
-    setRangeEnd('')
-
-    if (missing || notActive || dup) {
-      setErr(`เพิ่มแล้ว ${added} • ไม่พบ ${missing} • ไม่ ACTIVE ${notActive} • ซ้ำ ${dup}`)
-    }
-  }
-
-  // ✅ บันทึกรับเงินจริงเข้า payments
   async function createPaymentRecord({ invoiceId }) {
-    // unpaid = ไม่บันทึก
     if (payStatus === 'unpaid') return
 
     const total = Number(totals.totalPrice || 0)
@@ -443,7 +435,6 @@ export default function SellPage() {
     const bad = items.find((x) => parseMoneyInput(x.price) <= 0)
     if (bad) return setErr(`กรุณาใส่ราคาขายให้ครบ: ${bad.plant_code}`)
 
-    // ✅ partial ต้องกรอกยอดรับจริง
     if (payStatus === 'partial') {
       const ra = parseMoneyInput(receivedAmount || 0)
       if (!ra || ra <= 0) return setErr('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
@@ -452,7 +443,10 @@ export default function SellPage() {
 
     setLoading(true)
 
-    const payloadItems = items.map((x) => ({ plant_code: x.plant_code, price: parseMoneyInput(x.price) }))
+    const payloadItems = items.map((x) => ({
+      plant_code: x.plant_code,
+      price: parseMoneyInput(x.price),
+    }))
 
     const { data, error } = await supabase.rpc('create_sale_invoice', {
       p_sale_date: saleDate,
@@ -483,7 +477,6 @@ export default function SellPage() {
         )
       }
 
-      // ✅ ผูก payments ที่นี่
       await createPaymentRecord({ invoiceId })
 
       setLoading(false)
@@ -567,7 +560,6 @@ export default function SellPage() {
               <input value={paidDate} onChange={(e) => setPaidDate(e.target.value)} type="date" style={inputCompact} />
             </Field>
 
-            {/* ✅ เฉพาะ partial */}
             {payStatus === 'partial' ? (
               <Field label="ยอดที่รับจริง (จ่ายบางส่วน)">
                 <input
@@ -582,105 +574,61 @@ export default function SellPage() {
           </div>
         </Card>
 
-        <Card title="เพิ่มรายการขาย (Plant Code) — เร็ว + เช็คเรียลไทม์">
-          {/* ✅ Range input */}
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>
-              เพิ่มแบบ “ช่วงรหัส” (ต้องเป็นเดือนเดียวกัน + ประเภทเดียวกัน)
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <input
-                value={rangeStart}
-                onChange={(e) => setRangeStart(e.target.value)}
-                placeholder="เริ่มต้น เช่น O-2603-0005 หรือ o26030005"
-                style={{ ...inputCompact, flex: 1, minWidth: 220 }}
-                onBlur={() => {
-                  const norm = normalizeCode(rangeStart)
-                  if (norm && norm !== rangeStart) setRangeStart(norm)
-                }}
-              />
-              <input
-                value={rangeEnd}
-                onChange={(e) => setRangeEnd(e.target.value)}
-                placeholder="สิ้นสุด เช่น O-2603-0015"
-                style={{ ...inputCompact, flex: 1, minWidth: 220 }}
-                onBlur={() => {
-                  const norm = normalizeCode(rangeEnd)
-                  if (norm && norm !== rangeEnd) setRangeEnd(norm)
-                }}
-              />
-              <button onClick={addRange} style={primaryBtnCompact}>
-                เพิ่มช่วง
-              </button>
-            </div>
+        <Card title="เพิ่มรายการขาย (Plant Code) — ช่องเดียว รองรับหลายแบบ">
+          <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>
+            พิมพ์ได้ทั้งรหัสเดี่ยว / หลายรหัส / หลายบรรทัด / คั่นด้วยคอมม่า / ช่วงรหัส เช่น
+            <br />
+            <span style={{ fontWeight: 900 }}>
+              N-2603-0002
+              {' / '}
+              n26030002
+              {' / '}
+              26030002
+              {' / '}
+              N-2603-0005 ถึง N-2603-0015
+            </span>
           </div>
 
-          {/* Single add */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <input
-              value={plantCode}
-              onChange={(e) => setPlantCode(e.target.value)}
-              placeholder="พิมพ์รหัสแล้วกด Enter (เช่น N-2603-0002 หรือ n26030002 หรือ 26030002)"
-              style={{ ...inputCompact, flex: 1, minWidth: 220 }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const norm = normalizeCode(plantCode)
-                  setPlantCode(norm)
-                  addOne(norm)
-                }
-              }}
-              onBlur={() => {
-                const norm = normalizeCode(plantCode)
-                if (norm && norm !== plantCode) setPlantCode(norm)
-              }}
-            />
-            <button
-              onClick={() => {
-                const norm = normalizeCode(plantCode)
-                setPlantCode(norm)
-                addOne(norm)
-              }}
-              style={primaryBtnCompact}
-            >
-              เพิ่ม 1 ตัว
+          <textarea
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            placeholder={`ตัวอย่าง:
+N-2603-0002
+n26030003
+26030004
+N-2603-0005 ถึง N-2603-0010
+O-2603-0042, o26030043`}
+            style={textareaCompact}
+            rows={5}
+          />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
+            <div style={{ fontSize: 12, opacity: 0.8 }}>
+              {lookupLoading ? 'กำลังตรวจสอบ...' : `เพิ่มได้ (ACTIVE): ${canAddCount} / ${previewRows.length}`}
+              {parsedInput.unresolvedDigits.length ? (
+                <span style={{ color: '#ffd37a' }}>
+                  {' '}• มีรหัสเลขล้วน {parsedInput.unresolvedDigits.length} ตัว
+                </span>
+              ) : null}
+              {lookupErr ? <span style={{ color: '#ffb4b4' }}> • {lookupErr}</span> : null}
+            </div>
+
+            <button onClick={addParsed} style={primaryBtnCompact} disabled={!previewRows.length && !parsedInput.unresolvedDigits.length}>
+              เพิ่มที่ขายได้ทั้งหมด
             </button>
           </div>
 
-          {/* Bulk */}
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>
-              เพิ่มหลายรหัสในทีเดียว (วางได้หลายบรรทัด / คั่นด้วยเว้นวรรค / คอมม่า)
+          {previewRows.length ? (
+            <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
+              {previewRows.slice(0, 40).map((r) => (
+                <div key={r.code} style={{ ...previewRow, borderColor: borderByState(r.state) }}>
+                  <div style={{ fontWeight: 900 }}>{r.code}</div>
+                  <div style={{ fontSize: 12, opacity: 0.85 }}>{r.label}</div>
+                </div>
+              ))}
+              {previewRows.length > 40 ? <div style={{ fontSize: 12, opacity: 0.7 }}>แสดง 40 รายการแรก</div> : null}
             </div>
-            <textarea
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              placeholder={`ตัวอย่าง:\nN26030001\nN-2603-0002\nO 2603 0042`}
-              style={textareaCompact}
-              rows={4}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-              <div style={{ fontSize: 12, opacity: 0.8 }}>
-                {lookupLoading ? 'กำลังตรวจสอบ...' : `เพิ่มได้ (ACTIVE): ${canAddCount} / ${previewRows.length}`}
-                {lookupErr ? <span style={{ color: '#ffb4b4' }}> • {lookupErr}</span> : null}
-              </div>
-              <button onClick={addBulkValid} style={primaryBtnCompact} disabled={!canAddCount}>
-                เพิ่มที่ขายได้ทั้งหมด
-              </button>
-            </div>
-
-            {previewRows.length ? (
-              <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-                {previewRows.slice(0, 40).map((r) => (
-                  <div key={r.code} style={{ ...previewRow, borderColor: borderByState(r.state) }}>
-                    <div style={{ fontWeight: 900 }}>{r.code}</div>
-                    <div style={{ fontSize: 12, opacity: 0.85 }}>{r.label}</div>
-                  </div>
-                ))}
-                {previewRows.length > 40 ? <div style={{ fontSize: 12, opacity: 0.7 }}>แสดง 40 รายการแรก</div> : null}
-              </div>
-            ) : null}
-          </div>
+          ) : null}
 
           <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
             {items.map((x, idx) => (
@@ -723,7 +671,6 @@ export default function SellPage() {
         </Card>
       </div>
 
-      {/* ✅ Popup เลือก N/O เมื่อพิมพ์เลขล้วน */}
       {needPrefixModal ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 md:items-center">
           <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0b1a14] p-4">

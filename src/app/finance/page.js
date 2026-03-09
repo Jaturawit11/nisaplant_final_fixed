@@ -39,17 +39,16 @@ export default function FinancePage() {
   return (
     <AppShell title="การเงิน">
       <div className="space-y-4">
-        {/* Tabs (ลิงก์ไปหน้าเดิม เพื่อไม่ไปยุ่ง logic เดิม) */}
+        {/* Tabs */}
         <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm md:p-5">
           <div className="text-sm font-semibold text-slate-900">แท็บการเงิน</div>
           <div className="mt-3 flex flex-wrap gap-2">
             <Tab href="/bank" label="ภาพรวมธนาคาร" />
             <Tab href="/ar" label="ลูกหนี้ (AR)" />
             <Tab href="/salary" label="เงินเดือน" />
-            <Tab href="/closing" label="ปิดเดือน" />
           </div>
           <div className="mt-2 text-xs text-slate-500">
-            หมายเหตุ: ยุบเมนูให้ใช้ง่ายขึ้น แต่ยังใช้หน้าเดิมทั้งหมด (ไม่เปลี่ยน logic เดิม)
+            หมายเหตุ: ยุบเมนูให้ใช้ง่ายขึ้น และคงหน้าเดิมที่ใช้งานอยู่
           </div>
         </div>
 
@@ -68,12 +67,7 @@ export default function FinancePage() {
           <CardLink
             href="/salary"
             title="เงินเดือน"
-            desc="คำนวณเงินเดือนตามกติกา (ผัว 10% เมีย 20% รวมไม่เกิน 60,000 ปัดลง)"
-          />
-          <CardLink
-            href="/closing"
-            title="ปิดเดือน"
-            desc="สรุปปิดเดือน/กันภาษี/บันทึกยอดเดือน เพื่อให้อ่านง่ายและตรวจย้อนหลัง"
+            desc="คำนวณเงินเดือนตามกติกาของระบบ"
           />
         </div>
       </div>

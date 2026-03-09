@@ -1,11 +1,21 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { supabaseBrowser } from '@/lib/supabase/browser'
 import { PAY_THAI, SHIP_THAI } from '@/components/ThaiStatus'
 
-const money = (n) => Number(n || 0).toLocaleString()
+const money = (n) => Number(n || 0).toLocaleString('th-TH')
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function daysAgoISO(days) {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return d.toISOString().slice(0, 10)
+}
 
 export default function EditInvoicePage() {
   const supabase = supabaseBrowser()
@@ -15,8 +25,14 @@ export default function EditInvoicePage() {
   const [err, setErr] = useState('')
 
   const [results, setResults] = useState([])
-  const [selected, setSelected] = useState(null) // invoice row
+  const [selected, setSelected] = useState(null)
   const [items, setItems] = useState([])
+
+  // filters
+  const [dateFrom, setDateFrom] = useState(daysAgoISO(90))
+  const [dateTo, setDateTo] = useState(todayISO())
+  const [payFilter, setPayFilter] = useState('open') // open | unpaid | partial | paid | all
+  const [bankFilter, setBankFilter] = useState('all') // all | GSB | KTB | KBANK
 
   // edit fields
   const [payStatus, setPayStatus] = useState('unpaid')
@@ -28,7 +44,7 @@ export default function EditInvoicePage() {
 
   const [selectedItemIds, setSelectedItemIds] = useState(new Set())
   const [refundAmount, setRefundAmount] = useState('')
-  const [refundType, setRefundType] = useState('partial') // partial | full
+  const [refundType, setRefundType] = useState('partial')
 
   const totals = useMemo(() => {
     const totalCost = Number(selected?.total_cost || 0)
@@ -42,7 +58,14 @@ export default function EditInvoicePage() {
     return s === 'cancelled'
   }, [selected?.invoice_status])
 
-  function resetPageForm({ keepQuery = true } = {}) {
+  function resetActionInputsOnly() {
+    setSelectedItemIds(new Set())
+    setRefundAmount('')
+    setRefundType('partial')
+    setPaidDate('')
+  }
+
+  function resetPageForm({ keepFilters = true } = {}) {
     setErr('')
     setLoading(false)
     setResults([])
@@ -50,55 +73,61 @@ export default function EditInvoicePage() {
     setItems([])
     setSelectedItemIds(new Set())
 
-    // reset edit fields
     setPayStatus('unpaid')
     setShipStatus('not_shipped')
     setBank('GSB')
     setPaymentMethod('transfer')
     setPaidDate('')
+    setCustomerName('')
 
-    // reset refund
     setRefundAmount('')
     setRefundType('partial')
+    setQ('')
 
-    if (!keepQuery) setQ('')
+    if (!keepFilters) {
+      setDateFrom(daysAgoISO(90))
+      setDateTo(todayISO())
+      setPayFilter('open')
+      setBankFilter('all')
+    }
   }
 
-  function resetActionInputsOnly() {
-    // ใช้หลังทำ action สำเร็จ เพื่อไม่ให้ค้างค่าที่เพิ่งกรอก
-    setSelectedItemIds(new Set())
-    setRefundAmount('')
-    setRefundType('partial')
-    setPaidDate('') // กันคนลืมค้างวัน
-  }
-
-  async function search() {
+  async function loadInvoices() {
     setErr('')
     setLoading(true)
     setResults([])
-    setSelected(null)
-    setItems([])
-    setSelectedItemIds(new Set())
-
-    const keyword = q.trim()
 
     try {
-      if (!keyword) {
-        setLoading(false)
-        setErr('พิมพ์เลขบิล (Bxxxx) หรือชื่อลูกค้าเพื่อค้นหา')
-        return
-      }
-
-      const { data, error } = await supabase
+      let query = supabase
         .from('invoices')
         .select(
           'id, invoice_no, sale_date, customer_name, bank, pay_status, ship_status, payment_method, paid_date, invoice_status, total_cost, total_price, total_profit'
         )
-        .or(`invoice_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%`)
         .order('sale_date', { ascending: false })
-        .limit(30)
+        .order('created_at', { ascending: false })
+        .limit(100)
 
+      if (dateFrom) query = query.gte('sale_date', dateFrom)
+      if (dateTo) query = query.lte('sale_date', dateTo)
+
+      if (bankFilter !== 'all') {
+        query = query.eq('bank', bankFilter)
+      }
+
+      if (payFilter === 'open') {
+        query = query.in('pay_status', ['unpaid', 'partial'])
+      } else if (payFilter !== 'all') {
+        query = query.eq('pay_status', payFilter)
+      }
+
+      const keyword = q.trim()
+      if (keyword) {
+        query = query.or(`invoice_no.ilike.%${keyword}%,customer_name.ilike.%${keyword}%`)
+      }
+
+      const { data, error } = await query
       if (error) throw error
+
       setResults(data || [])
     } catch (e) {
       setErr(e.message || String(e))
@@ -107,12 +136,16 @@ export default function EditInvoicePage() {
     }
   }
 
+  useEffect(() => {
+    loadInvoices()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function openInvoice(inv) {
     setErr('')
     setSelected(inv)
     setSelectedItemIds(new Set())
 
-    // hydrate edit fields
     setPayStatus(inv.pay_status || 'unpaid')
     setShipStatus(inv.ship_status || 'not_shipped')
     setBank(inv.bank || 'GSB')
@@ -120,12 +153,10 @@ export default function EditInvoicePage() {
     setPaidDate(inv.paid_date || '')
     setCustomerName(inv.customer_name || '')
 
-    // reset refund inputs when opening a new invoice
     setRefundAmount('')
     setRefundType('partial')
 
     try {
-      // ✅ แสดงเฉพาะรายการที่ยัง ACTIVE (หรือของเก่าที่ item_status ยังเป็น null)
       const { data, error } = await supabase
         .from('sale_items')
         .select('id, invoice_id, plant_id, plant_code, plant_name, cost, price, profit, item_status, created_at')
@@ -151,21 +182,27 @@ export default function EditInvoicePage() {
   }
 
   async function rpcCancelInvoice() {
-    if (!selected?.id) return
-    if (isCancelled) return
+    if (!selected?.id || isCancelled) return
 
-    const ok = confirm(`ยืนยัน "ยกเลิกทั้งบิล" ${selected.invoice_no} ?\n- คืนสต๊อกไม้ทุกต้นในบิล\n- บิลจะเป็น cancelled`)
+    const ok = confirm(
+      `ยืนยัน "ยกเลิกทั้งบิล" ${selected.invoice_no} ?\n- คืนสต๊อกไม้ทุกต้นในบิล\n- บิลจะเป็น cancelled`
+    )
     if (!ok) return
 
     setLoading(true)
     setErr('')
     try {
-      const { error } = await supabase.rpc('cancel_invoice', { p_invoice_id: selected.id, p_reason: null })
+      const { error } = await supabase.rpc('cancel_invoice', {
+        p_invoice_id: selected.id,
+        p_reason: null,
+      })
       if (error) throw error
 
-      // หลังสำเร็จ: รีเซ็ตหน้าให้กลับไปเริ่มต้น (ไม่ค้างข้อมูลเดิม)
       alert('ยกเลิกบิลเรียบร้อย')
-      window.location.reload()
+      await loadInvoices()
+      setSelected(null)
+      setItems([])
+      resetActionInputsOnly()
     } catch (e) {
       setErr(e.message || String(e))
     } finally {
@@ -174,8 +211,7 @@ export default function EditInvoicePage() {
   }
 
   async function rpcRemoveItems() {
-    if (!selected?.id) return
-    if (isCancelled) return
+    if (!selected?.id || isCancelled) return
 
     const ids = Array.from(selectedItemIds)
     if (!ids.length) {
@@ -183,7 +219,9 @@ export default function EditInvoicePage() {
       return
     }
 
-    const ok = confirm(`ยืนยัน "ยกเลิกรายการ" ${ids.length} รายการ?\n- คืนสต๊อกเฉพาะรายการที่เลือก\n- รายการจะถูกเอาออกจากบิล`)
+    const ok = confirm(
+      `ยืนยัน "ยกเลิกรายการ" ${ids.length} รายการ?\n- คืนสต๊อกเฉพาะรายการที่เลือก\n- รายการจะถูกเอาออกจากบิล`
+    )
     if (!ok) return
 
     setLoading(true)
@@ -195,11 +233,10 @@ export default function EditInvoicePage() {
       })
       if (error) throw error
 
-      // reload invoice + items (ยังอยู่หน้าเดิมได้)
       await refreshSelected()
+      await loadInvoices()
       resetActionInputsOnly()
       alert('ยกเลิกรายการเรียบร้อย')
-      window.location.reload()
     } catch (e) {
       setErr(e.message || String(e))
     } finally {
@@ -208,8 +245,7 @@ export default function EditInvoicePage() {
   }
 
   async function rpcUpdateStatus() {
-    if (!selected?.id) return
-    if (isCancelled) return
+    if (!selected?.id || isCancelled) return
 
     const ok = confirm(
       `ยืนยันอัปเดตสถานะบิล ${selected.invoice_no} ?\n` +
@@ -233,9 +269,9 @@ export default function EditInvoicePage() {
       if (error) throw error
 
       await refreshSelected()
+      await loadInvoices()
       resetActionInputsOnly()
       alert('อัปเดตสถานะเรียบร้อย')
-      window.location.reload()
     } catch (e) {
       setErr(e.message || String(e))
     } finally {
@@ -244,8 +280,7 @@ export default function EditInvoicePage() {
   }
 
   async function rpcRefund() {
-    if (!selected?.id) return
-    if (isCancelled) return
+    if (!selected?.id || isCancelled) return
 
     const amt = Number(refundAmount || 0)
     if (amt < 0) return setErr('ยอดคืนเงินต้องมากกว่าหรือเท่ากับ 0')
@@ -269,9 +304,9 @@ export default function EditInvoicePage() {
       if (error) throw error
 
       await refreshSelected()
+      await loadInvoices()
       resetActionInputsOnly()
       alert('บันทึกเคลมเงินเรียบร้อย')
-      window.location.reload()
     } catch (e) {
       setErr(e.message || String(e))
     } finally {
@@ -281,6 +316,7 @@ export default function EditInvoicePage() {
 
   async function refreshSelected() {
     if (!selected?.id) return
+
     const { data, error } = await supabase
       .from('invoices')
       .select(
@@ -288,6 +324,7 @@ export default function EditInvoicePage() {
       )
       .eq('id', selected.id)
       .single()
+
     if (error) throw error
 
     setSelected(data)
@@ -296,82 +333,153 @@ export default function EditInvoicePage() {
     setBank(data.bank || 'GSB')
     setPaymentMethod(data.payment_method || 'transfer')
     setPaidDate(data.paid_date || '')
+    setCustomerName(data.customer_name || '')
 
     const b = await supabase
       .from('sale_items')
       .select('id, invoice_id, plant_id, plant_code, plant_name, cost, price, profit, item_status, created_at')
-      .eq('invoice_id', selected.id)
+      .eq('invoice_id', data.id)
       .or('item_status.is.null,item_status.eq.ACTIVE')
       .order('created_at', { ascending: true })
+
     if (b.error) throw b.error
     setItems(b.data || [])
   }
 
   return (
     <AppShell title="แก้บิล (Edit Invoice)">
-      <div style={{ maxWidth: 980, margin: '0 auto', display: 'grid', gap: 12 }}>
-        <Card title="ค้นหาบิล">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="พิมพ์เลขบิล เช่น B26020006 หรือชื่อลูกค้า"
-              style={{ ...input, flex: 1, minWidth: 260 }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  search()
-                }
-              }}
-            />
-            <button onClick={search} style={btnPrimary} disabled={loading}>
-              {loading ? 'กำลังค้นหา...' : 'ค้นหา'}
+      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gap: 12 }}>
+        <Card title="ค้นหาบิล / ตัวกรอง">
+          <div style={filterGrid}>
+            <Field label="ค้นหาเลขบิล / ชื่อลูกค้า">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="พิมพ์เลขบิล เช่น B26020006 หรือชื่อลูกค้า"
+                style={input}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    loadInvoices()
+                  }
+                }}
+              />
+            </Field>
+
+            <Field label="จากวันที่">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                style={input}
+              />
+            </Field>
+
+            <Field label="ถึงวันที่">
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                style={input}
+              />
+            </Field>
+
+            <Field label="สถานะการชำระ">
+              <select value={payFilter} onChange={(e) => setPayFilter(e.target.value)} style={input}>
+                <option value="open">ยังไม่จ่าย + จ่ายบางส่วน</option>
+                <option value="unpaid">ยังไม่จ่าย</option>
+                <option value="partial">จ่ายบางส่วน</option>
+                <option value="paid">จ่ายแล้ว</option>
+                <option value="all">ทั้งหมด</option>
+              </select>
+            </Field>
+
+            <Field label="ธนาคาร">
+              <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={input}>
+                <option value="all">ทั้งหมด</option>
+                <option value="GSB">GSB</option>
+                <option value="KTB">KTB</option>
+                <option value="KBANK">KBANK</option>
+              </select>
+            </Field>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+            <button onClick={loadInvoices} style={btnPrimary} disabled={loading}>
+              {loading ? 'กำลังโหลด...' : 'ค้นหา'}
             </button>
 
             <button
-              onClick={() => resetPageForm({ keepQuery: false })}
+              onClick={() => resetPageForm({ keepFilters: false })}
               style={btnGhost}
               disabled={loading}
-              title="ล้างฟอร์มทั้งหมด"
             >
               ล้างฟอร์ม
             </button>
           </div>
 
           {err ? <pre style={errBox}>{err}</pre> : null}
+        </Card>
 
-          {results.length ? (
-            <div className="mt-3 grid gap-2">
-              {results.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => openInvoice(r)}
-                  style={{
-                    textAlign: 'left',
-                    padding: 12,
-                    borderRadius: 16,
-                    border: '1px solid rgba(255,255,255,0.12)',
-                    background: 'rgba(255,255,255,0.05)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <div style={{ fontWeight: 900 }}>{r.invoice_no}</div>
-                    <div style={{ opacity: 0.85 }}>{r.sale_date}</div>
-                  </div>
-                  <div style={{ opacity: 0.9, marginTop: 4 }}>
-                    ลูกค้า: <b>{r.customer_name || '-'}</b> • {PAY_THAI[r.pay_status]} • {SHIP_THAI[r.ship_status]}
-                  </div>
-                </button>
-              ))}
+        <Card title={`รายการบิล (${results.length})`}>
+          {!results.length ? (
+            <div style={{ opacity: 0.8 }}>ไม่พบบิลตามเงื่อนไข</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={table}>
+                <thead>
+                  <tr>
+                    <th style={th}>เลขบิล</th>
+                    <th style={th}>วันที่</th>
+                    <th style={th}>ลูกค้า</th>
+                    <th style={thRight}>ยอดรวม</th>
+                    <th style={th}>ชำระเงิน</th>
+                    <th style={th}>จัดส่ง</th>
+                    <th style={th}>ธนาคาร</th>
+                    <th style={th}>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {results.map((r) => (
+                    <tr
+                      key={r.id}
+                      style={{
+                        ...tr,
+                        background:
+                          selected?.id === r.id ? 'rgba(31,138,91,0.12)' : 'transparent',
+                      }}
+                    >
+                      <td style={tdStrong}>{r.invoice_no}</td>
+                      <td style={td}>{r.sale_date}</td>
+                      <td style={td}>{r.customer_name || '-'}</td>
+                      <td style={tdRight}>{money(r.total_price)}</td>
+                      <td style={td}>
+                        <StatusChip tone={payTone(r.pay_status)}>
+                          {PAY_THAI[r.pay_status] || r.pay_status}
+                        </StatusChip>
+                      </td>
+                      <td style={td}>
+                        <StatusChip tone={shipTone(r.ship_status)}>
+                          {SHIP_THAI[r.ship_status] || r.ship_status}
+                        </StatusChip>
+                      </td>
+                      <td style={td}>{r.bank || '-'}</td>
+                      <td style={td}>
+                        <button onClick={() => openInvoice(r)} style={btnSmall}>
+                          แก้ไข
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ) : null}
+          )}
         </Card>
 
         {selected ? (
           <>
             <Card title={`รายละเอียดบิล: ${selected.invoice_no}`}>
-              {/* ✅ badge CANCELLED */}
               {isCancelled ? (
                 <div style={badgeCancelled}>
                   บิลนี้ถูกยกเลิกแล้ว (CANCELLED) — โหมดดูอย่างเดียว
@@ -393,7 +501,6 @@ export default function EditInvoicePage() {
                 <Mini label="กำไร">{money(totals.totalProfit)}</Mini>
               </div>
 
-              {/* ✅ ซ่อน action ทั้งหมดถ้า cancelled */}
               {!isCancelled ? (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
                   <button onClick={rpcCancelInvoice} style={btnDanger} disabled={loading}>
@@ -425,7 +532,6 @@ export default function EditInvoicePage() {
                         opacity: isCancelled ? 0.65 : 1,
                       }}
                     >
-                      {/* ✅ ถ้า cancelled ให้ disable checkbox */}
                       <input
                         type="checkbox"
                         disabled={isCancelled}
@@ -439,7 +545,9 @@ export default function EditInvoicePage() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 900 }}>{money(it.price)}</div>
-                        <div style={{ fontSize: 12, opacity: 0.8 }}>ทุน {money(it.cost)} • กำไร {money(it.profit)}</div>
+                        <div style={{ fontSize: 12, opacity: 0.8 }}>
+                          ทุน {money(it.cost)} • กำไร {money(it.profit)}
+                        </div>
                       </div>
                     </label>
                   ))}
@@ -447,7 +555,6 @@ export default function EditInvoicePage() {
               )}
             </Card>
 
-            {/* ✅ ซ่อนทั้งก้อนถ้า cancelled */}
             {!isCancelled ? (
               <Card title="อัปเดตสถานะ (ไทย)">
                 <div style={{ display: 'grid', gap: 10 }}>
@@ -492,7 +599,12 @@ export default function EditInvoicePage() {
                   </Field>
 
                   <Field label="วันที่รับเงิน (ถ้ามี)">
-                    <input value={paidDate} onChange={(e) => setPaidDate(e.target.value)} type="date" style={input} />
+                    <input
+                      value={paidDate}
+                      onChange={(e) => setPaidDate(e.target.value)}
+                      type="date"
+                      style={input}
+                    />
                   </Field>
 
                   <button onClick={rpcUpdateStatus} style={btnPrimary} disabled={loading}>
@@ -539,9 +651,72 @@ export default function EditInvoicePage() {
   )
 }
 
+function payTone(status) {
+  const s = String(status || '').toLowerCase()
+  if (s === 'paid') return 'green'
+  if (s === 'partial') return 'yellow'
+  return 'red'
+}
+
+function shipTone(status) {
+  const s = String(status || '').toLowerCase()
+  if (s === 'shipped') return 'green'
+  return 'gray'
+}
+
+function StatusChip({ tone = 'gray', children }) {
+  const map = {
+    green: {
+      background: 'rgba(16,185,129,0.15)',
+      border: '1px solid rgba(16,185,129,0.28)',
+      color: '#b7f7dd',
+    },
+    yellow: {
+      background: 'rgba(245,158,11,0.15)',
+      border: '1px solid rgba(245,158,11,0.28)',
+      color: '#ffe3a1',
+    },
+    red: {
+      background: 'rgba(239,68,68,0.15)',
+      border: '1px solid rgba(239,68,68,0.28)',
+      color: '#ffc2c2',
+    },
+    gray: {
+      background: 'rgba(255,255,255,0.08)',
+      border: '1px solid rgba(255,255,255,0.14)',
+      color: 'white',
+    },
+  }
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 28,
+        padding: '0 10px',
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 900,
+        whiteSpace: 'nowrap',
+        ...(map[tone] || map.gray),
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
 function Card({ title, children }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 18, padding: 14 }}>
+    <div
+      style={{
+        background: 'rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.10)',
+        borderRadius: 18,
+        padding: 14,
+      }}
+    >
       <div style={{ fontWeight: 900, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
@@ -573,6 +748,12 @@ function Mini({ label, children }) {
       <div style={{ fontSize: 18, fontWeight: 900 }}>{children}</div>
     </div>
   )
+}
+
+const filterGrid = {
+  display: 'grid',
+  gap: 10,
+  gridTemplateColumns: 'minmax(260px,2fr) repeat(4, minmax(160px,1fr))',
 }
 
 const input = {
@@ -627,6 +808,17 @@ const btnGhost = {
   cursor: 'pointer',
 }
 
+const btnSmall = {
+  height: 34,
+  padding: '0 12px',
+  borderRadius: 12,
+  border: 'none',
+  background: '#1f8a5b',
+  color: 'white',
+  fontWeight: 900,
+  cursor: 'pointer',
+}
+
 const badgeCancelled = {
   border: '1px solid rgba(255,60,60,0.45)',
   background: 'rgba(255,60,60,0.10)',
@@ -644,4 +836,46 @@ const errBox = {
   border: '1px solid rgba(255,255,255,0.12)',
   borderRadius: 14,
   padding: 10,
+}
+
+const table = {
+  width: '100%',
+  borderCollapse: 'separate',
+  borderSpacing: 0,
+}
+
+const th = {
+  textAlign: 'left',
+  fontSize: 12,
+  opacity: 0.8,
+  padding: '10px 10px',
+  borderBottom: '1px solid rgba(255,255,255,0.12)',
+  whiteSpace: 'nowrap',
+}
+
+const thRight = {
+  ...th,
+  textAlign: 'right',
+}
+
+const tr = {
+  borderBottom: '1px solid rgba(255,255,255,0.06)',
+}
+
+const td = {
+  padding: '12px 10px',
+  borderBottom: '1px solid rgba(255,255,255,0.06)',
+  fontSize: 13,
+  verticalAlign: 'middle',
+}
+
+const tdStrong = {
+  ...td,
+  fontWeight: 900,
+}
+
+const tdRight = {
+  ...td,
+  textAlign: 'right',
+  fontWeight: 900,
 }
