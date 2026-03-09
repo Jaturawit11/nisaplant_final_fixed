@@ -6,333 +6,576 @@ import { supabaseBrowser } from '@/lib/supabase/browser'
 
 const money = (n) => Number(n || 0).toLocaleString('th-TH')
 
-function pad2(n){ return String(n).padStart(2,'0') }
-function monthKey(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}` }
-
-function startOfMonth(m){
-  const [y,mm]=m.split('-').map(Number)
-  return new Date(y,mm-1,1)
+function pad2(n) {
+  return String(n).padStart(2, '0')
 }
-
-function endOfMonthExclusive(m){
-  const [y,mm]=m.split('-').map(Number)
-  return new Date(y,mm,1)
+function monthKey(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
 }
-
-function toISODate(d){
-  return d.toISOString().slice(0,10)
+function startOfMonth(yyyyMm) {
+  const [y, m] = yyyyMm.split('-').map((x) => Number(x))
+  return new Date(y, m - 1, 1)
 }
-
-function addDays(d,n){
-  const x=new Date(d)
-  x.setDate(x.getDate()+n)
+function endOfMonthExclusive(yyyyMm) {
+  const [y, m] = yyyyMm.split('-').map((x) => Number(x))
+  return new Date(y, m, 1)
+}
+function toISODate(d) {
+  return d.toISOString().slice(0, 10)
+}
+function addDays(d, days) {
+  const x = new Date(d)
+  x.setDate(x.getDate() + days)
   return x
 }
-
-function startOfDay(d=new Date()){
-  const x=new Date(d)
-  x.setHours(0,0,0,0)
+function startOfDay(d = new Date()) {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
   return x
 }
-
-function pickRow(d){
-  const r=Array.isArray(d)?d[0]:d
-  return r||null
+function pickRow(data) {
+  const row = Array.isArray(data) ? data[0] : data
+  return row || null
+}
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ')
 }
 
-export default function SummaryPage(){
+function normalizeSummary(sum) {
+  const totalSales = Number(sum?.total_sales || 0)
+  const totalCost = Number(sum?.total_cost || 0)
+  const grossProfit = Number(sum?.gross_profit || 0)
+  const totalExpenses = Number(sum?.total_expenses || 0)
+  const netProfit = Number(sum?.net_profit || 0)
+  const tax15 = Number(sum?.tax_15 || 0)
+  const afterTax = Number(sum?.after_tax || 0)
 
-  const supabase=supabaseBrowser()
+  return { totalSales, totalCost, grossProfit, totalExpenses, netProfit, tax15, afterTax }
+}
 
-  const [month,setMonth]=useState(()=>monthKey(new Date()))
-  const [loading,setLoading]=useState(false)
-  const [err,setErr]=useState('')
+function Pill({ tone = 'slate', children }) {
+  const map = {
+    emerald: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
+    amber: 'border border-amber-200/90 bg-amber-50 text-amber-700',
+    rose: 'border border-rose-200/90 bg-rose-50 text-rose-700',
+    slate: 'border border-slate-200/90 bg-white text-slate-600',
+    sky: 'border border-sky-200/90 bg-sky-50 text-sky-700',
+    lilac: 'border border-violet-200/90 bg-violet-50 text-violet-700',
+  }
 
-  const [sumMonth,setSumMonth]=useState(null)
-  const [sumToday,setSumToday]=useState(null)
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight',
+        map[tone] || map.slate
+      )}
+    >
+      {children}
+    </span>
+  )
+}
 
-  const [series30,setSeries30]=useState([])
-  const [series30Note,setSeries30Note]=useState('')
+function ShellCard({ title, subtitle, tint = 'default', right, children, className = '' }) {
+  const tintMap = {
+    default:
+      'border border-white/80 bg-white/92 shadow-[0_8px_24px_rgba(15,23,42,0.05)]',
+    rose:
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,244,247,0.96)_46%,rgba(252,231,243,0.92)_100%)] shadow-[0_8px_24px_rgba(244,63,94,0.06)]',
+    sky:
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,250,255,0.96)_46%,rgba(224,242,254,0.92)_100%)] shadow-[0_8px_24px_rgba(59,130,246,0.06)]',
+    emerald:
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
+    cream:
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
+    lilac:
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
+  }
 
-  const [top10,setTop10]=useState([])
-  const [top10Note,setTop10Note]=useState('')
+  return (
+    <section
+      className={cn(
+        'relative overflow-hidden rounded-[30px] p-4 sm:p-5',
+        tintMap[tint] || tintMap.default,
+        className
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_38%)]" />
+      <div className="relative z-10">
+        {(title || subtitle || right) && (
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {title ? (
+                <div className="text-[15px] font-semibold tracking-tight text-slate-900">
+                  {title}
+                </div>
+              ) : null}
+              {subtitle ? (
+                <div className="mt-1 text-xs leading-relaxed text-slate-500">{subtitle}</div>
+              ) : null}
+            </div>
+            {right}
+          </div>
+        )}
+        {children}
+      </div>
+    </section>
+  )
+}
 
-  const rangeMonth=useMemo(()=>{
-    const s=startOfMonth(month)
-    const e=endOfMonthExclusive(month)
-    return {start:toISODate(s),end:toISODate(e)}
-  },[month])
+function KPI({ title, value, tone = 'default', suffix = 'บาท' }) {
+  const toneMap = {
+    default: 'border-white/85 bg-white/82',
+    rose: 'border-rose-100/90 bg-white/72',
+    sky: 'border-sky-100/90 bg-white/72',
+    emerald: 'border-emerald-100/90 bg-white/72',
+    cream: 'border-amber-100/90 bg-white/72',
+  }
 
-  const rangeToday=useMemo(()=>{
-    const s=startOfDay(new Date())
-    const e=startOfDay(addDays(s,1))
-    return {start:toISODate(s),end:toISODate(e)}
-  },[])
+  return (
+    <div
+      className={cn(
+        'rounded-[26px] border p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
+        toneMap[tone] || toneMap.default
+      )}
+    >
+      <div className="text-xs font-semibold text-slate-500">{title}</div>
+      <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
+        <span className="text-[30px] font-bold leading-none tracking-tight text-slate-900">
+          {value}
+        </span>
+        <span className="mb-1 text-xs font-semibold text-slate-400">{suffix}</span>
+      </div>
+    </div>
+  )
+}
 
-  const range30=useMemo(()=>{
-    const end=startOfDay(addDays(new Date(),1))
-    const start=startOfDay(addDays(end,-30))
-    return {start:toISODate(start),end:toISODate(end)}
-  },[])
+function MiniStat({ label, value, tone = 'default' }) {
+  const toneMap = {
+    default: 'border-white/85 bg-white/82',
+    rose: 'border-rose-100/90 bg-white/72',
+    sky: 'border-sky-100/90 bg-white/72',
+    emerald: 'border-emerald-100/90 bg-white/72',
+    cream: 'border-amber-100/90 bg-white/72',
+    lilac: 'border-violet-100/90 bg-white/72',
+  }
 
-  async function rpcSafe(name,args){
-    const {data,error}=await supabase.rpc(name,args)
-    if(error)throw error
+  return (
+    <div
+      className={cn(
+        'rounded-[22px] border p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
+        toneMap[tone] || toneMap.default
+      )}
+    >
+      <div className="text-xs font-semibold text-slate-500">{label}</div>
+      <div className="mt-2 text-[24px] font-bold tracking-tight text-slate-900">{value}</div>
+    </div>
+  )
+}
+
+function BigLine({ label, value, tone = 'default', emphasize = false }) {
+  const toneMap = {
+    default: 'border-white/85 bg-white/80',
+    rose: 'border-rose-100/90 bg-white/74',
+    sky: 'border-sky-100/90 bg-white/74',
+    emerald: 'border-emerald-100/90 bg-white/74',
+    cream: 'border-amber-100/90 bg-white/74',
+  }
+
+  return (
+    <div
+      className={cn(
+        'rounded-[22px] border px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
+        toneMap[tone] || toneMap.default
+      )}
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm font-semibold text-slate-600">{label}</div>
+        <div
+          className={cn(
+            'text-right font-bold tracking-tight text-slate-900',
+            emphasize ? 'text-[28px]' : 'text-[22px]'
+          )}
+        >
+          {value}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EmptyHint({ text }) {
+  return (
+    <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
+      {text}
+    </div>
+  )
+}
+
+function SimpleBarChart({ rows, xKey, yKey }) {
+  const cleaned = (rows || [])
+    .map((r) => ({
+      x: r?.[xKey] ?? r?.d ?? '',
+      y: Number(r?.[yKey] ?? 0),
+    }))
+    .slice(-30)
+
+  if (!cleaned.length) return null
+
+  const maxAbs = Math.max(1, ...cleaned.map((p) => Math.abs(p.y)))
+  const w = 960
+  const h = 210
+  const pad = 16
+  const baseY = h / 2
+  const gap = 4
+  const barW = Math.max(6, Math.floor((w - pad * 2) / cleaned.length) - gap)
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="h-[220px] min-w-[760px] w-full rounded-[24px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.72)_100%)]"
+      >
+        <line x1={0} y1={baseY} x2={w} y2={baseY} stroke="rgba(100,116,139,0.18)" strokeWidth="1" />
+
+        {cleaned.map((p, i) => {
+          const x = pad + i * (barW + gap)
+          const barH = Math.round((Math.abs(p.y) / maxAbs) * (h / 2 - 26))
+          const y = p.y >= 0 ? baseY - barH : baseY
+          const fill = p.y >= 0 ? '#34d399' : '#fb7185'
+
+          return (
+            <g key={i}>
+              <rect x={x} y={y} width={barW} height={barH} rx="4" fill={fill} />
+              {i % 6 === 0 ? (
+                <text x={x} y={h - 8} fontSize="10" fill="rgba(100,116,139,0.75)">
+                  {String(p.x).slice(5)}
+                </text>
+              ) : null}
+            </g>
+          )
+        })}
+      </svg>
+
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-500">
+        <span className="inline-flex items-center gap-2">
+          <span className="h-3 w-3 rounded bg-emerald-400" />
+          กำไร (+)
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className="h-3 w-3 rounded bg-rose-400" />
+          ขาดทุน (-)
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export default function SummaryPage() {
+  const supabase = supabaseBrowser()
+
+  const [month, setMonth] = useState(() => monthKey(new Date()))
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
+
+  const [sumMonth, setSumMonth] = useState(null)
+  const [sumToday, setSumToday] = useState(null)
+
+  const [series30, setSeries30] = useState([])
+  const [series30Note, setSeries30Note] = useState('')
+
+  const [top10, setTop10] = useState([])
+  const [top10Note, setTop10Note] = useState('')
+
+  const rangeMonth = useMemo(() => {
+    const s = startOfMonth(month)
+    const e = endOfMonthExclusive(month)
+    return { start: toISODate(s), end: toISODate(e) }
+  }, [month])
+
+  const rangeToday = useMemo(() => {
+    const s = startOfDay(new Date())
+    const e = startOfDay(addDays(s, 1))
+    return { start: toISODate(s), end: toISODate(e) }
+  }, [])
+
+  const range30 = useMemo(() => {
+    const end = startOfDay(addDays(new Date(), 1))
+    const start = startOfDay(addDays(end, -30))
+    return { start: toISODate(start), end: toISODate(end) }
+  }, [])
+
+  async function rpcSafe(name, args) {
+    const { data, error } = await supabase.rpc(name, args)
+    if (error) throw error
     return data
   }
 
-  async function loadAll(){
-
+  async function loadAll() {
     setErr('')
     setLoading(true)
 
-    try{
-
-      const dataMonth=await rpcSafe('get_month_summary',{
-        p_start:rangeMonth.start,
-        p_end:rangeMonth.end
-      })
-      setSumMonth(pickRow(dataMonth))
-
-      const dataToday=await rpcSafe('get_month_summary',{
-        p_start:rangeToday.start,
-        p_end:rangeToday.end
-      })
-      setSumToday(pickRow(dataToday))
-
-      try{
-        const s=await rpcSafe('get_daily_profit_series',{
-          p_start:range30.start,
-          p_end:range30.end
+    try {
+      {
+        const data = await rpcSafe('get_month_summary', {
+          p_start: rangeMonth.start,
+          p_end: rangeMonth.end,
         })
-        setSeries30(Array.isArray(s)?s:[])
-      }catch(e){
+        setSumMonth(pickRow(data))
+      }
+
+      {
+        const data = await rpcSafe('get_month_summary', {
+          p_start: rangeToday.start,
+          p_end: rangeToday.end,
+        })
+        setSumToday(pickRow(data))
+      }
+
+      try {
+        const data = await rpcSafe('get_daily_profit_series', {
+          p_start: range30.start,
+          p_end: range30.end,
+        })
+        const rows = Array.isArray(data) ? data : []
+        setSeries30(rows)
+        setSeries30Note('')
+      } catch (e) {
         setSeries30([])
-        setSeries30Note('ยังไม่ได้เปิดใช้กราฟ 30 วัน')
+        setSeries30Note('ยังไม่ได้เปิดใช้กราฟ 30 วัน (ต้องสร้าง RPC: get_daily_profit_series)')
       }
 
-      try{
-        const t=await rpcSafe('get_top_profit_items',{
-          p_start:rangeMonth.start,
-          p_end:rangeMonth.end,
-          p_limit:10
+      try {
+        const data = await rpcSafe('get_top_profit_items', {
+          p_start: rangeMonth.start,
+          p_end: rangeMonth.end,
+          p_limit: 10,
         })
-        setTop10(Array.isArray(t)?t:[])
-      }catch(e){
+        const rows = Array.isArray(data) ? data : []
+        setTop10(rows)
+        setTop10Note('')
+      } catch (e) {
         setTop10([])
-        setTop10Note('ยังไม่ได้เปิดใช้ Top 10')
+        setTop10Note('ยังไม่ได้เปิดใช้ Top 10 (ต้องสร้าง RPC: get_top_profit_items)')
       }
-
-    }catch(e){
-      setErr(e.message||String(e))
-    }finally{
+    } catch (e) {
+      setErr(e.message || String(e))
+      setSumMonth(null)
+      setSumToday(null)
+      setSeries30([])
+      setTop10([])
+    } finally {
       setLoading(false)
     }
-
   }
 
-  useEffect(()=>{loadAll()},[rangeMonth.start])
-
-  const m=normalize(sumMonth)
-  const t=normalize(sumToday)
-
-  return(
-
-<AppShell title="Summary">
-
-<div className="max-w-6xl mx-auto grid gap-4">
-
-{/* header */}
-
-<div className="flex flex-wrap gap-2 items-center">
-
-<button onClick={()=>setMonth(monthKey(addDays(startOfMonth(month),-30)))} className="btn-ghost">
-◀ เดือนก่อน
-</button>
-
-<input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="input"/>
-
-<button onClick={()=>setMonth(monthKey(addDays(startOfMonth(month),30)))} className="btn-ghost">
-เดือนถัดไป ▶
-</button>
-
-<button onClick={loadAll} className="btn-primary">
-{loading?'กำลังโหลด...':'รีเฟรช'}
-</button>
-
-</div>
-
-{err?<div className="text-red-400">{err}</div>:null}
-
-{/* KPI */}
-
-<div className="grid md:grid-cols-4 gap-3">
-
-<KPI title="ยอดขายวันนี้" value={money(t.totalSales)}/>
-<KPI title="กำไรวันนี้" value={money(t.netProfit)}/>
-
-<KPI title="ยอดขายเดือนนี้" value={money(m.totalSales)}/>
-<KPI title="กำไรเดือนนี้" value={money(m.netProfit)}/>
-
-</div>
-
-{/* month breakdown */}
-
-<Card title="ภาพรวมรายเดือน">
-
-<div className="grid md:grid-cols-2 gap-3">
-
-<Mini label="ยอดขายรวม">{money(m.totalSales)}</Mini>
-<Mini label="ต้นทุนรวม">{money(m.totalCost)}</Mini>
-<Mini label="กำไรจากการขาย">{money(m.grossProfit)}</Mini>
-<Mini label="ค่าใช้จ่ายรวม">{money(m.totalExpenses)}</Mini>
-
-</div>
-
-</Card>
-
-{/* net tax */}
-
-<Card title="กำไรสุทธิจริง + ภาษี">
-
-<Big label="กำไรสุทธิ">{money(m.netProfit)}</Big>
-<Big label="ภาษี 15%">{money(m.tax15)}</Big>
-<Big label="หลังภาษี">{money(m.afterTax)}</Big>
-
-</Card>
-
-{/* chart */}
-
-<Card title="แนวโน้มกำไร 30 วัน">
-
-{series30.length
-? <Chart rows={series30}/>
-: <div className="text-sm text-slate-500">{series30Note||'ยังไม่มีข้อมูล'}</div>}
-
-</Card>
-
-{/* top 10 */}
-
-<Card title="Top 10 กำไรสูงสุด">
-
-{top10.length
-? <table className="w-full text-sm">
-<thead>
-<tr>
-<th>#</th>
-<th>รายการ</th>
-<th className="text-right">ยอดขาย</th>
-<th className="text-right">กำไร</th>
-</tr>
-</thead>
-<tbody>
-
-{top10.map((r,i)=>(
-
-<tr key={i}>
-<td>{i+1}</td>
-<td>{r.name||r.plant_name||'-'}</td>
-<td className="text-right">{money(r.total_sales||0)}</td>
-<td className="text-right">{money(r.profit||0)}</td>
-</tr>
-
-))}
-
-</tbody>
-</table>
-
-: <div className="text-sm text-slate-500">{top10Note||'ยังไม่มีข้อมูล'}</div>}
-
-</Card>
-
-</div>
-
-</AppShell>
-
-)
-
-}
-
-function normalize(s){
-
-return{
-totalSales:Number(s?.total_sales||0),
-totalCost:Number(s?.total_cost||0),
-grossProfit:Number(s?.gross_profit||0),
-totalExpenses:Number(s?.total_expenses||0),
-netProfit:Number(s?.net_profit||0),
-tax15:Number(s?.tax_15||0),
-afterTax:Number(s?.after_tax||0)
-}
-
-}
-
-function Card({title,children}){
-
-return(
-<div className="rounded-[28px] border bg-white p-4 shadow-sm">
-<div className="font-semibold mb-3">{title}</div>
-{children}
-</div>
-)
-
-}
-
-function KPI({title,value}){
-
-return(
-<div className="rounded-[28px] border bg-white p-4 shadow-sm">
-<div className="text-xs text-slate-500">{title}</div>
-<div className="text-2xl font-bold">{value}</div>
-</div>
-)
-
-}
-
-function Mini({label,children}){
-
-return(
-<div className="rounded-[22px] border p-3">
-<div className="text-xs text-slate-500">{label}</div>
-<div className="text-lg font-bold">{children}</div>
-</div>
-)
-
-}
-
-function Big({label,children}){
-
-return(
-<div className="flex justify-between border rounded-[18px] p-3">
-<span>{label}</span>
-<b>{children}</b>
-</div>
-)
-
-}
-
-function Chart({rows}){
-
-return(
-
-<div className="h-40 flex items-end gap-1">
-
-{rows.map((r,i)=>{
-
-const h=Math.min(100,Math.abs(r.net_profit)/1000)
-
-return(
-<div
-key={i}
-style={{height:`${h}%`}}
-className="flex-1 bg-emerald-400 rounded"
-/>
-)
-
-})}
-
-</div>
-
-)
-
+  useEffect(() => {
+    loadAll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeMonth.start, rangeMonth.end])
+
+  function prevMonth() {
+    const d = startOfMonth(month)
+    d.setMonth(d.getMonth() - 1)
+    setMonth(monthKey(d))
+  }
+
+  function nextMonth() {
+    const d = startOfMonth(month)
+    d.setMonth(d.getMonth() + 1)
+    setMonth(monthKey(d))
+  }
+
+  const m = normalizeSummary(sumMonth)
+  const t = normalizeSummary(sumToday)
+
+  return (
+    <AppShell title="สรุป (Summary)">
+      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+        <div className="mx-auto grid max-w-6xl gap-3 sm:gap-4">
+          <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                NisaPlant Summary
+              </div>
+              <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
+                สรุป
+              </div>
+              <div className="mt-1 text-sm leading-relaxed text-slate-500">
+                ภาพรวมยอดขาย กำไร ภาษี และแนวโน้มรายเดือนในธีมเดียวกับทั้งระบบ
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Pill tone="sky">เดือน {month}</Pill>
+              <Pill tone="emerald">วันนี้ {rangeToday.start}</Pill>
+            </div>
+          </div>
+
+          <ShellCard
+            title="เลือกเดือน"
+            subtitle={`ช่วงข้อมูลเดือน: ${rangeMonth.start} - ${rangeMonth.end} | วันนี้: ${rangeToday.start}`}
+            tint="default"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={prevMonth}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                disabled={loading}
+              >
+                ◀ เดือนก่อน
+              </button>
+
+              <input
+                type="month"
+                value={month}
+                onChange={(e) => setMonth(e.target.value)}
+                className="h-11 rounded-2xl border border-slate-200/90 bg-white/85 px-4 text-[15px] text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+              />
+
+              <button
+                onClick={nextMonth}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                disabled={loading}
+              >
+                เดือนถัดไป ▶
+              </button>
+
+              <button
+                onClick={loadAll}
+                className="inline-flex h-11 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(16,185,129,0.16)] transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading}
+              >
+                {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
+              </button>
+            </div>
+
+            {err ? (
+              <div className="mt-4 rounded-[22px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 whitespace-pre-wrap">
+                {err}
+              </div>
+            ) : null}
+          </ShellCard>
+
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <KPI title="ยอดขายวันนี้" value={money(t.totalSales)} tone="rose" />
+            <KPI title="กำไรวันนี้" value={money(t.netProfit)} tone="sky" />
+            <KPI title="ยอดขายเดือนนี้" value={money(m.totalSales)} tone="cream" />
+            <KPI title="กำไรเดือนนี้" value={money(m.netProfit)} tone="emerald" />
+          </div>
+
+          <ShellCard title="ภาพรวมรายเดือน" subtitle="ค่าสรุปหลักของเดือนที่เลือก" tint="default">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <MiniStat label="ยอดขายรวม" value={money(m.totalSales)} tone="rose" />
+              <MiniStat label="ต้นทุนรวม" value={money(m.totalCost)} tone="sky" />
+              <MiniStat label="กำไรจากการขาย" value={money(m.grossProfit)} tone="emerald" />
+              <MiniStat label="ค่าใช้จ่ายรวม" value={money(m.totalExpenses)} tone="cream" />
+            </div>
+          </ShellCard>
+
+          <ShellCard title="กำไรสุทธิจริง + ภาษี" subtitle="สรุปกำไรหลังหักค่าใช้จ่ายและเกราะภาษี" tint="lilac">
+            <div className="grid gap-3">
+              <BigLine label="กำไรสุทธิ (กำไรจากการขาย - ค่าใช้จ่าย)" value={money(m.netProfit)} tone="default" />
+              <BigLine label="ภาษี 15%" value={money(m.tax15)} tone="cream" />
+              <BigLine
+                label="เหลือหลังกันภาษี (เงินใช้/ลงทุนได้จริง)"
+                value={money(m.afterTax)}
+                tone="emerald"
+                emphasize
+              />
+            </div>
+          </ShellCard>
+
+          <ShellCard
+            title="แนวโน้มกำไร 30 วันล่าสุด"
+            subtitle={`ช่วงข้อมูล: ${range30.start} - ${range30.end}`}
+            tint="sky"
+            right={series30Note ? <Pill tone="amber">ยังไม่ครบ</Pill> : null}
+          >
+            {series30?.length ? (
+              <SimpleBarChart rows={series30} xKey="d" yKey="net_profit" />
+            ) : (
+              <EmptyHint text={series30Note || 'ยังไม่มีข้อมูลกราฟ 30 วัน'} />
+            )}
+          </ShellCard>
+
+          <ShellCard
+            title="Top 10 รายการกำไรสูงสุด"
+            subtitle="อ้างอิงจากเดือนที่เลือก"
+            tint="cream"
+            right={top10Note ? <Pill tone="amber">ยังไม่ครบ</Pill> : null}
+          >
+            {top10?.length ? (
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full border-separate border-spacing-0">
+                    <thead>
+                      <tr>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">อันดับ</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">รายการ</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-right text-xs font-semibold text-slate-400">ยอดขาย</th>
+                        <th className="border-b border-slate-100 px-3 py-3 text-right text-xs font-semibold text-slate-400">กำไร</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {top10.map((r, idx) => (
+                        <tr key={idx}>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm font-bold text-slate-900">
+                            {idx + 1}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-sm text-slate-700">
+                            <div className="font-semibold text-slate-900">
+                              {r.name || r.item_name || r.plant_name || '-'}
+                            </div>
+                            {r.note ? <div className="mt-1 text-xs text-slate-500">{r.note}</div> : null}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-right text-sm font-semibold text-slate-900">
+                            {money(r.total_sales || r.sales || 0)}
+                          </td>
+                          <td className="border-b border-slate-100 px-3 py-4 text-right text-sm font-bold text-emerald-700">
+                            {money(r.profit || r.net_profit || 0)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="grid gap-2 md:hidden">
+                  {top10.map((r, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-[22px] border border-white/85 bg-white/82 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-slate-500">#{idx + 1}</div>
+                          <div className="mt-1 text-sm font-bold tracking-tight text-slate-900">
+                            {r.name || r.item_name || r.plant_name || '-'}
+                          </div>
+                          {r.note ? <div className="mt-1 text-xs text-slate-500">{r.note}</div> : null}
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <div className="text-xs text-slate-500">ยอดขาย</div>
+                          <div className="text-sm font-semibold text-slate-900">
+                            {money(r.total_sales || r.sales || 0)}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">กำไร</div>
+                          <div className="text-sm font-bold text-emerald-700">
+                            {money(r.profit || r.net_profit || 0)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <EmptyHint text={top10Note || 'ยังไม่มีข้อมูล Top 10'} />
+            )}
+          </ShellCard>
+        </div>
+      </div>
+    </AppShell>
+  )
 }
