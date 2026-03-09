@@ -31,23 +31,13 @@ function parseMoneyInput(v) {
   return Number.isFinite(n) ? n : 0
 }
 
-/**
- * Normalize Plant Code ให้เป็นมาตรฐานเดียวกันก่อน query
- * รองรับ:
- *  - N26020010 -> N-2602-0010
- *  - N-2602-0010 -> N-2602-0010
- *  - n 2602 0010 -> N-2602-0010
- *  - o26030042 -> O-2603-0042
- *
- * ถ้าเป็นเลขล้วน (ไม่มี N/O) จะคืนค่าเลขล้วนไว้ก่อน
- */
 function normalizeCode(input) {
   const raw = String(input || '').trim().toUpperCase()
   if (!raw) return ''
 
   const cleaned = raw.replace(/[^A-Z0-9-]/g, '')
-
   const compact = cleaned.replace(/-/g, '')
+
   if (compact && digitsOnly(compact) && !compact.startsWith('N') && !compact.startsWith('O')) {
     return compact
   }
@@ -61,19 +51,13 @@ function normalizeCode(input) {
   return cleaned
 }
 
-function parseParts(code /* N-2603-0002 */) {
+function parseParts(code) {
   const s = String(code || '')
   const m = s.match(/^([NO])-(\d{4})-(\d{4})$/)
   if (!m) return null
   return { prefix: m[1], yymm: m[2], run: parseInt(m[3], 10) || 0 }
 }
 
-/**
- * รองรับ 1 ช่อง แต่พิมพ์ได้หลายแบบ
- * - ทีละรหัส
- * - หลายรหัสคั่นด้วย newline / comma / ; / tab
- * - ช่วงรหัส เช่น N-2603-0005 ถึง N-2603-0015
- */
 function parseUnifiedInput(input) {
   const raw = String(input || '').replace(/\r/g, '\n').trim()
   if (!raw) {
@@ -154,6 +138,119 @@ function parseUnifiedInput(input) {
   return { codes, unresolvedDigits, invalidRanges, tooLongRange }
 }
 
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ')
+}
+
+function Pill({ tone = 'slate', children }) {
+  const map = {
+    emerald: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
+    amber: 'border border-amber-200/90 bg-amber-50 text-amber-700',
+    rose: 'border border-rose-200/90 bg-rose-50 text-rose-700',
+    slate: 'border border-slate-200/90 bg-white text-slate-600',
+    sky: 'border border-sky-200/90 bg-sky-50 text-sky-700',
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight',
+        map[tone] || map.slate
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function ShellCard({ title, subtitle, tint = 'default', right, children, className = '' }) {
+  const tintMap = {
+    default:
+      'border border-white/80 bg-white/92 shadow-[0_8px_24px_rgba(15,23,42,0.05)]',
+    rose:
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,244,247,0.96)_46%,rgba(252,231,243,0.92)_100%)] shadow-[0_8px_24px_rgba(244,63,94,0.06)]',
+    sky:
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,250,255,0.96)_46%,rgba(224,242,254,0.92)_100%)] shadow-[0_8px_24px_rgba(59,130,246,0.06)]',
+    emerald:
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
+    cream:
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
+    lilac:
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
+  }
+
+  return (
+    <section
+      className={cn(
+        'relative overflow-hidden rounded-[30px] p-4 sm:p-5',
+        tintMap[tint] || tintMap.default,
+        className
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_38%)]" />
+      <div className="relative z-10">
+        {(title || subtitle || right) && (
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {title ? (
+                <div className="text-[15px] font-semibold tracking-tight text-slate-900">{title}</div>
+              ) : null}
+              {subtitle ? (
+                <div className="mt-1 text-xs leading-relaxed text-slate-500">{subtitle}</div>
+              ) : null}
+            </div>
+            {right}
+          </div>
+        )}
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function Field({ label, children, hint }) {
+  return (
+    <label className="block">
+      <div className="mb-2 text-xs font-semibold tracking-tight text-slate-500">{label}</div>
+      {children}
+      {hint ? <div className="mt-1 text-[11px] text-slate-400">{hint}</div> : null}
+    </label>
+  )
+}
+
+function MiniStat({ label, value, tone = 'default' }) {
+  const toneMap = {
+    default: 'border-white/85 bg-white/82',
+    rose: 'border-rose-100/90 bg-white/72',
+    sky: 'border-sky-100/90 bg-white/72',
+    emerald: 'border-emerald-100/90 bg-white/72',
+  }
+
+  return (
+    <div
+      className={cn(
+        'rounded-[22px] border p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
+        toneMap[tone] || toneMap.default
+      )}
+    >
+      <div className="text-xs font-semibold text-slate-500">{label}</div>
+      <div className="mt-2 text-[26px] font-bold tracking-tight text-slate-900">{value}</div>
+    </div>
+  )
+}
+
+const inputClass =
+  'h-11 w-full rounded-2xl border border-slate-200/90 bg-white/85 px-4 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100'
+
+const textareaClass =
+  'w-full rounded-[22px] border border-slate-200/90 bg-white/85 px-4 py-3 text-[14px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100 resize-y'
+
+const primaryBtnClass =
+  'inline-flex h-11 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(16,185,129,0.16)] transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60'
+
+const ghostBtnClass =
+  'inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50'
+
 export default function SellPage() {
   const supabase = supabaseBrowser()
   const router = useRouter()
@@ -165,24 +262,15 @@ export default function SellPage() {
   const [shipStatus, setShipStatus] = useState('not_shipped')
   const [paymentMethod, setPaymentMethod] = useState('transfer')
   const [paidDate, setPaidDate] = useState('')
-
-  // ✅ ใช้เมื่อ payStatus = partial
   const [receivedAmount, setReceivedAmount] = useState('')
-
-  // ✅ เหลือช่องเดียว
   const [codeInput, setCodeInput] = useState('')
-
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
-
-  // realtime lookup
   const [lookupErr, setLookupErr] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupMap, setLookupMap] = useState({})
   const lastLookupKeyRef = useRef('')
-
-  // ✅ Digits-only popup
   const [needPrefixModal, setNeedPrefixModal] = useState(false)
   const [pendingDigits, setPendingDigits] = useState('')
   const pendingSetterRef = useRef(null)
@@ -195,9 +283,7 @@ export default function SellPage() {
   }, [items])
 
   const existingSet = useMemo(() => new Set(items.map((x) => normalizeCode(x.plant_code))), [items])
-
   const parsedInput = useMemo(() => parseUnifiedInput(codeInput), [codeInput])
-
   const previewCodes = useMemo(() => parsedInput.codes.slice(0, 220), [parsedInput.codes])
 
   function openPrefixModal(digits, setterFn) {
@@ -206,7 +292,7 @@ export default function SellPage() {
     setNeedPrefixModal(true)
   }
 
-  function choosePrefix(pfx /* 'N'|'O' */) {
+  function choosePrefix(pfx) {
     const digits = String(pendingDigits || '').replace(/[^0-9]/g, '')
     const yymm = digits.slice(0, 4)
     const run = digits.slice(4)
@@ -506,194 +592,309 @@ export default function SellPage() {
 
   return (
     <AppShell title="ขาย">
-      <div style={{ display: 'grid', gap: 12, maxWidth: 880, margin: '0 auto' }}>
-        <Card title="ข้อมูลบิล">
-          <div style={grid2}>
-            <Field label="วันที่ขาย">
-              <input value={saleDate} onChange={(e) => setSaleDate(e.target.value)} type="date" style={inputCompact} />
-            </Field>
+      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+        <div className="mx-auto grid max-w-6xl gap-3 sm:gap-4">
+          <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                NisaPlant Sell
+              </div>
+              <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
+                ขายสินค้า
+              </div>
+              <div className="mt-1 text-sm leading-relaxed text-slate-500">
+                ธีมเดียวกับ Dashboard เน้นมือถือ ใช้งานง่าย และไม่แตะ logic เดิม
+              </div>
+            </div>
 
-            <Field label="ชื่อลูกค้า">
-              <input value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="พิมพ์ชื่อ..." style={inputCompact} />
-            </Field>
+            <div className="flex flex-wrap gap-2">
+              <Pill tone="emerald">รวม {items.length} รายการ</Pill>
+              <Pill tone="sky">ขายได้ {canAddCount}</Pill>
+            </div>
+          </div>
 
-            <Field label="ธนาคารรับเงิน">
-              <select value={bank} onChange={(e) => setBank(e.target.value)} style={inputCompact}>
-                <option value="GSB">GSB (ธุรกิจ)</option>
-                <option value="KTB">KTB (ส่วนตัว)</option>
-                <option value="KBANK">KBANK (เก็บกำไร)</option>
-              </select>
-            </Field>
-
-            <Field label="การชำระเงิน">
-              <select
-                value={payStatus}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setPayStatus(v)
-                  if (v !== 'partial') setReceivedAmount('')
-                }}
-                style={inputCompact}
-              >
-                <option value="unpaid">{TH.pay.unpaid}</option>
-                <option value="partial">{TH.pay.partial}</option>
-                <option value="paid">{TH.pay.paid}</option>
-              </select>
-            </Field>
-
-            <Field label="การจัดส่ง">
-              <select value={shipStatus} onChange={(e) => setShipStatus(e.target.value)} style={inputCompact}>
-                <option value="not_shipped">{TH.ship.not_shipped}</option>
-                <option value="shipped">{TH.ship.shipped}</option>
-              </select>
-            </Field>
-
-            <Field label="วิธีรับเงิน">
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={inputCompact}>
-                <option value="transfer">โอน</option>
-                <option value="cash">เงินสด</option>
-                <option value="qr">สแกน QR</option>
-              </select>
-            </Field>
-
-            <Field label="วันที่รับเงิน (ถ้ามี)">
-              <input value={paidDate} onChange={(e) => setPaidDate(e.target.value)} type="date" style={inputCompact} />
-            </Field>
-
-            {payStatus === 'partial' ? (
-              <Field label="ยอดที่รับจริง (จ่ายบางส่วน)">
+          <ShellCard
+            title="ข้อมูลบิล"
+            subtitle="กรอกข้อมูลลูกค้า การรับเงิน และสถานะการชำระ"
+            tint="default"
+          >
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Field label="วันที่ขาย">
                 <input
-                  value={receivedAmount}
-                  onChange={(e) => setReceivedAmount(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="เช่น 3000"
-                  style={inputCompact}
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  type="date"
+                  className={inputClass}
                 />
               </Field>
-            ) : null}
-          </div>
-        </Card>
 
-        <Card title="เพิ่มรายการขาย (Plant Code) — ช่องเดียว รองรับหลายแบบ">
-          <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>
-            พิมพ์ได้ทั้งรหัสเดี่ยว / หลายรหัส / หลายบรรทัด / คั่นด้วยคอมม่า / ช่วงรหัส เช่น
-            <br />
-            <span style={{ fontWeight: 900 }}>
-              N-2603-0002
-              {' / '}
-              n26030002
-              {' / '}
-              26030002
-              {' / '}
-              N-2603-0005 ถึง N-2603-0015
-            </span>
-          </div>
+              <Field label="ชื่อลูกค้า">
+                <input
+                  value={customer}
+                  onChange={(e) => setCustomer(e.target.value)}
+                  placeholder="พิมพ์ชื่อ..."
+                  className={inputClass}
+                />
+              </Field>
 
-          <textarea
-            value={codeInput}
-            onChange={(e) => setCodeInput(e.target.value)}
-            placeholder={`ตัวอย่าง:
+              <Field label="ธนาคารรับเงิน">
+                <select value={bank} onChange={(e) => setBank(e.target.value)} className={inputClass}>
+                  <option value="GSB">GSB (ธุรกิจ)</option>
+                  <option value="KTB">KTB (ส่วนตัว)</option>
+                  <option value="KBANK">KBANK (เก็บกำไร)</option>
+                </select>
+              </Field>
+
+              <Field label="การชำระเงิน">
+                <select
+                  value={payStatus}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setPayStatus(v)
+                    if (v !== 'partial') setReceivedAmount('')
+                  }}
+                  className={inputClass}
+                >
+                  <option value="unpaid">{TH.pay.unpaid}</option>
+                  <option value="partial">{TH.pay.partial}</option>
+                  <option value="paid">{TH.pay.paid}</option>
+                </select>
+              </Field>
+
+              <Field label="การจัดส่ง">
+                <select
+                  value={shipStatus}
+                  onChange={(e) => setShipStatus(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="not_shipped">{TH.ship.not_shipped}</option>
+                  <option value="shipped">{TH.ship.shipped}</option>
+                </select>
+              </Field>
+
+              <Field label="วิธีรับเงิน">
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="transfer">โอน</option>
+                  <option value="cash">เงินสด</option>
+                  <option value="qr">สแกน QR</option>
+                </select>
+              </Field>
+
+              <Field label="วันที่รับเงิน (ถ้ามี)">
+                <input
+                  value={paidDate}
+                  onChange={(e) => setPaidDate(e.target.value)}
+                  type="date"
+                  className={inputClass}
+                />
+              </Field>
+
+              {payStatus === 'partial' ? (
+                <Field label="ยอดที่รับจริง (จ่ายบางส่วน)">
+                  <input
+                    value={receivedAmount}
+                    onChange={(e) => setReceivedAmount(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="เช่น 3000"
+                    className={inputClass}
+                  />
+                </Field>
+              ) : null}
+            </div>
+          </ShellCard>
+
+          <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <ShellCard
+              title="เพิ่มรายการขาย (Plant Code)"
+              subtitle="ช่องเดียว รองรับรหัสเดี่ยว หลายรหัส หลายบรรทัด คั่นด้วยคอมม่า และช่วงรหัส"
+              tint="rose"
+            >
+              <div className="rounded-[22px] border border-white/85 bg-white/72 p-4 text-xs leading-6 text-slate-500">
+                พิมพ์ได้ทั้งรหัสเดี่ยว / หลายรหัส / หลายบรรทัด / คั่นด้วยคอมม่า / ช่วงรหัส เช่น
+                <div className="mt-2 font-extrabold tracking-tight text-slate-700">
+                  N-2603-0002 / n26030002 / 26030002 / N-2603-0005 ถึง N-2603-0015
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <textarea
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value)}
+                  placeholder={`ตัวอย่าง:
 N-2603-0002
 n26030003
 26030004
 N-2603-0005 ถึง N-2603-0010
 O-2603-0042, o26030043`}
-            style={textareaCompact}
-            rows={5}
-          />
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginTop: 8 }}>
-            <div style={{ fontSize: 12, opacity: 0.8 }}>
-              {lookupLoading ? 'กำลังตรวจสอบ...' : `เพิ่มได้ (ACTIVE): ${canAddCount} / ${previewRows.length}`}
-              {parsedInput.unresolvedDigits.length ? (
-                <span style={{ color: '#ffd37a' }}>
-                  {' '}• มีรหัสเลขล้วน {parsedInput.unresolvedDigits.length} ตัว
-                </span>
-              ) : null}
-              {lookupErr ? <span style={{ color: '#ffb4b4' }}> • {lookupErr}</span> : null}
-            </div>
-
-            <button onClick={addParsed} style={primaryBtnCompact} disabled={!previewRows.length && !parsedInput.unresolvedDigits.length}>
-              เพิ่มที่ขายได้ทั้งหมด
-            </button>
-          </div>
-
-          {previewRows.length ? (
-            <div style={{ marginTop: 10, display: 'grid', gap: 6 }}>
-              {previewRows.slice(0, 40).map((r) => (
-                <div key={r.code} style={{ ...previewRow, borderColor: borderByState(r.state) }}>
-                  <div style={{ fontWeight: 900 }}>{r.code}</div>
-                  <div style={{ fontSize: 12, opacity: 0.85 }}>{r.label}</div>
-                </div>
-              ))}
-              {previewRows.length > 40 ? <div style={{ fontSize: 12, opacity: 0.7 }}>แสดง 40 รายการแรก</div> : null}
-            </div>
-          ) : null}
-
-          <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-            {items.map((x, idx) => (
-              <div key={x.plant_code} style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 900 }}>{x.plant_code}</div>
-                    <div style={{ fontSize: 13, opacity: 0.85 }}>{x.name}</div>
-                  </div>
-                  <button onClick={() => removeItem(idx)} style={ghostBtn}>
-                    ลบ
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
-                  <Mini label="ทุน">{Number(x.cost || 0).toLocaleString('th-TH')}</Mini>
-                  <div>
-                    <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>ราคาขาย</div>
-                    <input value={x.price} onChange={(e) => updatePrice(idx, e.target.value)} inputMode="numeric" style={inputCompact} />
-                  </div>
-                </div>
+                  className={textareaClass}
+                  rows={6}
+                />
               </div>
-            ))}
-            {!items.length ? <div style={{ opacity: 0.75 }}>ยังไม่มีรายการ</div> : null}
+
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs leading-relaxed text-slate-500">
+                  {lookupLoading ? 'กำลังตรวจสอบ...' : `เพิ่มได้ (ACTIVE): ${canAddCount} / ${previewRows.length}`}
+                  {parsedInput.unresolvedDigits.length ? (
+                    <span className="font-semibold text-amber-600">
+                      {' '}• มีรหัสเลขล้วน {parsedInput.unresolvedDigits.length} ตัว
+                    </span>
+                  ) : null}
+                  {lookupErr ? (
+                    <span className="font-semibold text-rose-600">
+                      {' '}• {lookupErr}
+                    </span>
+                  ) : null}
+                </div>
+
+                <button
+                  onClick={addParsed}
+                  className={primaryBtnClass}
+                  disabled={!previewRows.length && !parsedInput.unresolvedDigits.length}
+                >
+                  เพิ่มที่ขายได้ทั้งหมด
+                </button>
+              </div>
+
+              {previewRows.length ? (
+                <div className="mt-4 grid gap-2">
+                  {previewRows.slice(0, 40).map((r) => (
+                    <div
+                      key={r.code}
+                      className="flex items-center justify-between gap-3 rounded-[20px] border bg-white/80 px-4 py-3"
+                      style={{ borderColor: borderByState(r.state) }}
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
+                          {r.code}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">{r.label}</div>
+                      </div>
+
+                      <div className="shrink-0">
+                        {r.state === 'ok' ? <Pill tone="emerald">ACTIVE</Pill> : null}
+                        {r.state === 'dup' ? <Pill tone="sky">ซ้ำ</Pill> : null}
+                        {r.state === 'missing' ? <Pill tone="rose">ไม่พบ</Pill> : null}
+                        {r.state === 'bad' ? <Pill tone="amber">ขายไม่ได้</Pill> : null}
+                        {r.state === 'loading' ? <Pill tone="slate">ตรวจสอบ</Pill> : null}
+                      </div>
+                    </div>
+                  ))}
+                  {previewRows.length > 40 ? (
+                    <div className="pt-1 text-xs text-slate-400">แสดง 40 รายการแรก</div>
+                  ) : null}
+                </div>
+              ) : null}
+            </ShellCard>
+
+            <ShellCard title="สรุป" subtitle="รวมต้นทุน ยอดขาย และกำไรของบิลนี้" tint="sky">
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <MiniStat label="ต้นทุนรวม" value={totals.totalCost.toLocaleString('th-TH')} tone="default" />
+                <MiniStat label="ยอดขายรวม" value={totals.totalPrice.toLocaleString('th-TH')} tone="sky" />
+                <MiniStat label="กำไร" value={totals.profit.toLocaleString('th-TH')} tone="emerald" />
+              </div>
+
+              {err ? (
+                <div className="mt-4 rounded-[22px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 whitespace-pre-wrap">
+                  {err}
+                </div>
+              ) : null}
+
+              <button
+                disabled={loading}
+                onClick={submit}
+                className={cn(primaryBtnClass, 'mt-4 h-12 w-full text-[15px]')}
+              >
+                {loading ? 'กำลังบันทึก...' : 'ยืนยันการขาย'}
+              </button>
+            </ShellCard>
           </div>
-        </Card>
 
-        <Card title="สรุป">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-            <Mini label="ต้นทุนรวม">{totals.totalCost.toLocaleString('th-TH')}</Mini>
-            <Mini label="ยอดขายรวม">{totals.totalPrice.toLocaleString('th-TH')}</Mini>
-            <Mini label="กำไร">{totals.profit.toLocaleString('th-TH')}</Mini>
-          </div>
+          <ShellCard
+            title="รายการที่เลือกขาย"
+            subtitle="ตรวจสอบชื่อ ทุน และกรอกราคาขายของแต่ละต้น"
+            tint="default"
+            right={<Pill tone="slate">{items.length} รายการ</Pill>}
+          >
+            {items.length ? (
+              <div className="grid gap-3">
+                {items.map((x, idx) => (
+                  <div
+                    key={x.plant_code}
+                    className="rounded-[24px] border border-white/85 bg-white/84 p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-[15px] font-extrabold tracking-tight text-slate-900">
+                          {x.plant_code}
+                        </div>
+                        <div className="mt-1 text-sm text-slate-500">{x.name}</div>
+                      </div>
 
-          {err ? <pre style={{ marginTop: 10, color: '#ffb4b4', whiteSpace: 'pre-wrap' }}>{err}</pre> : null}
+                      <button onClick={() => removeItem(idx)} className={ghostBtnClass}>
+                        ลบ
+                      </button>
+                    </div>
 
-          <button disabled={loading} onClick={submit} style={{ ...primaryBtn, width: '100%', height: 48, marginTop: 12 }}>
-            {loading ? 'กำลังบันทึก...' : 'ยืนยันการขาย'}
-          </button>
-        </Card>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <div className="rounded-[20px] border border-slate-100 bg-white/70 p-4">
+                        <div className="text-xs font-semibold text-slate-500">ทุน</div>
+                        <div className="mt-2 text-[24px] font-bold tracking-tight text-slate-900">
+                          {Number(x.cost || 0).toLocaleString('th-TH')}
+                        </div>
+                      </div>
+
+                      <Field label="ราคาขาย">
+                        <input
+                          value={x.price}
+                          onChange={(e) => updatePrice(idx, e.target.value)}
+                          inputMode="numeric"
+                          className={inputClass}
+                          placeholder="กรอกราคาขาย"
+                        />
+                      </Field>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
+                ยังไม่มีรายการ
+              </div>
+            )}
+          </ShellCard>
+        </div>
       </div>
 
       {needPrefixModal ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 md:items-center">
-          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#0b1a14] p-4">
-            <div className="text-base font-semibold text-white">เลือกว่าเป็น N หรือ O</div>
-            <div className="mt-1 text-xs text-white/70">
-              คุณพิมพ์เป็นเลขล้วน: <span className="font-mono text-white/90">{pendingDigits}</span>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 md:items-center">
+          <div className="w-full max-w-sm rounded-[28px] border border-white/70 bg-white/95 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
+            <div className="text-[18px] font-semibold tracking-tight text-slate-900">เลือกว่าเป็น N หรือ O</div>
+            <div className="mt-2 text-sm leading-relaxed text-slate-500">
+              คุณพิมพ์เป็นเลขล้วน:{' '}
+              <span className="font-mono font-semibold text-slate-800">{pendingDigits}</span>
             </div>
-            <div className="mt-4 flex gap-2">
+
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={() => choosePrefix('N')}
-                className="flex-1 rounded-2xl bg-emerald-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-600"
+                className="flex-1 rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
               >
                 ใหม่ (N)
               </button>
               <button
                 type="button"
                 onClick={() => choosePrefix('O')}
-                className="flex-1 rounded-2xl bg-sky-600/80 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600"
+                className="flex-1 rounded-full bg-sky-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-600"
               >
                 เก่า (O)
               </button>
             </div>
+
             <button
               type="button"
               onClick={() => {
@@ -701,7 +902,7 @@ O-2603-0042, o26030043`}
                 setPendingDigits('')
                 pendingSetterRef.current = null
               }}
-              className="mt-3 w-full rounded-2xl bg-white/10 px-3 py-2 text-sm text-white/90 hover:bg-white/15"
+              className="mt-3 w-full rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
             >
               ยกเลิก
             </button>
@@ -713,101 +914,9 @@ O-2603-0042, o26030043`}
 }
 
 function borderByState(state) {
-  if (state === 'ok') return 'rgba(40, 200, 120, 0.55)'
-  if (state === 'missing') return 'rgba(255, 120, 120, 0.55)'
-  if (state === 'bad') return 'rgba(255, 200, 80, 0.55)'
-  if (state === 'dup') return 'rgba(140, 200, 255, 0.45)'
-  return 'rgba(255,255,255,0.12)'
-}
-
-function Card({ title, children }) {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 18, padding: 14 }}>
-      <div style={{ fontWeight: 900, marginBottom: 10 }}>{title}</div>
-      {children}
-    </div>
-  )
-}
-
-function Field({ label, children }) {
-  return (
-    <label style={{ display: 'block' }}>
-      <div style={{ fontSize: 12, opacity: 0.85, marginBottom: 6 }}>{label}</div>
-      {children}
-    </label>
-  )
-}
-
-function Mini({ label, children }) {
-  return (
-    <div style={{ border: '1px solid rgba(255,255,255,0.10)', borderRadius: 16, padding: 12 }}>
-      <div style={{ fontSize: 12, opacity: 0.85 }}>{label}</div>
-      <div style={{ fontSize: 18, fontWeight: 900 }}>{children}</div>
-    </div>
-  )
-}
-
-const grid2 = {
-  display: 'grid',
-  gap: 10,
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-}
-
-const inputCompact = {
-  width: '100%',
-  height: 40,
-  padding: '0 10px',
-  borderRadius: 12,
-  border: '1px solid rgba(0,0,0,0.2)',
-}
-
-const textareaCompact = {
-  width: '100%',
-  padding: '10px 10px',
-  borderRadius: 12,
-  border: '1px solid rgba(0,0,0,0.2)',
-  resize: 'vertical',
-}
-
-const previewRow = {
-  padding: '10px 12px',
-  borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.12)',
-  background: 'rgba(255,255,255,0.04)',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'baseline',
-  gap: 10,
-}
-
-const primaryBtn = {
-  height: 44,
-  padding: '0 16px',
-  borderRadius: 14,
-  border: 'none',
-  background: '#1f8a5b',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const primaryBtnCompact = {
-  height: 40,
-  padding: '0 14px',
-  borderRadius: 12,
-  border: 'none',
-  background: '#1f8a5b',
-  color: 'white',
-  fontWeight: 900,
-  cursor: 'pointer',
-}
-
-const ghostBtn = {
-  height: 36,
-  padding: '0 12px',
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,0.2)',
-  background: 'transparent',
-  color: 'white',
-  cursor: 'pointer',
+  if (state === 'ok') return 'rgba(16,185,129,0.42)'
+  if (state === 'missing') return 'rgba(244,63,94,0.42)'
+  if (state === 'bad') return 'rgba(245,158,11,0.42)'
+  if (state === 'dup') return 'rgba(59,130,246,0.34)'
+  return 'rgba(148,163,184,0.22)'
 }
