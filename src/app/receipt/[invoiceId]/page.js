@@ -209,35 +209,82 @@ export default function ReceiptPage() {
     }
   }
 
-  async function buildPngDataUrl() {
+  function createExportClone() {
     if (!printRef.current) throw new Error('ไม่พบพื้นที่ใบเสร็จ')
 
-    const node = printRef.current
-    await waitForFontsAndImages(node)
-    const restore = await inlineImagesTemporarily(node)
+    const source = printRef.current
+    const wrapper = document.createElement('div')
+    wrapper.style.position = 'fixed'
+    wrapper.style.left = '-100000px'
+    wrapper.style.top = '0'
+    wrapper.style.zIndex = '-1'
+    wrapper.style.background = '#ffffff'
+    wrapper.style.padding = '0'
+    wrapper.style.margin = '0'
+    wrapper.style.width = '760px'
+    wrapper.style.boxSizing = 'border-box'
+    wrapper.style.overflow = 'visible'
+
+    const clone = source.cloneNode(true)
+    clone.style.width = '760px'
+    clone.style.maxWidth = '760px'
+    clone.style.minWidth = '760px'
+    clone.style.margin = '0'
+    clone.style.boxSizing = 'border-box'
+    clone.style.transform = 'none'
+    clone.style.overflow = 'visible'
+
+    const watermark = clone.querySelector('.receipt-watermark')
+    if (watermark) {
+      watermark.style.width = '420px'
+    }
+
+    wrapper.appendChild(clone)
+    document.body.appendChild(wrapper)
+
+    return {
+      wrapper,
+      clone,
+      destroy() {
+        wrapper.remove()
+      },
+    }
+  }
+
+  async function buildPngDataUrl() {
+    const exportNode = createExportClone()
 
     try {
-      const rect = node.getBoundingClientRect()
+      await waitForFontsAndImages(exportNode.clone)
+      const restore = await inlineImagesTemporarily(exportNode.clone)
 
-      const dataUrl = await htmlToImage.toPng(node, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        canvasWidth: Math.round(rect.width * 2),
-        canvasHeight: Math.round(rect.height * 2),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left',
-          width: `${Math.round(rect.width)}px`,
-          height: `${Math.round(rect.height)}px`,
-        },
-      })
+      try {
+        const rect = exportNode.clone.getBoundingClientRect()
 
-      return dataUrl
+        const dataUrl = await htmlToImage.toPng(exportNode.clone, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: '#ffffff',
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+          canvasWidth: Math.round(rect.width * 2),
+          canvasHeight: Math.round(rect.height * 2),
+          style: {
+            margin: '0',
+            width: `${Math.round(rect.width)}px`,
+            height: `${Math.round(rect.height)}px`,
+            transform: 'none',
+            transformOrigin: 'top left',
+            overflow: 'visible',
+          },
+        })
+
+        return dataUrl
+      } finally {
+        restore()
+      }
     } finally {
-      restore()
+      exportNode.destroy()
     }
   }
 
