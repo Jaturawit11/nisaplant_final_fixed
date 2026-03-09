@@ -66,6 +66,113 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;')
 }
 
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ')
+}
+
+function Pill({ tone = 'slate', children }) {
+  const map = {
+    emerald: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
+    amber: 'border border-amber-200/90 bg-amber-50 text-amber-700',
+    rose: 'border border-rose-200/90 bg-rose-50 text-rose-700',
+    slate: 'border border-slate-200/90 bg-white text-slate-600',
+    sky: 'border border-sky-200/90 bg-sky-50 text-sky-700',
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight',
+        map[tone] || map.slate
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function ShellCard({ title, subtitle, tint = 'default', right, children, className = '' }) {
+  const tintMap = {
+    default:
+      'border border-white/80 bg-white/92 shadow-[0_8px_24px_rgba(15,23,42,0.05)]',
+    rose:
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,244,247,0.96)_46%,rgba(252,231,243,0.92)_100%)] shadow-[0_8px_24px_rgba(244,63,94,0.06)]',
+    sky:
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,250,255,0.96)_46%,rgba(224,242,254,0.92)_100%)] shadow-[0_8px_24px_rgba(59,130,246,0.06)]',
+    emerald:
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
+    cream:
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
+    lilac:
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
+  }
+
+  return (
+    <section
+      className={cn(
+        'relative overflow-hidden rounded-[30px] p-4 sm:p-5',
+        tintMap[tint] || tintMap.default,
+        className
+      )}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_38%)]" />
+      <div className="relative z-10">
+        {(title || subtitle || right) && (
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {title ? (
+                <div className="text-[15px] font-semibold tracking-tight text-slate-900">
+                  {title}
+                </div>
+              ) : null}
+              {subtitle ? (
+                <div className="mt-1 text-xs leading-relaxed text-slate-500">{subtitle}</div>
+              ) : null}
+            </div>
+            {right}
+          </div>
+        )}
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function Field({ label, children, hint }) {
+  return (
+    <label className="block">
+      <div className="mb-2 text-xs font-semibold tracking-tight text-slate-500">{label}</div>
+      {children}
+      {hint ? <div className="mt-1 text-[11px] text-slate-400">{hint}</div> : null}
+    </label>
+  )
+}
+
+function MiniStat({ label, value, tone = 'default' }) {
+  const toneMap = {
+    default: 'border-white/85 bg-white/82',
+    rose: 'border-rose-100/90 bg-white/72',
+    sky: 'border-sky-100/90 bg-white/72',
+    emerald: 'border-emerald-100/90 bg-white/72',
+    cream: 'border-amber-100/90 bg-white/72',
+  }
+
+  return (
+    <div
+      className={cn(
+        'rounded-[22px] border p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
+        toneMap[tone] || toneMap.default
+      )}
+    >
+      <div className="text-xs font-semibold text-slate-500">{label}</div>
+      <div className="mt-2 text-[26px] font-bold tracking-tight text-slate-900">{value}</div>
+    </div>
+  )
+}
+
+const inputClass =
+  'h-11 w-full rounded-2xl border border-slate-200/90 bg-white/85 px-4 text-[15px] text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100'
+
 export default function PlantsPage() {
   const supabase = supabaseBrowser()
 
@@ -74,24 +181,20 @@ export default function PlantsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // ---------- Add form ----------
-  const [kind, setKind] = useState('NEW') // NEW | OLD
+  const [kind, setKind] = useState('NEW')
   const [dateCode, setDateCode] = useState(currentYYMM())
   const [qty, setQty] = useState(1)
   const [name, setName] = useState('')
   const [cost, setCost] = useState('')
 
-  // ---------- List ----------
   const [plants, setPlants] = useState([])
   const [q, setQ] = useState('')
 
-  // ---------- Search normalize modal ----------
   const [needPrefixModal, setNeedPrefixModal] = useState(false)
   const [pendingDigits, setPendingDigits] = useState('')
   const [pendingResolved, setPendingResolved] = useState('')
 
-  // ---------- Label / print ----------
-  const [labelMode, setLabelMode] = useState('single') // single | range
+  const [labelMode, setLabelMode] = useState('single')
   const [labelQ, setLabelQ] = useState('')
   const [rangeStart, setRangeStart] = useState('')
   const [rangeEnd, setRangeEnd] = useState('')
@@ -128,6 +231,12 @@ export default function PlantsPage() {
     const ids = new Set(selectedIds)
     return labelList.filter((x) => ids.has(x.id))
   }, [labelList, selectedIds])
+
+  const activeCount = plants.length
+  const totalCost = useMemo(
+    () => plants.reduce((sum, p) => sum + Number(p.cost || 0), 0),
+    [plants]
+  )
 
   function toastOk(msg) {
     setOk(msg)
@@ -485,434 +594,489 @@ export default function PlantsPage() {
 
   return (
     <AppShell title="ฐานต้นไม้">
-      <div className="space-y-4">
-        {(err || ok) && (
-          <div className="space-y-2">
-            {err ? (
-              <div className="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {err}
+      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+        <div className="mx-auto grid max-w-6xl gap-3 sm:gap-4">
+          <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                NisaPlant Plants
               </div>
-            ) : null}
-            {ok ? (
-              <div className="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                {ok}
+              <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
+                เพิ่มฐานข้อมูลต้นไม้
               </div>
-            ) : null}
-          </div>
-        )}
-
-        {/* Add form */}
-        <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm md:p-5">
-          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-            <div>
-              <div className="text-base font-semibold text-slate-900 md:text-lg">เพิ่มต้นไม้</div>
-              <div className="text-xs text-slate-500 md:text-sm">
-                กรอกน้อยที่สุด • Single/Bulk ในฟอร์มเดียว • ใช้ทุนอย่างเดียว
+              <div className="mt-1 text-sm leading-relaxed text-slate-500">
+                ธีมเดียวกับ Dashboard และ Sell เน้นมือถือ ใช้งานง่าย และไม่แตะ logic เดิม
               </div>
             </div>
-            <div className="text-xs text-slate-500">
-              โค้ดตัวอย่าง: <span className="font-mono text-slate-700">{prefix}-{dateCode}-0001</span>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
-              <div className="mb-2 text-xs font-semibold text-slate-700">ประเภท</div>
-              <div className="inline-flex w-full rounded-2xl border border-black/10 bg-white p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setKind('NEW')}
-                  className={
-                    (kind === 'NEW' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-100') +
-                    ' flex-1 rounded-xl px-3 py-2 text-sm font-semibold'
-                  }
-                >
-                  ใหม่ (N)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKind('OLD')}
-                  className={
-                    (kind === 'OLD' ? 'bg-sky-600 text-white' : 'text-slate-700 hover:bg-slate-100') +
-                    ' flex-1 rounded-xl px-3 py-2 text-sm font-semibold'
-                  }
-                >
-                  เก่า (O)
-                </button>
-              </div>
-              <div className="mt-2 text-[11px] text-slate-500">
-                เพิ่มต้นไม้ = เพิ่ม stock อย่างเดียว • ไม่หักเงินอัตโนมัติแล้ว
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="mb-1 text-xs font-semibold text-slate-700">เดือน (YYMM)</div>
-                  <input
-                    value={dateCode}
-                    onChange={(e) => setDateCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 font-mono text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
-                    placeholder="2603"
-                    inputMode="numeric"
-                  />
-                </div>
-                <div>
-                  <div className="mb-1 text-xs font-semibold text-slate-700">จำนวน</div>
-                  <input
-                    value={qty}
-                    onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ''))}
-                    className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
-                    placeholder="1"
-                    inputMode="numeric"
-                  />
-                  <div className="mt-1 text-[11px] text-slate-500">ใส่ 1 = เพิ่มทีละต้น</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
-              <div className="mb-1 text-xs font-semibold text-slate-700">ชื่อไม้</div>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
-                placeholder="เช่น Alocasia..."
-              />
-            </div>
-
-            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
-              <div className="mb-1 text-xs font-semibold text-slate-700">ทุน (บาท)</div>
-              <input
-                value={cost}
-                onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ''))}
-                className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
-                placeholder="0"
-                inputMode="decimal"
-              />
-              <div className="mt-1 text-[11px] text-slate-500">ใช้คำนวณกำไรตอนขาย</div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div className="text-xs text-slate-500">
-              ระบบจะสร้างรหัสให้เองตามลำดับล่าสุดของเดือนนั้น ๆ
-            </div>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={addPlants}
-              className="rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
-            >
-              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
-            </button>
-          </div>
-        </div>
-
-        {/* List */}
-        <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm md:p-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-base font-semibold text-slate-900 md:text-lg">รายการต้นไม้ที่ยังมีอยู่</div>
-              <div className="text-xs text-slate-500 md:text-sm">แสดงเฉพาะ ACTIVE • เรียงจากน้อยไปมาก</div>
-            </div>
-            <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onBlur={onSearchBlur}
-                className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10 md:w-[320px]"
-                placeholder="ค้นหา เช่น n26030001 หรือ O-2603-0042"
-              />
-              <button
-                type="button"
-                onClick={loadPlants}
-                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                รีเฟรช
-              </button>
-            </div>
-          </div>
-
-          {pendingResolved ? (
-            <div className="mt-2 text-xs text-emerald-700">
-              แปลงรหัสเป็น: <span className="font-mono">{pendingResolved}</span>
-            </div>
-          ) : null}
-
-          <div className="mt-4">
-            {loading ? (
-              <div className="text-sm text-slate-600">กำลังโหลด...</div>
-            ) : filtered.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-black/15 bg-slate-50 p-4 text-sm text-slate-600">
-                ไม่พบรายการ
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {filtered.map((p) => (
-                  <div key={p.id} className="rounded-3xl border border-black/10 bg-white p-3 shadow-sm">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-mono text-sm text-slate-900">{p.plant_code}</div>
-                        <div className="truncate text-sm text-slate-700">{p.name || '-'}</div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="text-[11px] text-slate-500">ทุน</div>
-                        <div className="text-sm font-semibold text-slate-900">
-                          {Number(p.cost || 0).toLocaleString('th-TH')}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Print label */}
-        <div className="rounded-3xl border border-black/10 bg-white p-4 shadow-sm md:p-5">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-base font-semibold text-slate-900 md:text-lg">
-                พิมพ์ / สร้างไฟล์สติ๊กเกอร์โค้ด (14×60 mm)
-              </div>
-              <div className="text-xs text-slate-500 md:text-sm">
-                รองรับค้นหาเดี่ยว, เลือกหลายรายการ, และเลือกเป็นช่วง
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-3">
-            <div className="inline-flex w-full rounded-2xl border border-black/10 bg-white p-1 shadow-sm md:w-[320px]">
-              <button
-                type="button"
-                onClick={() => setLabelMode('single')}
-                className={
-                  (labelMode === 'single' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-100') +
-                  ' flex-1 rounded-xl px-3 py-2 text-sm font-semibold'
-                }
-              >
-                ค้นหา/เลือกเอง
-              </button>
-              <button
-                type="button"
-                onClick={() => setLabelMode('range')}
-                className={
-                  (labelMode === 'range' ? 'bg-emerald-600 text-white' : 'text-slate-700 hover:bg-slate-100') +
-                  ' flex-1 rounded-xl px-3 py-2 text-sm font-semibold'
-                }
-              >
-                เลือกเป็นช่วง
-              </button>
-            </div>
-
-            {labelMode === 'single' ? (
-              <div className="flex flex-col gap-2 md:flex-row md:items-center">
-                <input
-                  value={labelQ}
-                  onChange={(e) => setLabelQ(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') searchLabelPlants()
-                  }}
-                  className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10 md:flex-1"
-                  placeholder="ค้นหา เช่น n26030001 หรือชื่อไม้"
-                />
-                <button
-                  type="button"
-                  onClick={searchLabelPlants}
-                  className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-                  disabled={labelLoading}
-                >
-                  {labelLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto]">
-                <input
-                  value={rangeStart}
-                  onChange={(e) => setRangeStart(e.target.value)}
-                  className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
-                  placeholder="รหัสเริ่มต้น เช่น n-2603-0001"
-                />
-                <input
-                  value={rangeEnd}
-                  onChange={(e) => setRangeEnd(e.target.value)}
-                  className="w-full rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-emerald-600/40 focus:ring-4 focus:ring-emerald-600/10"
-                  placeholder="รหัสสิ้นสุด เช่น n-2603-0010"
-                />
-                <button
-                  type="button"
-                  onClick={searchLabelPlants}
-                  className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
-                  disabled={labelLoading}
-                >
-                  {labelLoading ? 'กำลังค้นหา...' : 'ค้นหาช่วง'}
-                </button>
-              </div>
-            )}
-
-            {labelErr ? <div className="text-xs text-rose-700">{labelErr}</div> : null}
 
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={selectAllResults}
-                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                disabled={labelList.length === 0}
-              >
-                เลือกทั้งหมด
-              </button>
-              <button
-                type="button"
-                onClick={clearSelected}
-                className="rounded-2xl border border-black/10 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
-                disabled={selectedIds.length === 0}
-              >
-                ล้างที่เลือก
-              </button>
-              <button
-                type="button"
-                onClick={printBulkLabels}
-                className="rounded-2xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
-                disabled={selectedIds.length === 0}
-              >
-                พิมพ์ที่เลือก
-              </button>
-              <button
-                type="button"
-                onClick={exportSelectedTxt}
-                className="rounded-2xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:opacity-60"
-                disabled={selectedIds.length === 0}
-              >
-                สร้างไฟล์ TXT
-              </button>
+              <Pill tone="emerald">ACTIVE {activeCount}</Pill>
+              <Pill tone="sky">ป้าย {selectedLabels.length}</Pill>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-xs font-semibold text-slate-700">พรีวิว</div>
-                <div className="text-[11px] text-slate-500">{selectedLabels.length} รายการที่เลือก</div>
+          {(err || ok) && (
+            <div className="space-y-2">
+              {err ? (
+                <div className="rounded-[24px] border border-rose-100/90 bg-rose-50/92 px-4 py-3 text-sm font-semibold text-rose-700">
+                  {err}
+                </div>
+              ) : null}
+              {ok ? (
+                <div className="rounded-[24px] border border-emerald-100/90 bg-emerald-50/92 px-4 py-3 text-sm font-semibold text-emerald-700">
+                  {ok}
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+            <ShellCard
+              title="เพิ่มต้นไม้"
+              subtitle="กรอกน้อยที่สุด • Single/Bulk ในฟอร์มเดียว • ใช้ทุนอย่างเดียว"
+              tint="rose"
+              right={<Pill tone={isNew ? 'emerald' : 'sky'}>{prefix}</Pill>}
+            >
+              <div className="rounded-[22px] border border-white/85 bg-white/72 p-4 text-xs leading-6 text-slate-500">
+                โค้ดตัวอย่าง:
+                <div className="mt-2 font-mono text-sm font-extrabold tracking-tight text-slate-700">
+                  {prefix}-{dateCode || 'YYMM'}-0001
+                </div>
+                <div className="mt-1">
+                  เพิ่มต้นไม้ = เพิ่ม stock อย่างเดียว • ไม่หักเงินอัตโนมัติแล้ว
+                </div>
               </div>
 
-              <div className="space-y-2">
-                {selectedLabels.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-black/15 bg-white p-3 text-sm text-slate-600">
-                    ยังไม่ได้เลือกรายการ
-                  </div>
-                ) : (
-                  selectedLabels.slice(0, 5).map((p) => (
-                    <div
-                      key={p.id}
-                      className="rounded-2xl border border-dashed border-black/20 bg-white p-2"
-                      style={{ width: '60mm', height: '14mm' }}
+              <div className="mt-4 grid gap-3 sm:gap-4 md:grid-cols-2">
+                <div className="rounded-[24px] border border-white/85 bg-white/72 p-4">
+                  <div className="mb-2 text-xs font-semibold tracking-tight text-slate-500">ประเภท</div>
+                  <div className="inline-flex w-full rounded-2xl border border-slate-200/90 bg-white/85 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setKind('NEW')}
+                      className={cn(
+                        'flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition',
+                        kind === 'NEW'
+                          ? 'bg-emerald-500 text-white'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      )}
                     >
-                      <div className="font-mono text-[14px] font-extrabold leading-none text-slate-900">
-                        {p.plant_code}
-                      </div>
-                      <div className="mt-1 truncate text-[10px] leading-tight text-slate-700">
-                        {p.name || 'ชื่อไม้'}
-                      </div>
-                    </div>
-                  ))
-                )}
+                      ใหม่ (N)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setKind('OLD')}
+                      className={cn(
+                        'flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition',
+                        kind === 'OLD'
+                          ? 'bg-sky-500 text-white'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      )}
+                    >
+                      เก่า (O)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-[24px] border border-white/85 bg-white/72 p-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="เดือน (YYMM)">
+                      <input
+                        value={dateCode}
+                        onChange={(e) =>
+                          setDateCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))
+                        }
+                        className={cn(inputClass, 'font-mono')}
+                        placeholder="2603"
+                        inputMode="numeric"
+                      />
+                    </Field>
+
+                    <Field label="จำนวน" hint="ใส่ 1 = เพิ่มทีละต้น">
+                      <input
+                        value={qty}
+                        onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ''))}
+                        className={inputClass}
+                        placeholder="1"
+                        inputMode="numeric"
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                <Field label="ชื่อไม้">
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={inputClass}
+                    placeholder="เช่น Alocasia..."
+                  />
+                </Field>
+
+                <Field label="ทุน (บาท)" hint="ใช้คำนวณกำไรตอนขาย">
+                  <input
+                    value={cost}
+                    onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ''))}
+                    className={inputClass}
+                    placeholder="0"
+                    inputMode="decimal"
+                  />
+                </Field>
               </div>
 
-              {selectedLabels.length > 5 ? (
-                <div className="mt-2 text-[11px] text-slate-500">
-                  และอีก {selectedLabels.length - 5} รายการ
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-xs leading-relaxed text-slate-500">
+                  ระบบจะสร้างรหัสให้เองตามลำดับล่าสุดของเดือนนั้น ๆ
+                </div>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={addPlants}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(16,185,129,0.16)] transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
+              </div>
+            </ShellCard>
+
+            <ShellCard
+              title="สรุป"
+              subtitle="ภาพรวม stock ที่ยัง ACTIVE"
+              tint="sky"
+            >
+              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                <MiniStat label="จำนวนต้นไม้" value={activeCount.toLocaleString('th-TH')} tone="default" />
+                <MiniStat label="มูลค่าทุนรวม" value={totalCost.toLocaleString('th-TH')} tone="emerald" />
+                <MiniStat label="ผลลัพธ์ค้นหาล่าสุด" value={filtered.length.toLocaleString('th-TH')} tone="sky" />
+              </div>
+            </ShellCard>
+          </div>
+
+          <ShellCard
+            title="รายการต้นไม้ที่ยังมีอยู่"
+            subtitle="แสดงเฉพาะ ACTIVE • เรียงจากน้อยไปมาก"
+            tint="default"
+            right={
+              <div className="flex gap-2">
+                <Pill tone="slate">ทั้งหมด {filtered.length}</Pill>
+                <button
+                  type="button"
+                  onClick={loadPlants}
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                >
+                  รีเฟรช
+                </button>
+              </div>
+            }
+          >
+            <div className="max-w-md">
+              <Field label="ค้นหา">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onBlur={onSearchBlur}
+                  className={inputClass}
+                  placeholder="ค้นหา เช่น n26030001 หรือ O-2603-0042"
+                />
+              </Field>
+
+              {pendingResolved ? (
+                <div className="mt-2 text-xs font-semibold text-emerald-700">
+                  แปลงรหัสเป็น: <span className="font-mono">{pendingResolved}</span>
                 </div>
               ) : null}
             </div>
 
-            <div className="rounded-3xl border border-black/10 bg-slate-50 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-xs font-semibold text-slate-700">ผลลัพธ์</div>
-                <div className="text-[11px] text-slate-500">{labelList.length} รายการ</div>
-              </div>
-
-              {labelList.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-black/15 bg-white p-3 text-sm text-slate-600">
-                  ยังไม่มีผลลัพธ์
+            <div className="mt-4">
+              {loading ? (
+                <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
+                  กำลังโหลด...
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
+                  ไม่พบรายการ
                 </div>
               ) : (
-                <div className="max-h-[320px] space-y-2 overflow-auto pr-1">
-                  {labelList.map((p) => {
-                    const active = selectedIds.includes(p.id)
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => toggleSelect(p.id)}
-                        className={
-                          (active ? 'border-emerald-200 bg-emerald-50' : 'border-black/10 bg-white hover:bg-slate-50') +
-                          ' w-full rounded-2xl border p-2 text-left shadow-sm'
-                        }
-                      >
-                        <div className="flex items-start gap-2">
-                          <input
-                            type="checkbox"
-                            readOnly
-                            checked={active}
-                            className="mt-1 h-4 w-4"
-                          />
-                          <div className="min-w-0">
-                            <div className="truncate font-mono text-sm text-slate-900">{p.plant_code}</div>
-                            <div className="truncate text-sm text-slate-700">{p.name || '-'}</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {filtered.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-[24px] border border-white/85 bg-white/84 p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="truncate font-mono text-sm font-extrabold tracking-tight text-slate-900">
+                            {p.plant_code}
+                          </div>
+                          <div className="mt-1 truncate text-sm text-slate-600">{p.name || '-'}</div>
+                        </div>
+
+                        <div className="shrink-0 text-right">
+                          <div className="text-[11px] font-semibold text-slate-400">ทุน</div>
+                          <div className="mt-1 text-sm font-bold text-slate-900">
+                            {Number(p.cost || 0).toLocaleString('th-TH')}
                           </div>
                         </div>
-                      </button>
-                    )
-                  })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
-          </div>
+          </ShellCard>
 
-          <div className="mt-3 text-[11px] text-slate-500">
-            ใช้กับ Nimbot D110_M / label 14×60 mm ได้ และไม่ต้องไล่พิมพ์ทีละใบแล้ว
-          </div>
-        </div>
-
-        {/* Prefix modal */}
-        {needPrefixModal ? (
-          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 md:items-center">
-            <div className="w-full max-w-sm rounded-3xl border border-black/10 bg-white p-4 shadow-lg">
-              <div className="text-base font-semibold text-slate-900">เลือกว่าเป็น N หรือ O</div>
-              <div className="mt-1 text-xs text-slate-500">
-                คุณพิมพ์เป็นเลขล้วน: <span className="font-mono text-slate-700">{pendingDigits}</span>
-              </div>
-              <div className="mt-4 flex gap-2">
+          <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1.12fr_0.88fr]">
+            <ShellCard
+              title="พิมพ์ / สร้างไฟล์สติ๊กเกอร์โค้ด (14×60 mm)"
+              subtitle="รองรับค้นหาเดี่ยว, เลือกหลายรายการ, และเลือกเป็นช่วง"
+              tint="cream"
+            >
+              <div className="inline-flex w-full rounded-2xl border border-slate-200/90 bg-white/85 p-1 shadow-sm md:w-[320px]">
                 <button
                   type="button"
-                  onClick={() => choosePrefix('N')}
-                  className="flex-1 rounded-2xl bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
+                  onClick={() => setLabelMode('single')}
+                  className={cn(
+                    'flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition',
+                    labelMode === 'single'
+                      ? 'bg-emerald-500 text-white'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  )}
                 >
-                  ใหม่ (N)
+                  ค้นหา/เลือกเอง
                 </button>
                 <button
                   type="button"
-                  onClick={() => choosePrefix('O')}
-                  className="flex-1 rounded-2xl bg-sky-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-sky-700"
+                  onClick={() => setLabelMode('range')}
+                  className={cn(
+                    'flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition',
+                    labelMode === 'range'
+                      ? 'bg-emerald-500 text-white'
+                      : 'text-slate-700 hover:bg-slate-50'
+                  )}
                 >
-                  เก่า (O)
+                  เลือกเป็นช่วง
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setNeedPrefixModal(false)
-                  setPendingDigits('')
-                }}
-                className="mt-3 w-full rounded-2xl border border-black/10 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+
+              {labelMode === 'single' ? (
+                <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center">
+                  <input
+                    value={labelQ}
+                    onChange={(e) => setLabelQ(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') searchLabelPlants()
+                    }}
+                    className={cn(inputClass, 'md:flex-1')}
+                    placeholder="ค้นหา เช่น n26030001 หรือชื่อไม้"
+                  />
+                  <button
+                    type="button"
+                    onClick={searchLabelPlants}
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={labelLoading}
+                  >
+                    {labelLoading ? 'กำลังค้นหา...' : 'ค้นหา'}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto]">
+                  <input
+                    value={rangeStart}
+                    onChange={(e) => setRangeStart(e.target.value)}
+                    className={inputClass}
+                    placeholder="รหัสเริ่มต้น เช่น n-2603-0001"
+                  />
+                  <input
+                    value={rangeEnd}
+                    onChange={(e) => setRangeEnd(e.target.value)}
+                    className={inputClass}
+                    placeholder="รหัสสิ้นสุด เช่น n-2603-0010"
+                  />
+                  <button
+                    type="button"
+                    onClick={searchLabelPlants}
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={labelLoading}
+                  >
+                    {labelLoading ? 'กำลังค้นหา...' : 'ค้นหาช่วง'}
+                  </button>
+                </div>
+              )}
+
+              {labelErr ? (
+                <div className="mt-3 rounded-[20px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                  {labelErr}
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllResults}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  disabled={labelList.length === 0}
+                >
+                  เลือกทั้งหมด
+                </button>
+                <button
+                  type="button"
+                  onClick={clearSelected}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                  disabled={selectedIds.length === 0}
+                >
+                  ล้างที่เลือก
+                </button>
+                <button
+                  type="button"
+                  onClick={printBulkLabels}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-4 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={selectedIds.length === 0}
+                >
+                  พิมพ์ที่เลือก
+                </button>
+                <button
+                  type="button"
+                  onClick={exportSelectedTxt}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-sky-200/80 bg-sky-500 px-4 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={selectedIds.length === 0}
+                >
+                  สร้างไฟล์ TXT
+                </button>
+              </div>
+
+              <div className="mt-3 text-[11px] text-slate-500">
+                ใช้กับ Nimbot D110_M / label 14×60 mm ได้ และไม่ต้องไล่พิมพ์ทีละใบแล้ว
+              </div>
+            </ShellCard>
+
+            <div className="grid gap-3 sm:gap-4">
+              <ShellCard
+                title="พรีวิว"
+                subtitle={`${selectedLabels.length} รายการที่เลือก`}
+                tint="sky"
               >
-                ยกเลิก
-              </button>
+                <div className="space-y-2">
+                  {selectedLabels.length === 0 ? (
+                    <div className="rounded-[22px] border border-dashed border-slate-200 bg-white/70 p-4 text-sm text-slate-500">
+                      ยังไม่ได้เลือกรายการ
+                    </div>
+                  ) : (
+                    selectedLabels.slice(0, 5).map((p) => (
+                      <div
+                        key={p.id}
+                        className="rounded-[18px] border border-dashed border-slate-300 bg-white p-2"
+                        style={{ width: '60mm', height: '14mm' }}
+                      >
+                        <div className="font-mono text-[14px] font-extrabold leading-none text-slate-900">
+                          {p.plant_code}
+                        </div>
+                        <div className="mt-1 truncate text-[10px] leading-tight text-slate-700">
+                          {p.name || 'ชื่อไม้'}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {selectedLabels.length > 5 ? (
+                  <div className="mt-2 text-[11px] text-slate-500">
+                    และอีก {selectedLabels.length - 5} รายการ
+                  </div>
+                ) : null}
+              </ShellCard>
+
+              <ShellCard
+                title="ผลลัพธ์"
+                subtitle={`${labelList.length} รายการ`}
+                tint="default"
+              >
+                {labelList.length === 0 ? (
+                  <div className="rounded-[22px] border border-dashed border-slate-200 bg-white/70 p-4 text-sm text-slate-500">
+                    ยังไม่มีผลลัพธ์
+                  </div>
+                ) : (
+                  <div className="max-h-[360px] space-y-2 overflow-auto pr-1">
+                    {labelList.map((p) => {
+                      const active = selectedIds.includes(p.id)
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => toggleSelect(p.id)}
+                          className={cn(
+                            'w-full rounded-[20px] border p-3 text-left shadow-[0_4px_14px_rgba(15,23,42,0.04)] transition',
+                            active
+                              ? 'border-emerald-200 bg-emerald-50'
+                              : 'border-white/85 bg-white/82 hover:bg-slate-50'
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              readOnly
+                              checked={active}
+                              className="mt-1 h-4 w-4"
+                            />
+                            <div className="min-w-0">
+                              <div className="truncate font-mono text-sm font-bold text-slate-900">
+                                {p.plant_code}
+                              </div>
+                              <div className="mt-1 truncate text-sm text-slate-600">
+                                {p.name || '-'}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </ShellCard>
             </div>
           </div>
-        ) : null}
+
+          {needPrefixModal ? (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 md:items-center">
+              <div className="w-full max-w-sm rounded-[28px] border border-white/70 bg-white/95 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
+                <div className="text-[18px] font-semibold tracking-tight text-slate-900">
+                  เลือกว่าเป็น N หรือ O
+                </div>
+                <div className="mt-2 text-sm leading-relaxed text-slate-500">
+                  คุณพิมพ์เป็นเลขล้วน:{' '}
+                  <span className="font-mono font-semibold text-slate-800">{pendingDigits}</span>
+                </div>
+
+                <div className="mt-5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => choosePrefix('N')}
+                    className="flex-1 rounded-full bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
+                  >
+                    ใหม่ (N)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => choosePrefix('O')}
+                    className="flex-1 rounded-full bg-sky-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-600"
+                  >
+                    เก่า (O)
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNeedPrefixModal(false)
+                    setPendingDigits('')
+                  }}
+                  className="mt-3 w-full rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
     </AppShell>
   )
