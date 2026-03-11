@@ -487,32 +487,27 @@ export default function SellPage() {
   }
 
   async function createPaymentRecord({ invoiceId }) {
-    if (payStatus === 'unpaid') return
+  if (payStatus !== 'partial') return
 
-    const total = Number(totals.totalPrice || 0)
-    if (total <= 0) return
+  const total = Number(totals.totalPrice || 0)
+  if (total <= 0) return
 
-    let amt = 0
-    if (payStatus === 'paid') {
-      amt = total
-    } else if (payStatus === 'partial') {
-      amt = parseMoneyInput(receivedAmount || 0)
-      if (!amt || amt <= 0) throw new Error('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
-      if (amt > total) throw new Error('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
-    }
+  const amt = parseMoneyInput(receivedAmount || 0)
+  if (!amt || amt <= 0) throw new Error('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
+  if (amt > total) throw new Error('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
 
-    const payDate = paidDate ? paidDate : saleDate
+  const payDate = paidDate ? paidDate : saleDate
 
-    const { error } = await supabase.from('payments').insert({
-      invoice_id: invoiceId,
-      pay_date: payDate,
-      bank,
-      amount: amt,
-      payment_method: paymentMethod || null,
-      note: 'รับเงินจากการขาย',
-    })
-    if (error) throw error
-  }
+  const { error } = await supabase.from('payments').insert({
+    invoice_id: invoiceId,
+    pay_date: payDate,
+    bank,
+    amount: amt,
+    payment_method: paymentMethod || null,
+    note: 'รับเงินบางส่วนจากการขาย',
+  })
+  if (error) throw error
+}
 
   async function submit() {
     setErr('')
