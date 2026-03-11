@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { supabaseBrowser } from '@/lib/supabase/browser'
@@ -253,6 +253,26 @@ const ghostBtnClass =
   'inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-50'
 
 export default function SellPage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell title="ขาย">
+          <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+            <div className="mx-auto max-w-6xl">
+              <div className="rounded-[30px] border border-white/80 bg-white/92 p-6 text-sm font-medium text-slate-500 shadow-[0_8px_24px_rgba(15,23,42,0.05)]">
+                กำลังโหลดหน้าขาย...
+              </div>
+            </div>
+          </div>
+        </AppShell>
+      }
+    >
+      <SellPageInner />
+    </Suspense>
+  )
+}
+
+function SellPageInner() {
   const supabase = supabaseBrowser()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -267,19 +287,7 @@ export default function SellPage() {
   const [receivedAmount, setReceivedAmount] = useState('')
   const [codeInput, setCodeInput] = useState('')
   const [items, setItems] = useState([])
-const [loading, setLoading] = useState(false)
-
-useEffect(() => {
-  const code = searchParams.get('code')
-  if (!code) return
-
-  const normalized = normalizeCode(code)
-
-  setCodeInput((prev) => {
-    if (prev && prev.includes(normalized)) return prev
-    return prev ? prev + '\n' + normalized : normalized
-  })
-}, [searchParams])
+  const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
   const [lookupErr, setLookupErr] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
@@ -288,6 +296,18 @@ useEffect(() => {
   const [needPrefixModal, setNeedPrefixModal] = useState(false)
   const [pendingDigits, setPendingDigits] = useState('')
   const pendingSetterRef = useRef(null)
+
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (!code) return
+
+    const normalized = normalizeCode(code)
+
+    setCodeInput((prev) => {
+      if (prev && prev.includes(normalized)) return prev
+      return prev ? prev + '\n' + normalized : normalized
+    })
+  }, [searchParams])
 
   const totals = useMemo(() => {
     const totalCost = items.reduce((s, x) => s + Number(x.cost || 0), 0)
@@ -501,27 +521,27 @@ useEffect(() => {
   }
 
   async function createPaymentRecord({ invoiceId }) {
-  if (payStatus !== 'partial') return
+    if (payStatus !== 'partial') return
 
-  const total = Number(totals.totalPrice || 0)
-  if (total <= 0) return
+    const total = Number(totals.totalPrice || 0)
+    if (total <= 0) return
 
-  const amt = parseMoneyInput(receivedAmount || 0)
-  if (!amt || amt <= 0) throw new Error('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
-  if (amt > total) throw new Error('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
+    const amt = parseMoneyInput(receivedAmount || 0)
+    if (!amt || amt <= 0) throw new Error('กรุณากรอก “ยอดที่รับจริง” (จ่ายบางส่วน)')
+    if (amt > total) throw new Error('ยอดที่รับจริงมากกว่ายอดขายรวมของบิล')
 
-  const payDate = paidDate ? paidDate : saleDate
+    const payDate = paidDate ? paidDate : saleDate
 
-  const { error } = await supabase.from('payments').insert({
-    invoice_id: invoiceId,
-    pay_date: payDate,
-    bank,
-    amount: amt,
-    payment_method: paymentMethod || null,
-    note: 'รับเงินบางส่วนจากการขาย',
-  })
-  if (error) throw error
-}
+    const { error } = await supabase.from('payments').insert({
+      invoice_id: invoiceId,
+      pay_date: payDate,
+      bank,
+      amount: amt,
+      payment_method: paymentMethod || null,
+      note: 'รับเงินบางส่วนจากการขาย',
+    })
+    if (error) throw error
+  }
 
   async function submit() {
     setErr('')
@@ -611,9 +631,7 @@ useEffect(() => {
               <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
                 ขายสินค้า
               </div>
-              <div className="mt-1 text-sm leading-relaxed text-slate-500">
-              
-              </div>
+              <div className="mt-1 text-sm leading-relaxed text-slate-500"></div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -715,12 +733,14 @@ useEffect(() => {
               ) : null}
             </div>
           </ShellCard>
-<Link
-  href="/stock"
-  className="inline-flex h-10 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
->
-  เปิดคลังไม้พร้อมขาย
-</Link>
+
+          <Link
+            href="/stock"
+            className="inline-flex h-10 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+          >
+            เปิดคลังไม้พร้อมขาย
+          </Link>
+
           <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1.2fr_0.8fr]">
             <ShellCard
               title="เพิ่มรายการขาย (Plant Code)"
