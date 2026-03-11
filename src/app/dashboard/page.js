@@ -4,6 +4,23 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { supabaseBrowser } from '@/lib/supabase/browser'
+import {
+  BrainCircuit,
+  Boxes,
+  BriefcaseBusiness,
+  CircleDollarSign,
+  Coins,
+  Landmark,
+  Leaf,
+  PackageOpen,
+  PercentCircle,
+  ReceiptText,
+  RefreshCw,
+  Sparkles,
+  TrendingUp,
+  TriangleAlert,
+  Wallet,
+} from 'lucide-react'
 
 function money(n) {
   const x = Number(n)
@@ -36,19 +53,16 @@ function isDateInRange(dateStr, start, end) {
 function Pill({ tone = 'slate', children }) {
   const map = {
     emerald:
-      'border border-emerald-200/80 bg-emerald-50/90 text-emerald-700 shadow-[0_2px_8px_rgba(16,185,129,0.08)]',
+      'border border-emerald-200/80 bg-emerald-50/90 text-emerald-700 shadow-[0_2px_8px_rgba(16,185,129,0.06)]',
     amber:
-      'border border-amber-200/80 bg-amber-50/90 text-amber-700 shadow-[0_2px_8px_rgba(245,158,11,0.08)]',
+      'border border-amber-200/80 bg-amber-50/90 text-amber-700 shadow-[0_2px_8px_rgba(245,158,11,0.06)]',
     rose:
-      'border border-rose-200/80 bg-rose-50/90 text-rose-700 shadow-[0_2px_8px_rgba(244,63,94,0.08)]',
+      'border border-rose-200/80 bg-rose-50/90 text-rose-700 shadow-[0_2px_8px_rgba(244,63,94,0.06)]',
     slate:
       'border border-slate-200/80 bg-white/90 text-slate-600 shadow-[0_2px_8px_rgba(15,23,42,0.04)]',
-    teal:
-      'border border-teal-200/80 bg-teal-50/90 text-teal-700 shadow-[0_2px_8px_rgba(20,184,166,0.08)]',
-    sky:
-      'border border-sky-200/80 bg-sky-50/90 text-sky-700 shadow-[0_2px_8px_rgba(59,130,246,0.08)]',
+    sky: 'border border-sky-200/80 bg-sky-50/90 text-sky-700 shadow-[0_2px_8px_rgba(59,130,246,0.06)]',
     lilac:
-      'border border-violet-200/80 bg-violet-50/90 text-violet-700 shadow-[0_2px_8px_rgba(139,92,246,0.08)]',
+      'border border-violet-200/80 bg-violet-50/90 text-violet-700 shadow-[0_2px_8px_rgba(139,92,246,0.06)]',
   }
 
   return (
@@ -66,17 +80,17 @@ function Pill({ tone = 'slate', children }) {
 function Card({ children, className = '', style, tint = 'default' }) {
   const tintMap = {
     default:
-      'border border-white/80 bg-white/86 shadow-[0_14px_40px_rgba(15,23,42,0.06)] backdrop-blur-[6px]',
+      'border border-white/80 bg-white/88 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-[4px]',
     rose:
-      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,248,251,0.96)_52%,rgba(255,238,244,0.96)_100%)] shadow-[0_14px_40px_rgba(244,63,94,0.08)] backdrop-blur-[6px]',
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,246,249,0.96)_54%,rgba(253,234,242,0.96)_100%)] shadow-[0_12px_30px_rgba(244,63,94,0.07)]',
     sky:
-      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(247,251,255,0.96)_52%,rgba(235,246,255,0.96)_100%)] shadow-[0_14px_40px_rgba(59,130,246,0.08)] backdrop-blur-[6px]',
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(246,250,255,0.96)_54%,rgba(233,244,255,0.96)_100%)] shadow-[0_12px_30px_rgba(59,130,246,0.07)]',
     emerald:
-      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(247,255,251,0.96)_52%,rgba(232,250,241,0.96)_100%)] shadow-[0_14px_40px_rgba(16,185,129,0.08)] backdrop-blur-[6px]',
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(246,255,251,0.96)_54%,rgba(232,250,241,0.96)_100%)] shadow-[0_12px_30px_rgba(16,185,129,0.07)]',
     cream:
-      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,252,247,0.96)_52%,rgba(255,246,233,0.96)_100%)] shadow-[0_14px_40px_rgba(245,158,11,0.08)] backdrop-blur-[6px]',
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,251,245,0.96)_54%,rgba(255,245,230,0.96)_100%)] shadow-[0_12px_30px_rgba(245,158,11,0.07)]',
     lilac:
-      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(250,248,255,0.96)_52%,rgba(244,238,255,0.96)_100%)] shadow-[0_14px_40px_rgba(139,92,246,0.08)] backdrop-blur-[6px]',
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(249,247,255,0.96)_54%,rgba(241,235,255,0.96)_100%)] shadow-[0_12px_30px_rgba(139,92,246,0.07)]',
   }
 
   return (
@@ -88,12 +102,48 @@ function Card({ children, className = '', style, tint = 'default' }) {
         className
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.78),transparent_34%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.16)_100%)]" />
-      <div className="pointer-events-none absolute -bottom-6 left-0 right-0 h-20 opacity-70">
-        <div className="h-full w-full bg-[radial-gradient(60%_100%_at_50%_100%,rgba(255,255,255,0.36)_0%,transparent_70%)]" />
-      </div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.72),transparent_34%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.14)_100%)]" />
       {children}
+    </div>
+  )
+}
+
+function Watermark({ icon: Icon, tint = 'slate', className = '' }) {
+  const map = {
+    rose: 'text-rose-300/30',
+    sky: 'text-sky-300/30',
+    emerald: 'text-emerald-300/30',
+    cream: 'text-amber-300/30',
+    lilac: 'text-violet-300/28',
+    slate: 'text-slate-300/25',
+  }
+
+  return (
+    <div className={cn('pointer-events-none absolute -bottom-2 right-2', className)}>
+      <Icon className={cn('h-24 w-24 sm:h-28 sm:w-28', map[tint] || map.slate)} strokeWidth={1.4} />
+    </div>
+  )
+}
+
+function CornerIcon({ icon: Icon, tone = 'slate' }) {
+  const map = {
+    rose: 'bg-rose-100/90 text-rose-500',
+    sky: 'bg-sky-100/90 text-sky-500',
+    emerald: 'bg-emerald-100/90 text-emerald-500',
+    cream: 'bg-amber-100/90 text-amber-500',
+    lilac: 'bg-violet-100/90 text-violet-500',
+    slate: 'bg-slate-100/90 text-slate-500',
+  }
+
+  return (
+    <div
+      className={cn(
+        'flex h-11 w-11 items-center justify-center rounded-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]',
+        map[tone] || map.slate
+      )}
+    >
+      <Icon className="h-5 w-5" strokeWidth={2.2} />
     </div>
   )
 }
@@ -106,15 +156,16 @@ function PageHeader({ loading, onReload }) {
           <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
             NisaPlant Dashboard
           </div>
-          <div className="mt-2 text-[28px] font-bold tracking-tight text-slate-900 sm:text-[32px]">
+          <div className="mt-2 text-[28px] font-bold tracking-tight text-slate-900 sm:text-[34px]">
             ภาพรวมธุรกิจ
           </div>
         </div>
 
         <button
           onClick={onReload}
-          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(16,185,129,0.22)] transition hover:bg-emerald-600 active:scale-[0.99]"
+          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(16,185,129,0.20)] transition hover:bg-emerald-600 active:scale-[0.99]"
         >
+          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
         </button>
       </div>
@@ -122,35 +173,22 @@ function PageHeader({ loading, onReload }) {
   )
 }
 
-function MetricIcon({ tone = 'slate', children }) {
-  const map = {
-    rose: 'bg-rose-100 text-rose-600',
-    sky: 'bg-sky-100 text-sky-600',
-    emerald: 'bg-emerald-100 text-emerald-600',
-    cream: 'bg-amber-100 text-amber-600',
-    lilac: 'bg-violet-100 text-violet-600',
-    slate: 'bg-slate-100 text-slate-600',
-  }
-
+function StatCard({
+  title,
+  value,
+  suffix = 'บาท',
+  tint = 'default',
+  icon,
+  watermark,
+}) {
   return (
-    <div
-      className={cn(
-        'flex h-11 w-11 items-center justify-center rounded-2xl text-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]',
-        map[tone] || map.slate
-      )}
-    >
-      {children}
-    </div>
-  )
-}
+    <Card tint={tint} className="min-h-[158px]">
+      {watermark ? <Watermark icon={watermark} tint={tint} /> : null}
 
-function StatCard({ title, value, suffix = 'บาท', tint = 'default', icon = '◌' }) {
-  return (
-    <Card tint={tint} className="min-h-[150px] sm:min-h-[158px]">
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 text-sm font-medium text-slate-500">{title}</div>
-          <MetricIcon tone={tint}>{icon}</MetricIcon>
+          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
         </div>
 
         <div className="mt-5">
@@ -168,13 +206,22 @@ function StatCard({ title, value, suffix = 'บาท', tint = 'default', icon =
   )
 }
 
-function SmallStatCard({ title, value, suffix = '', tint = 'default', icon = '◌' }) {
+function SmallStatCard({
+  title,
+  value,
+  suffix = '',
+  tint = 'default',
+  icon,
+  watermark,
+}) {
   return (
-    <Card tint={tint} className="min-h-[150px] sm:min-h-[158px]">
+    <Card tint={tint} className="min-h-[158px]">
+      {watermark ? <Watermark icon={watermark} tint={tint} /> : null}
+
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 text-sm font-medium text-slate-500">{title}</div>
-          <MetricIcon tone={tint}>{icon}</MetricIcon>
+          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
         </div>
 
         <div className="mt-5">
@@ -192,17 +239,18 @@ function SmallStatCard({ title, value, suffix = '', tint = 'default', icon = '�
   )
 }
 
-function TextCard({ title, text, tint = 'default', icon = '✦' }) {
+function TextCard({ title, text, tint = 'default', icon, watermark }) {
   return (
-    <Card tint={tint} className="min-h-[220px] sm:min-h-[230px]">
-      <div className="pointer-events-none absolute right-5 top-5 text-[40px] font-light text-slate-300/35">
-        {icon}
-      </div>
+    <Card tint={tint} className="min-h-[192px]">
+      {watermark ? <Watermark icon={watermark} tint={tint} className="bottom-0 right-0" /> : null}
 
       <div className="relative z-10 flex h-full flex-col">
-        <div className="text-sm font-medium text-slate-500">{title}</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-sm font-medium text-slate-500">{title}</div>
+          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
+        </div>
 
-        <div className="mt-3 inline-flex w-fit rounded-full border border-white/80 bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
+        <div className="mt-3 inline-flex w-fit rounded-full border border-white/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-slate-500">
           Insight
         </div>
 
@@ -214,13 +262,18 @@ function TextCard({ title, text, tint = 'default', icon = '✦' }) {
   )
 }
 
-function SalaryCard({ title, total, time, nisa, tint = 'default' }) {
+function SalaryCard({ title, total, time, nisa, tint = 'default', icon, watermark }) {
   return (
-    <Card tint={tint} className="min-h-[150px] sm:min-h-[158px]">
-      <div className="relative z-10">
-        <div className="text-sm font-medium text-slate-500">{title}</div>
+    <Card tint={tint} className="min-h-[158px]">
+      {watermark ? <Watermark icon={watermark} tint={tint} /> : null}
 
-        <div className="mt-3 inline-flex rounded-full border border-white/80 bg-white/78 px-3 py-1 text-xs font-semibold text-slate-500 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-sm font-medium text-slate-500">{title}</div>
+          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
+        </div>
+
+        <div className="mt-3 inline-flex rounded-full border border-white/80 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-500">
           Time {money(time)} / Nisa {money(nisa)}
         </div>
 
@@ -235,17 +288,36 @@ function SalaryCard({ title, total, time, nisa, tint = 'default' }) {
   )
 }
 
-function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tint = 'default' }) {
+function DonutCard({
+  title,
+  subtitle,
+  data,
+  colors,
+  centerTop,
+  centerBottom,
+  tint = 'default',
+  icon,
+  watermark,
+}) {
   const total = data.reduce((a, b) => a + Number(b.value || 0), 0)
   const safeData = total > 0 ? data : [{ name: 'ไม่มีข้อมูล', value: 1 }]
 
   return (
     <Card tint={tint} className="p-0">
+      {watermark ? <Watermark icon={watermark} tint={tint} className="bottom-3 right-3" /> : null}
+
       <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5 lg:px-6 lg:pb-6 lg:pt-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
-              {title}
+            <div className="flex items-center gap-2">
+              {icon ? (
+                <div className="text-slate-500">
+                  {icon}
+                </div>
+              ) : null}
+              <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
+                {title}
+              </div>
             </div>
             {subtitle ? (
               <div className="mt-1 truncate text-xs leading-relaxed text-slate-500">
@@ -254,19 +326,14 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
             ) : null}
           </div>
 
-          <span className="inline-flex items-center rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
+          <span className="inline-flex items-center rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600">
             รวม {money(total)}
           </span>
         </div>
 
-        <div className="mt-3 h-[250px] sm:h-[260px]">
+        <div className="mt-3 h-[248px] sm:h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <defs>
-                <filter id={`softShadow-${title.replace(/\s+/g, '-')}`}>
-                  <feDropShadow dx="0" dy="4" stdDeviation="6" floodOpacity="0.10" />
-                </filter>
-              </defs>
               <Pie
                 data={safeData}
                 dataKey="value"
@@ -275,7 +342,6 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
                 outerRadius={94}
                 stroke="#fff"
                 strokeWidth={2}
-                filter={`url(#softShadow-${title.replace(/\s+/g, '-')})`}
               >
                 {safeData.map((entry, idx) => (
                   <Cell
@@ -289,7 +355,7 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
           </ResponsiveContainer>
 
           <div className="pointer-events-none -mt-[150px] flex h-0 items-center justify-center">
-            <div className="rounded-full border border-white/85 bg-white/88 px-6 py-5 text-center shadow-[0_8px_20px_rgba(15,23,42,0.06)] backdrop-blur-[4px]">
+            <div className="rounded-full border border-white/85 bg-white/88 px-6 py-5 text-center shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
               <div className="text-[23px] font-bold tracking-tight text-slate-900">
                 {centerTop}
               </div>
@@ -302,7 +368,7 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
           {data.map((item, idx) => (
             <span
               key={item.name}
-              className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-[0_2px_10px_rgba(15,23,42,0.04)]"
+              className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600"
             >
               <span
                 className="h-2.5 w-2.5 rounded-full"
@@ -318,41 +384,37 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
 }
 
 const BANK_THEME = {
-  GSB: {
-    pill: 'rose',
-    tint: 'rose',
-    logo: '/banks/gsb.png',
-  },
-  KTB: {
-    pill: 'sky',
-    tint: 'sky',
-    logo: '/banks/ktb.png',
-  },
-  KBANK: {
-    pill: 'emerald',
-    tint: 'emerald',
-    logo: '/banks/kbank.png',
-  },
+  GSB: { tint: 'rose', logo: '/banks/gsb.png', icon: Coins },
+  KTB: { tint: 'sky', logo: '/banks/ktb.png', icon: Landmark },
+  KBANK: { tint: 'emerald', logo: '/banks/kbank.png', icon: Leaf },
 }
 
-function BankBalanceCard({ bank, balance, income, expense, tint = 'default', logo = '' }) {
-  const dotTone = bank === 'GSB' ? 'bg-rose-400' : bank === 'KTB' ? 'bg-sky-400' : 'bg-emerald-400'
-
+function BankBalanceCard({
+  bank,
+  balance,
+  income,
+  expense,
+  tint = 'default',
+  logo = '',
+  icon: WaterIcon,
+}) {
   return (
-    <Card tint={tint} className="min-h-[190px]">
+    <Card tint={tint} className="min-h-[182px]">
       {logo ? (
         <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]">
           <img
             src={logo}
             alt=""
-            className="absolute bottom-2 left-3 h-[96px] w-[96px] select-none object-contain opacity-[0.08] blur-[0.2px]"
+            className="absolute bottom-2 right-2 h-[90px] w-[90px] select-none object-contain opacity-[0.06] blur-[0.2px]"
           />
         </div>
+      ) : WaterIcon ? (
+        <Watermark icon={WaterIcon} tint={tint} />
       ) : null}
 
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-3">
-          <div className="text-[16px] font-bold tracking-[0.24em] text-slate-800">{bank}</div>
+          <div className="text-[16px] font-bold tracking-[0.22em] text-slate-800">{bank}</div>
           <Pill tone={bank === 'GSB' ? 'rose' : bank === 'KTB' ? 'sky' : 'emerald'}>
             Balance
           </Pill>
@@ -365,19 +427,13 @@ function BankBalanceCard({ bank, balance, income, expense, tint = 'default', log
           <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
         </div>
 
-        <div className="mt-5 rounded-[22px] border border-white/85 bg-white/74 px-4 py-3 text-sm shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+        <div className="mt-5 rounded-[20px] border border-white/85 bg-white/72 px-4 py-3 text-sm">
           <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-slate-500">
-              <span className={cn('h-2.5 w-2.5 rounded-full', dotTone)} />
-              รับเดือนนี้
-            </span>
+            <span className="text-slate-500">รับเดือนนี้</span>
             <span className="font-bold text-slate-900">{money(income)}</span>
           </div>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-slate-500">
-              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-              จ่ายเดือนนี้
-            </span>
+            <span className="text-slate-500">จ่ายเดือนนี้</span>
             <span className="font-bold text-slate-900">{money(expense)}</span>
           </div>
         </div>
@@ -639,7 +695,6 @@ export default function DashboardPage() {
           .order('created_at', { ascending: false }),
 
         supabase.from('payments').select('bank, amount, pay_date'),
-
         supabase.from('expenses').select('bank, amount, type, expense_date'),
       ])
 
@@ -830,7 +885,7 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="Dashboard">
-      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffefe_0%,#fffafc_22%,#f6fbff_56%,#f5fff8_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffefe_0%,#fff9fb_22%,#f7fbff_58%,#f7fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
         <div className="mx-auto max-w-7xl">
           <PageHeader loading={loading} onReload={loadDashboard} />
 
@@ -841,26 +896,38 @@ export default function DashboardPage() {
           ) : null}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} tint="rose" icon="🧾" />
-            <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthNet} tint="sky" icon="◔" />
-            <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" icon="📦" />
-            <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} tint="emerald" icon="💼" />
-          </div>
-
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard title="ภาษี 15%" value={kpi.taxReserve} tint="cream" icon="◌" />
-            <SalaryCard
-              title="เงินเดือน"
-              total={kpi.salaryTotal}
-              time={kpi.salaryTime}
-              nisa={kpi.salaryNisa}
-              tint="lilac"
+            <StatCard
+              title="ยอดขายเดือนนี้"
+              value={kpi.monthSales}
+              tint="rose"
+              icon={ReceiptText}
+              watermark={ReceiptText}
             />
-            <TextCard title="AI แนะนำการซื้อไม้" text={aiPlantText} tint="rose" icon="✿" />
-            <TextCard title="AI วิเคราะห์ธุรกิจ" text={aiBizText} tint="sky" icon="◎" />
+            <StatCard
+              title="กำไรสุทธิเดือนนี้"
+              value={kpi.monthNet}
+              tint="sky"
+              icon={TrendingUp}
+              watermark={TrendingUp}
+            />
+            <SmallStatCard
+              title="ไม้คงเหลือ"
+              value={kpi.activeCount}
+              suffix="ต้น"
+              tint="cream"
+              icon={PackageOpen}
+              watermark={Boxes}
+            />
+            <StatCard
+              title="มูลค่าทุนคงเหลือ"
+              value={kpi.activeCostSum}
+              tint="emerald"
+              icon={Wallet}
+              watermark={BriefcaseBusiness}
+            />
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr_0.95fr]">
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_0.95fr]">
             <DonutCard
               title="รายรับ / รายจ่าย"
               subtitle="ดูจากเงินเข้าออกจริงของเดือนนี้"
@@ -872,6 +939,8 @@ export default function DashboardPage() {
               )}
               centerBottom="สุทธิเดือนนี้"
               tint="emerald"
+              icon={<CircleDollarSign className="h-4 w-4" />}
+              watermark={Leaf}
             />
 
             <DonutCard
@@ -882,14 +951,21 @@ export default function DashboardPage() {
               centerTop={money(kpi.monthSales)}
               centerBottom="ยอดขายเดือนนี้"
               tint="sky"
+              icon={<TrendingUp className="h-4 w-4" />}
+              watermark={TrendingUp}
             />
 
             <Card tint="rose" className="min-h-[395px]">
+              <Watermark icon={ReceiptText} tint="rose" className="bottom-4 right-3" />
+
               <div className="relative z-10 flex h-full flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
-                      ยอดค้างชำระ
+                    <div className="flex items-center gap-2">
+                      <TriangleAlert className="h-4 w-4 text-rose-500" />
+                      <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
+                        ยอดค้างชำระ
+                      </div>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-slate-500">
                       ดูบิล unpaid / partial ของเดือนนี้
@@ -910,24 +986,61 @@ export default function DashboardPage() {
                   <Pill tone="amber">partial {arData.partialCount}</Pill>
                 </div>
 
-                <div className="mt-6 rounded-[22px] border border-white/85 bg-white/76 p-4 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+                <div className="mt-6 rounded-[22px] border border-white/85 bg-white/76 p-4">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
                     <span>สัดส่วนที่เก็บยอดขายเดือนนี้</span>
                     <span>{Math.round(arData.collectionPct)}%</span>
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-rose-100">
                     <div
-                      className="h-full rounded-full bg-rose-400 transition-all"
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-300 transition-all"
                       style={{ width: `${arData.collectionPct}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="mt-auto rounded-[20px] border border-white/85 bg-white/74 px-4 py-3 text-sm leading-6 text-slate-500 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+                <div className="mt-auto rounded-[20px] border border-white/85 bg-white/74 px-4 py-3 text-sm leading-6 text-slate-500">
                   ติดตามยอดค้างชำระก่อนซื้อเพิ่ม จะช่วยลดความเสี่ยงของ cashflow
                 </div>
               </div>
             </Card>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_1fr]">
+            <StatCard
+              title="ภาษี 15%"
+              value={kpi.taxReserve}
+              tint="cream"
+              icon={PercentCircle}
+              watermark={PercentCircle}
+            />
+            <SalaryCard
+              title="เงินเดือน"
+              total={kpi.salaryTotal}
+              time={kpi.salaryTime}
+              nisa={kpi.salaryNisa}
+              tint="lilac"
+              icon={Coins}
+              watermark={Coins}
+            />
+            <div className="hidden lg:block" />
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr]">
+            <TextCard
+              title="AI แนะนำการซื้อไม้"
+              text={aiPlantText}
+              tint="cream"
+              icon={Sparkles}
+              watermark={Sparkles}
+            />
+            <TextCard
+              title="AI วิเคราะห์ธุรกิจ"
+              text={aiBizText}
+              tint="sky"
+              icon={BrainCircuit}
+              watermark={BrainCircuit}
+            />
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -938,6 +1051,7 @@ export default function DashboardPage() {
               expense={bankCards.GSB.expense}
               tint={BANK_THEME.GSB.tint}
               logo={BANK_THEME.GSB.logo}
+              icon={BANK_THEME.GSB.icon}
             />
             <BankBalanceCard
               bank="KTB"
@@ -946,6 +1060,7 @@ export default function DashboardPage() {
               expense={bankCards.KTB.expense}
               tint={BANK_THEME.KTB.tint}
               logo={BANK_THEME.KTB.logo}
+              icon={BANK_THEME.KTB.icon}
             />
             <BankBalanceCard
               bank="KBANK"
@@ -954,6 +1069,7 @@ export default function DashboardPage() {
               expense={bankCards.KBANK.expense}
               tint={BANK_THEME.KBANK.tint}
               logo={BANK_THEME.KBANK.logo}
+              icon={BANK_THEME.KBANK.icon}
             />
           </div>
 
