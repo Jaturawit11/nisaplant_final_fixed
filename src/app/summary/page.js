@@ -42,17 +42,16 @@ function cn(...classes) {
 }
 
 function normalizeSummary(sum) {
-  const totalSales = Number(sum?.total_sales || 0)
-  const totalCost = Number(sum?.total_cost || 0)
-  const grossProfit = Number(sum?.gross_profit || 0)
-  const totalExpenses = Number(sum?.total_expenses || 0)
-  const netProfit = Number(sum?.net_profit || 0)
-  const tax15 = Number(sum?.tax_15 || 0)
-  const afterTax = Number(sum?.after_tax || 0)
+  const totalSales = Number(sum?.total_sales ?? sum?.sales ?? 0)
+  const totalCost = Number(sum?.total_cost ?? sum?.cost ?? 0)
+  const grossProfit = Number(sum?.gross_profit ?? sum?.gross ?? 0)
+  const totalExpenses = Number(sum?.total_expenses ?? sum?.expenses ?? 0)
+  const netProfit = Number(sum?.net_profit ?? sum?.net ?? 0)
+  const tax15 = Number(sum?.tax_15 ?? sum?.tax ?? 0)
+  const afterTax = Number(sum?.after_tax ?? sum?.after ?? 0)
 
   return { totalSales, totalCost, grossProfit, totalExpenses, netProfit, tax15, afterTax }
 }
-
 function Pill({ tone = 'slate', children }) {
   const map = {
     emerald: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
