@@ -156,7 +156,7 @@ function SmallStatCard({ title, value, suffix = '', tint = 'default' }) {
 
 function TextCard({ title, text, tint = 'default', icon = '✦' }) {
   return (
-    <Card tint={tint} className="min-h-[150px] sm:min-h-[162px]">
+    <Card tint={tint} className="min-h-[170px] sm:min-h-[182px]">
       <div className="pointer-events-none absolute right-5 top-4 text-[42px] font-light text-slate-300/35">
         {icon}
       </div>
@@ -415,17 +415,17 @@ export default function DashboardPage() {
   const [err, setErr] = useState('')
 
   const [kpi, setKpi] = useState({
-  activeCount: 0,
-  activeCostSum: 0,
-  monthSales: 0,
-  deadLoss: 0,
-  monthNet: 0,
-  taxReserve: 0,
-  afterTax: 0,
-  salaryTotal: 0,
-  salaryTime: 0,
-  salaryNisa: 0,
-})
+    activeCount: 0,
+    activeCostSum: 0,
+    monthSales: 0,
+    deadLoss: 0,
+    monthNet: 0,
+    taxReserve: 0,
+    afterTax: 0,
+    salaryTotal: 0,
+    salaryTime: 0,
+    salaryNisa: 0,
+  })
 
   const [incomeExpenseData, setIncomeExpenseData] = useState([
     { name: 'รายรับ', value: 0 },
@@ -456,47 +456,80 @@ export default function DashboardPage() {
     const gsbBalance = Number(bankCards.GSB.balance || 0)
     const gsbExpense = Number(bankCards.GSB.expense || 0)
     const arTotal = Number(arData.total || 0)
+    const deadLoss = Number(kpi.deadLoss || 0)
+    const monthNet = Number(kpi.monthNet || 0)
+    const activeCost = Number(kpi.activeCostSum || 0)
 
     const minReserve = Math.max(
       30000,
       roundUp1000(gsbExpense * 1.2),
-      roundUp1000(arTotal * 0.25)
+      roundUp1000(arTotal * 0.5),
+      deadLoss > 0 ? 40000 : 0
     )
 
-    const maxBuy = Math.max(
-      0,
-      Math.min(
-        Math.max(0, gsbBalance - minReserve),
-        Math.max(0, Number(kpi.afterTax || 0))
-      )
-    )
+    const rawBudget = gsbBalance - minReserve
+    const profitCap = monthNet > 0 ? Number(kpi.afterTax || 0) : 0
+    const maxBuy = Math.max(0, Math.min(rawBudget, profitCap))
+
+    if (monthNet < 0 && deadLoss > 0) {
+      return `เดือนนี้ยังไม่ควรซื้อไม้เพิ่ม\nขาดทุนสุทธิ ${money(Math.abs(monthNet))} บาท และมีไม้ตาย ${money(deadLoss)} บาท\nควรหยุดซื้อ ชะลอการจมทุน และเช็คสภาพแวดล้อมในตู้ก่อน`
+    }
+
+    if (monthNet < 0) {
+      return `เดือนนี้ยังไม่ควรซื้อไม้เพิ่ม\nขาดทุนสุทธิ ${money(Math.abs(monthNet))} บาท\nควรคุมค่าใช้จ่ายและรอให้กำไรกลับมาเป็นบวกก่อน`
+    }
+
+    if (arTotal > 0) {
+      return `เดือนนี้ควรซื้อไม้เพิ่มได้ไม่เกิน ${money(maxBuy)} บาท\nแต่ควรตามยอดค้างชำระ ${money(arTotal)} บาทก่อน\nและควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
+    }
+
+    if (activeCost > gsbBalance * 0.8 && activeCost > 0) {
+      return `เงินจมในสต๊อกค่อนข้างสูง\nควรซื้อเพิ่มได้ไม่เกิน ${money(maxBuy)} บาท\nและควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
+    }
 
     if (maxBuy <= 0) {
       return `เดือนนี้ควรซื้อไม้เพิ่มได้ไม่เกิน 0 บาท\nและควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
     }
 
     return `เดือนนี้ควรซื้อไม้เพิ่มได้ไม่เกิน ${money(maxBuy)} บาท\nและควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
-  }, [arData.total, bankCards.GSB.balance, bankCards.GSB.expense, kpi.afterTax])
+  }, [arData.total, bankCards.GSB.balance, bankCards.GSB.expense, kpi.afterTax, kpi.deadLoss, kpi.monthNet, kpi.activeCostSum])
 
   const aiBizText = useMemo(() => {
-  if (kpi.deadLoss > 0) {
-    return `เดือนนี้มีขาดทุนจากไม้ตาย ${money(kpi.deadLoss)} บาท\nควรระวังการซื้อเพิ่มและเช็คสภาพไม้ในตู้`
-  }
+    const monthNet = Number(kpi.monthNet || 0)
+    const deadLoss = Number(kpi.deadLoss || 0)
+    const arTotal = Number(arData.total || 0)
+    const gsbBalance = Number(bankCards.GSB.balance || 0)
+    const sales = Number(kpi.monthSales || 0)
+    const activeCost = Number(kpi.activeCostSum || 0)
 
-  if (arData.total > 0) {
-    return `มีเงินค้างชำระ ${money(arData.total)} บาท\nควรตามลูกหนี้ก่อนขยายสต๊อก`
-  }
+    const issues = []
 
-  if (kpi.monthNet > 0 && bankCards.GSB.balance >= 30000) {
-    return `ธุรกิจเดือนนี้ยังอยู่ในโซนปลอดภัย\nคุมค่าใช้จ่ายต่อและอย่าซื้อไม้เกินกำไรจริง`
-  }
+    if (monthNet < 0) issues.push('กำไรสุทธิติดลบ')
+    if (deadLoss > 0) issues.push('มีไม้ตาย')
+    if (arTotal > 0) issues.push('มีลูกหนี้ค้างชำระ')
+    if (gsbBalance < 30000) issues.push('เงินสดใน GSB ต่ำ')
+    if (sales === 0) issues.push('ยังไม่มีรายได้')
+    if (activeCost > gsbBalance && activeCost > 0) issues.push('เงินจมในสต๊อกสูง')
 
-  if (kpi.monthNet <= 0 && kpi.monthSales <= 0) {
-    return 'ยังไม่มีรายได้เดือนนี้\nควรเริ่มจากปิดบิลขายและคุมค่าใช้จ่าย'
-  }
+    let level = 'ปลอดภัย'
+    if (monthNet < 0 || arTotal > 0 || deadLoss > 0) level = 'เฝ้าระวัง'
+    if ((monthNet < 0 && arTotal > 0) || deadLoss > 0 || gsbBalance < 30000) level = 'เสี่ยง'
+    if ((monthNet < 0 && deadLoss > 0 && arTotal > 0) || gsbBalance < 15000) level = 'อันตราย'
 
-  return 'ภาพรวมธุรกิจปกติ\nระวังเงินจมในสต๊อกและคุม GSB ให้เหลือพอใช้'
-}, [arData.total, bankCards.GSB.balance, kpi.monthNet, kpi.monthSales, kpi.deadLoss])
+    if (level === 'อันตราย') {
+      return `ธุรกิจเดือนนี้อยู่ในโซนอันตราย\nปัญหาหลัก: ${issues.join(' / ')}\nควรหยุดซื้อทันที ตามเก็บเงินลูกค้า และรักษาเงินสดใน GSB`
+    }
+
+    if (level === 'เสี่ยง') {
+      return `ธุรกิจเดือนนี้อยู่ในโซนเสี่ยง\nปัญหาหลัก: ${issues.join(' / ')}\nควรชะลอการซื้อใหม่ ลดค่าใช้จ่าย และเร่งปิดยอดที่ค้าง`
+    }
+
+    if (level === 'เฝ้าระวัง') {
+      return `ธุรกิจเดือนนี้อยู่ในโซนเฝ้าระวัง\nปัจจัยที่ต้องระวัง: ${issues.join(' / ')}\nควรติดตามตัวเลขทุกวันและอย่าขยายสต๊อกเร็วเกินไป`
+    }
+
+    return 'ธุรกิจเดือนนี้อยู่ในโซนปลอดภัย\nยอดขาย เงินสด และภาระค้างชำระอยู่ในระดับควบคุมได้'
+  }, [arData.total, bankCards.GSB.balance, kpi.monthNet, kpi.monthSales, kpi.deadLoss, kpi.activeCostSum])
 
   async function loadDashboard() {
     setLoading(true)
@@ -577,10 +610,10 @@ export default function DashboardPage() {
       )
 
       const totalSales = Number(summaryRow.total_sales ?? summaryRow.sales ?? 0)
-const deadLoss = Number(summaryRow.dead_loss ?? summaryRow.dead ?? 0)
-const netProfit = Number(summaryRow.net_profit ?? summaryRow.net ?? 0)
-const tax15 = Number(summaryRow.tax_15 ?? summaryRow.tax ?? 0)
-const afterTax = Number(summaryRow.after_tax ?? summaryRow.after ?? 0)
+      const deadLoss = Number(summaryRow.dead_loss ?? summaryRow.dead ?? 0)
+      const netProfit = Number(summaryRow.net_profit ?? summaryRow.net ?? 0)
+      const tax15 = Number(summaryRow.tax_15 ?? summaryRow.tax ?? 0)
+      const afterTax = Number(summaryRow.after_tax ?? summaryRow.after ?? 0)
 
       const salaryTime = afterTax > 0 ? Math.floor((afterTax * 0.1) / 10) * 10 : 0
       const salaryNisa = afterTax > 0 ? Math.floor((afterTax * 0.2) / 10) * 10 : 0
@@ -695,6 +728,7 @@ const afterTax = Number(summaryRow.after_tax ?? summaryRow.after ?? 0)
         activeCount,
         activeCostSum,
         monthSales: totalSales,
+        deadLoss,
         monthNet: netProfit,
         taxReserve: tax15,
         afterTax,
