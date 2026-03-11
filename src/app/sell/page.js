@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { supabaseBrowser } from '@/lib/supabase/browser'
+import Link from 'next/link'
 
 function isUuid(v) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v || ''))
@@ -701,7 +702,12 @@ export default function SellPage() {
               ) : null}
             </div>
           </ShellCard>
-
+<Link
+  href="/stock"
+  className="inline-flex h-10 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+>
+  เปิดคลังไม้พร้อมขาย
+</Link>
           <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1.2fr_0.8fr]">
             <ShellCard
               title="เพิ่มรายการขาย (Plant Code)"

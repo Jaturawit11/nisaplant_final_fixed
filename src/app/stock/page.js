@@ -37,11 +37,13 @@ function ageLabel(days) {
 
 function Pill({ tone = 'slate', children }) {
   const map = {
-    emerald: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
-    amber: 'border border-amber-200/90 bg-amber-50 text-amber-700',
-    rose: 'border border-rose-200/90 bg-rose-50 text-rose-700',
-    slate: 'border border-slate-200/90 bg-white text-slate-600',
-    sky: 'border border-sky-200/90 bg-sky-50 text-sky-700',
+    emerald: 'border border-emerald-200/80 bg-emerald-50 text-emerald-700',
+    amber: 'border border-amber-200/80 bg-amber-50 text-amber-700',
+    rose: 'border border-rose-200/80 bg-rose-50 text-rose-700',
+    slate: 'border border-slate-200/80 bg-white text-slate-600',
+    teal: 'border border-teal-200/80 bg-teal-50 text-teal-700',
+    sky: 'border border-sky-200/80 bg-sky-50 text-sky-700',
+    lilac: 'border border-violet-200/80 bg-violet-50 text-violet-700',
   }
 
   return (
@@ -68,6 +70,8 @@ function Card({ children, className = '', tint = 'default' }) {
       'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
     cream:
       'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
+    lilac:
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
   }
 
   return (
@@ -97,6 +101,28 @@ function StatCard({ title, value, suffix = '', tint = 'default' }) {
           {suffix ? (
             <span className="mb-1 text-sm font-semibold text-slate-400">{suffix}</span>
           ) : null}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function TextCard({ title, text, tint = 'default', icon = '✦' }) {
+  return (
+    <Card tint={tint} className="min-h-[150px] sm:min-h-[162px]">
+      <div className="pointer-events-none absolute right-5 top-4 text-[42px] font-light text-slate-300/35">
+        {icon}
+      </div>
+
+      <div className="relative z-10 flex h-full flex-col">
+        <div className="text-sm font-medium text-slate-500">{title}</div>
+
+        <div className="mt-3 inline-flex w-fit rounded-full border border-white/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-slate-500">
+          Insight
+        </div>
+
+        <div className="mt-4 whitespace-pre-line text-base font-semibold leading-7 tracking-tight text-slate-900 sm:text-[17px]">
+          {text || '-'}
         </div>
       </div>
     </Card>
@@ -141,7 +167,7 @@ export default function StockPage() {
 
       setPlants(rows)
     } catch (e) {
-      setErr(e?.message || 'โหลด Stock Value ไม่สำเร็จ')
+      setErr(e?.message || 'โหลดคลังไม้พร้อมขายไม่สำเร็จ')
     } finally {
       setLoading(false)
     }
@@ -205,21 +231,37 @@ export default function StockPage() {
       .slice(0, 5)
   }, [plants])
 
+  const aiStockText = useMemo(() => {
+    if (stats.totalCount === 0) {
+      return 'ตอนนี้ไม่มีไม้พร้อมขายในคลัง\nสามารถเริ่มเพิ่มไม้ใหม่เข้าระบบได้'
+    }
+
+    if (stats.over90 > 0) {
+      return `มีไม้ค้างเกิน 90 วัน ${stats.over90} ต้น\nควรเร่งขายตัวที่ค้างนานก่อน เพื่อไม่ให้เงินจมเพิ่ม`
+    }
+
+    if (stats.over30 > 0) {
+      return `มีไม้ค้างเกิน 30 วัน ${stats.over30} ต้น\nเริ่มมีเงินจมในสต๊อก ควรติดตามการหมุนของขาย`
+    }
+
+    return 'สต๊อกยังอยู่ในระดับปกติ\nไม้ส่วนใหญ่ยังไม่ค้างนาน และพร้อมขายได้'
+  }, [stats])
+
   return (
-    <AppShell title="Stock Value">
+    <AppShell title="เปิดคลังไม้พร้อมขาย">
       <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
         <div className="mx-auto max-w-6xl">
           <div className="mb-5 sm:mb-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  NisaPlant Stock Value
+                  NisaPlant Sellable Stock
                 </div>
                 <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
-                  มูลค่าสต๊อกคงเหลือ
+                  เปิดคลังไม้พร้อมขาย
                 </div>
                 <div className="mt-1 text-sm text-slate-500">
-                  ดูเฉพาะไม้ที่ยัง ACTIVE และยังเป็นเงินที่จมอยู่ในสวนจริง
+                  ดูเฉพาะไม้ ACTIVE เพื่อหาของขาย เช็คทุน และดูเงินจมในสต๊อก
                 </div>
               </div>
 
@@ -238,15 +280,15 @@ export default function StockPage() {
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <StatCard
-              title="จำนวนไม้คงเหลือ"
+              title="ไม้พร้อมขาย"
               value={stats.totalCount.toLocaleString('th-TH')}
               suffix="ต้น"
               tint="rose"
             />
             <StatCard
-              title="มูลค่าทุนคงเหลือ"
+              title="เงินจมในสต๊อก"
               value={money(stats.totalCost)}
               suffix="บาท"
               tint="emerald"
@@ -258,21 +300,27 @@ export default function StockPage() {
               tint="sky"
             />
             <StatCard
-              title="ค้างเกิน 90 วัน"
-              value={stats.over90.toLocaleString('th-TH')}
+              title="ค้างเกิน 30 วัน"
+              value={stats.over30.toLocaleString('th-TH')}
               suffix="ต้น"
               tint="cream"
             />
+            <StatCard
+              title="ค้างเกิน 90 วัน"
+              value={stats.over90.toLocaleString('th-TH')}
+              suffix="ต้น"
+              tint="lilac"
+            />
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[1.15fr_0.85fr]">
             <Card tint="default">
               <div className="mb-4">
                 <div className="text-[15px] font-semibold tracking-tight text-slate-900">
                   ค้นหา / กรอง / เรียง
                 </div>
                 <div className="mt-1 text-xs leading-relaxed text-slate-500">
-                  ใช้ดูว่าไม้ตัวไหนค้างสต๊อกนาน และเงินจมอยู่ที่ต้นไหน
+                  ใช้หาต้นไม้ที่พร้อมขาย ดูรหัสกรณีป้ายหลุด และดูว่าต้นไหนค้างนาน
                 </div>
               </div>
 
@@ -315,46 +363,12 @@ export default function StockPage() {
               </div>
             </Card>
 
-            <Card tint="sky">
-              <div className="mb-4">
-                <div className="text-[15px] font-semibold tracking-tight text-slate-900">
-                  ทุนสูงสุด 5 อันดับ
-                </div>
-                <div className="mt-1 text-xs leading-relaxed text-slate-500">
-                  ใช้ดูว่าต้นไหนเป็นตัวที่เงินจมสูงสุดในสวน
-                </div>
-              </div>
-
-              {!topCostPlants.length ? (
-                <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
-                  ยังไม่มีไม้คงเหลือ
-                </div>
-              ) : (
-                <div className="grid gap-2">
-                  {topCostPlants.map((p, idx) => (
-                    <div
-                      key={p.id}
-                      className="rounded-[22px] border border-white/85 bg-white/84 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-slate-500">#{idx + 1}</div>
-                          <div className="mt-1 truncate font-mono text-sm font-bold text-slate-900">
-                            {p.plant_code}
-                          </div>
-                          <div className="mt-1 truncate text-sm text-slate-600">{p.name || '-'}</div>
-                        </div>
-
-                        <div className="shrink-0 text-right">
-                          <div className="text-sm font-bold text-slate-900">{money(p.cost)}</div>
-                          <div className="mt-1 text-xs text-slate-500">{p.days_in_stock} วัน</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+            <TextCard
+              title="AI วิเคราะห์สต๊อก"
+              text={aiStockText}
+              tint="sky"
+              icon="◎"
+            />
           </div>
 
           <div className="mt-3">
@@ -363,13 +377,28 @@ export default function StockPage() {
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="text-[15px] font-semibold tracking-tight text-slate-900">
-                      รายการสต๊อกคงเหลือ
+                      ไม้พร้อมขายทั้งหมด
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-slate-500">
-                      ดูเฉพาะ ACTIVE พร้อมจำนวนวันที่ถือ และมูลค่าทุนแต่ละต้น
+                      ตารางแบบ compact เพื่อดูได้หลายรายการในหน้าเดียว
                     </div>
                   </div>
                 </div>
+
+                {!topCostPlants.length ? null : (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {topCostPlants.map((p, idx) => (
+                      <span
+                        key={p.id}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600"
+                      >
+                        <span className="text-slate-400">#{idx + 1}</span>
+                        <span className="font-mono">{p.plant_code}</span>
+                        <span>{money(p.cost)}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {loading ? (
                   <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
@@ -377,7 +406,7 @@ export default function StockPage() {
                   </div>
                 ) : !filteredPlants.length ? (
                   <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
-                    ไม่พบไม้คงเหลือตามเงื่อนไข
+                    ไม่พบไม้พร้อมขายตามเงื่อนไข
                   </div>
                 ) : (
                   <>
@@ -398,29 +427,43 @@ export default function StockPage() {
                               ถือมาแล้ว
                             </th>
                             <th className="border-b border-slate-100 px-3 py-3 text-left text-xs font-semibold text-slate-400">
-                              สถานะสต๊อก
+                              สถานะ
+                            </th>
+                            <th className="border-b border-slate-100 px-3 py-3 text-right text-xs font-semibold text-slate-400">
+                              จัดการ
                             </th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredPlants.map((p) => (
                             <tr key={p.id}>
-                              <td className="border-b border-slate-100 px-3 py-4 font-mono text-sm font-bold text-slate-900">
+                              <td className="border-b border-slate-100 px-3 py-3 font-mono text-sm font-bold text-slate-900">
                                 {p.plant_code}
                               </td>
-                              <td className="border-b border-slate-100 px-3 py-4 text-sm text-slate-700">
+                              <td className="border-b border-slate-100 px-3 py-3 text-sm text-slate-700">
                                 {p.name || '-'}
                               </td>
-                              <td className="border-b border-slate-100 px-3 py-4 text-right text-sm font-bold text-slate-900">
+                              <td className="border-b border-slate-100 px-3 py-3 text-right text-sm font-bold text-slate-900">
                                 {money(p.cost)}
                               </td>
-                              <td className="border-b border-slate-100 px-3 py-4 text-right text-sm text-slate-700">
+                              <td className="border-b border-slate-100 px-3 py-3 text-right text-sm text-slate-700">
                                 {p.days_in_stock} วัน
                               </td>
-                              <td className="border-b border-slate-100 px-3 py-4 text-sm">
+                              <td className="border-b border-slate-100 px-3 py-3 text-sm">
                                 <Pill tone={ageTone(p.days_in_stock)}>
                                   {ageLabel(p.days_in_stock)}
                                 </Pill>
+                              </td>
+                              <td className="border-b border-slate-100 px-3 py-3 text-right">
+                                <button
+                                  type="button"
+                                  className="inline-flex h-9 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                  onClick={() => {
+                                    window.alert(`ช่วงที่ 1: ดูข้อมูลก่อน\nรหัสที่เลือก: ${p.plant_code}\nช่วงที่ 2 ค่อยผูกปุ่มนี้กลับไปหน้าขาย`)
+                                  }}
+                                >
+                                  เลือกไปขาย
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -440,7 +483,7 @@ export default function StockPage() {
                                 {p.plant_code}
                               </div>
                               <div className="mt-1 truncate text-sm text-slate-600">{p.name || '-'}</div>
-                              <div className="mt-2">
+                              <div className="mt-2 flex flex-wrap gap-2">
                                 <Pill tone={ageTone(p.days_in_stock)}>
                                   {ageLabel(p.days_in_stock)} • {p.days_in_stock} วัน
                                 </Pill>
@@ -452,6 +495,15 @@ export default function StockPage() {
                               <div className="mt-1 text-sm font-bold text-slate-900">
                                 {money(p.cost)}
                               </div>
+                              <button
+                                type="button"
+                                className="mt-3 inline-flex h-9 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-4 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                onClick={() => {
+                                  window.alert(`ช่วงที่ 1: ดูข้อมูลก่อน\nรหัสที่เลือก: ${p.plant_code}\nช่วงที่ 2 ค่อยผูกปุ่มนี้กลับไปหน้าขาย`)
+                                }}
+                              >
+                                เลือกไปขาย
+                              </button>
                             </div>
                           </div>
                         </div>
