@@ -4,23 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 import { supabaseBrowser } from '@/lib/supabase/browser'
-import {
-  BrainCircuit,
-  Boxes,
-  BriefcaseBusiness,
-  CircleDollarSign,
-  Coins,
-  Landmark,
-  Leaf,
-  PackageOpen,
-  PercentCircle,
-  ReceiptText,
-  RefreshCw,
-  Sparkles,
-  TrendingUp,
-  TriangleAlert,
-  Wallet,
-} from 'lucide-react'
 
 function money(n) {
   const x = Number(n)
@@ -60,7 +43,8 @@ function Pill({ tone = 'slate', children }) {
       'border border-rose-200/80 bg-rose-50/90 text-rose-700 shadow-[0_2px_8px_rgba(244,63,94,0.06)]',
     slate:
       'border border-slate-200/80 bg-white/90 text-slate-600 shadow-[0_2px_8px_rgba(15,23,42,0.04)]',
-    sky: 'border border-sky-200/80 bg-sky-50/90 text-sky-700 shadow-[0_2px_8px_rgba(59,130,246,0.06)]',
+    sky:
+      'border border-sky-200/80 bg-sky-50/90 text-sky-700 shadow-[0_2px_8px_rgba(59,130,246,0.06)]',
     lilac:
       'border border-violet-200/80 bg-violet-50/90 text-violet-700 shadow-[0_2px_8px_rgba(139,92,246,0.06)]',
   }
@@ -82,15 +66,15 @@ function Card({ children, className = '', style, tint = 'default' }) {
     default:
       'border border-white/80 bg-white/88 shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-[4px]',
     rose:
-      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,246,249,0.96)_54%,rgba(253,234,242,0.96)_100%)] shadow-[0_12px_30px_rgba(244,63,94,0.07)]',
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.95)_0%,rgba(255,246,249,0.97)_54%,rgba(253,234,242,0.96)_100%)] shadow-[0_12px_30px_rgba(244,63,94,0.07)]',
     sky:
-      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(246,250,255,0.96)_54%,rgba(233,244,255,0.96)_100%)] shadow-[0_12px_30px_rgba(59,130,246,0.07)]',
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.95)_0%,rgba(246,250,255,0.97)_54%,rgba(233,244,255,0.96)_100%)] shadow-[0_12px_30px_rgba(59,130,246,0.07)]',
     emerald:
-      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(246,255,251,0.96)_54%,rgba(232,250,241,0.96)_100%)] shadow-[0_12px_30px_rgba(16,185,129,0.07)]',
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.95)_0%,rgba(246,255,251,0.97)_54%,rgba(232,250,241,0.96)_100%)] shadow-[0_12px_30px_rgba(16,185,129,0.07)]',
     cream:
-      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,251,245,0.96)_54%,rgba(255,245,230,0.96)_100%)] shadow-[0_12px_30px_rgba(245,158,11,0.07)]',
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.95)_0%,rgba(255,251,245,0.97)_54%,rgba(255,245,230,0.96)_100%)] shadow-[0_12px_30px_rgba(245,158,11,0.07)]',
     lilac:
-      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(249,247,255,0.96)_54%,rgba(241,235,255,0.96)_100%)] shadow-[0_12px_30px_rgba(139,92,246,0.07)]',
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.95)_0%,rgba(249,247,255,0.97)_54%,rgba(241,235,255,0.96)_100%)] shadow-[0_12px_30px_rgba(139,92,246,0.07)]',
   }
 
   return (
@@ -109,24 +93,9 @@ function Card({ children, className = '', style, tint = 'default' }) {
   )
 }
 
-function Watermark({ icon: Icon, tint = 'slate', className = '' }) {
-  const map = {
-    rose: 'text-rose-300/30',
-    sky: 'text-sky-300/30',
-    emerald: 'text-emerald-300/30',
-    cream: 'text-amber-300/30',
-    lilac: 'text-violet-300/28',
-    slate: 'text-slate-300/25',
-  }
+/* ---------------- ICONS / ILLUSTRATIONS ---------------- */
 
-  return (
-    <div className={cn('pointer-events-none absolute -bottom-2 right-2', className)}>
-      <Icon className={cn('h-24 w-24 sm:h-28 sm:w-28', map[tint] || map.slate)} strokeWidth={1.4} />
-    </div>
-  )
-}
-
-function CornerIcon({ icon: Icon, tone = 'slate' }) {
+function CornerBadge({ tone = 'slate', children }) {
   const map = {
     rose: 'bg-rose-100/90 text-rose-500',
     sky: 'bg-sky-100/90 text-sky-500',
@@ -143,10 +112,155 @@ function CornerIcon({ icon: Icon, tone = 'slate' }) {
         map[tone] || map.slate
       )}
     >
-      <Icon className="h-5 w-5" strokeWidth={2.2} />
+      <span className="text-lg leading-none">{children}</span>
     </div>
   )
 }
+
+function Watermark({ children, tone = 'slate', className = '' }) {
+  const map = {
+    rose: 'text-rose-300/25',
+    sky: 'text-sky-300/25',
+    emerald: 'text-emerald-300/25',
+    cream: 'text-amber-300/25',
+    lilac: 'text-violet-300/25',
+    slate: 'text-slate-300/25',
+  }
+
+  return (
+    <div className={cn('pointer-events-none absolute bottom-2 right-2 select-none', className, map[tone] || map.slate)}>
+      {children}
+    </div>
+  )
+}
+
+function ReceiptIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M18 118 C50 108, 95 104, 162 111" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+      <path d="M95 20 l22 10 v72 l-10 -6 -10 6 -10 -6 -10 6 -10 -6 -10 6 V30 l22 -10z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+      <path d="M75 47 h25 M75 63 h25 M75 79 h18" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+      <circle cx="122" cy="100" r="14" fill="none" stroke="currentColor" strokeWidth="6" />
+      <path d="M122 92 v16 M115 100 h14" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function TrendIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M15 120 C40 110, 65 90, 90 95 C118 100, 138 78, 165 52" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+      <path d="M143 53 h22 v22" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M120 120 h14 M140 120 h10 M155 120 h8" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <circle cx="74" cy="92" r="4" fill="currentColor" />
+      <circle cx="108" cy="96" r="4" fill="currentColor" />
+      <circle cx="136" cy="80" r="4" fill="currentColor" />
+    </svg>
+  )
+}
+
+function BoxIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M42 74 l48 -20 48 20 -48 23 -48 -23z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+      <path d="M42 74 v28 l48 23 48 -23 V74" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+      <path d="M90 55 v42" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M89 53 C84 35, 94 24, 108 25 C108 39, 99 48, 89 53z" fill="none" stroke="currentColor" strokeWidth="5" />
+      <path d="M89 53 C74 50, 65 39, 67 26 C82 28, 91 39, 89 53z" fill="none" stroke="currentColor" strokeWidth="5" />
+    </svg>
+  )
+}
+
+function WalletIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M36 48 h88 a14 14 0 0 1 14 14 v46 a14 14 0 0 1 -14 14 H36 a14 14 0 0 1 -14 -14 V62 a14 14 0 0 1 14 -14z" fill="none" stroke="currentColor" strokeWidth="6" />
+      <path d="M28 60 h118" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M104 77 h38 a10 10 0 0 1 0 20 h-38z" fill="none" stroke="currentColor" strokeWidth="6" />
+      <circle cx="129" cy="87" r="4" fill="currentColor" />
+      <path d="M26 57 l20 -17 h73" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function LeafIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M35 118 C58 88, 92 73, 140 69 C135 113, 103 128, 68 128 C52 128, 41 124, 35 118z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+      <path d="M55 121 C76 101, 95 88, 129 77" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M28 100 C20 82, 20 60, 36 44 C50 57, 54 74, 48 94" fill="none" stroke="currentColor" strokeWidth="5" />
+    </svg>
+  )
+}
+
+function BrainIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M72 112 C48 112, 34 97, 34 76 C34 60, 44 47, 58 42 C60 24, 76 15, 91 19 C103 10, 121 12, 131 25 C146 25, 158 38, 158 54 C168 60, 172 74, 167 87 C162 100, 149 109, 136 109 H72z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+      <path d="M88 31 v74 M63 47 c14 4 21 12 25 23 M113 44 c-10 6 -16 13 -18 24 M60 78 c11 -2 19 1 28 8 M119 78 c-12 -1 -19 2 -26 8" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SparkIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M90 18 L101 57 L140 68 L101 79 L90 118 L79 79 L40 68 L79 57 Z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+      <path d="M142 31 v17 M133 40 h18 M37 97 v14 M30 104 h14" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ChartBarsIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M20 112 C45 102, 70 70, 94 78 C115 84, 130 68, 160 36" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M116 116 V93 M132 116 V78 M148 116 V62" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+      <circle cx="95" cy="79" r="4" fill="currentColor" />
+      <circle cx="130" cy="68" r="4" fill="currentColor" />
+    </svg>
+  )
+}
+
+function BankIllustration({ className = '' }) {
+  return (
+    <svg viewBox="0 0 180 140" className={className}>
+      <path d="M30 52 L90 24 L150 52" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+      <path d="M40 58 h100 M46 114 h88" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M56 58 v52 M82 58 v52 M108 58 v52 M134 58 v52" fill="none" stroke="currentColor" strokeWidth="6" />
+    </svg>
+  )
+}
+
+function IconReceipt(props) {
+  return <ReceiptIllustration {...props} />
+}
+function IconTrend(props) {
+  return <TrendIllustration {...props} />
+}
+function IconBox(props) {
+  return <BoxIllustration {...props} />
+}
+function IconWallet(props) {
+  return <WalletIllustration {...props} />
+}
+function IconLeaf(props) {
+  return <LeafIllustration {...props} />
+}
+function IconBrain(props) {
+  return <BrainIllustration {...props} />
+}
+function IconSpark(props) {
+  return <SparkIllustration {...props} />
+}
+function IconBars(props) {
+  return <ChartBarsIllustration {...props} />
+}
+function IconBank(props) {
+  return <BankIllustration {...props} />
+}
+
+/* ---------------- UI SECTIONS ---------------- */
 
 function PageHeader({ loading, onReload }) {
   return (
@@ -165,7 +279,7 @@ function PageHeader({ loading, onReload }) {
           onClick={onReload}
           className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(16,185,129,0.20)] transition hover:bg-emerald-600 active:scale-[0.99]"
         >
-          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          <span className={cn('inline-block', loading && 'animate-spin')}>↻</span>
           {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
         </button>
       </div>
@@ -178,17 +292,21 @@ function StatCard({
   value,
   suffix = 'บาท',
   tint = 'default',
-  icon,
+  icon = '◦',
   watermark,
 }) {
   return (
     <Card tint={tint} className="min-h-[158px]">
-      {watermark ? <Watermark icon={watermark} tint={tint} /> : null}
+      {watermark ? (
+        <Watermark tone={tint}>
+          {watermark}
+        </Watermark>
+      ) : null}
 
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 text-sm font-medium text-slate-500">{title}</div>
-          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
+          <CornerBadge tone={tint}>{icon}</CornerBadge>
         </div>
 
         <div className="mt-5">
@@ -211,17 +329,21 @@ function SmallStatCard({
   value,
   suffix = '',
   tint = 'default',
-  icon,
+  icon = '◦',
   watermark,
 }) {
   return (
     <Card tint={tint} className="min-h-[158px]">
-      {watermark ? <Watermark icon={watermark} tint={tint} /> : null}
+      {watermark ? (
+        <Watermark tone={tint}>
+          {watermark}
+        </Watermark>
+      ) : null}
 
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 text-sm font-medium text-slate-500">{title}</div>
-          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
+          <CornerBadge tone={tint}>{icon}</CornerBadge>
         </div>
 
         <div className="mt-5">
@@ -239,15 +361,19 @@ function SmallStatCard({
   )
 }
 
-function TextCard({ title, text, tint = 'default', icon, watermark }) {
+function TextCard({ title, text, tint = 'default', icon = '✦', watermark }) {
   return (
     <Card tint={tint} className="min-h-[192px]">
-      {watermark ? <Watermark icon={watermark} tint={tint} className="bottom-0 right-0" /> : null}
+      {watermark ? (
+        <Watermark tone={tint} className="bottom-0 right-0">
+          {watermark}
+        </Watermark>
+      ) : null}
 
       <div className="relative z-10 flex h-full flex-col">
         <div className="flex items-start justify-between gap-3">
           <div className="text-sm font-medium text-slate-500">{title}</div>
-          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
+          <CornerBadge tone={tint}>{icon}</CornerBadge>
         </div>
 
         <div className="mt-3 inline-flex w-fit rounded-full border border-white/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-slate-500">
@@ -262,15 +388,19 @@ function TextCard({ title, text, tint = 'default', icon, watermark }) {
   )
 }
 
-function SalaryCard({ title, total, time, nisa, tint = 'default', icon, watermark }) {
+function SalaryCard({ title, total, time, nisa, tint = 'default', icon = '↺', watermark }) {
   return (
     <Card tint={tint} className="min-h-[158px]">
-      {watermark ? <Watermark icon={watermark} tint={tint} /> : null}
+      {watermark ? (
+        <Watermark tone={tint}>
+          {watermark}
+        </Watermark>
+      ) : null}
 
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-3">
           <div className="text-sm font-medium text-slate-500">{title}</div>
-          {icon ? <CornerIcon icon={icon} tone={tint} /> : null}
+          <CornerBadge tone={tint}>{icon}</CornerBadge>
         </div>
 
         <div className="mt-3 inline-flex rounded-full border border-white/80 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-500">
@@ -296,7 +426,7 @@ function DonutCard({
   centerTop,
   centerBottom,
   tint = 'default',
-  icon,
+  icon = '•',
   watermark,
 }) {
   const total = data.reduce((a, b) => a + Number(b.value || 0), 0)
@@ -304,17 +434,17 @@ function DonutCard({
 
   return (
     <Card tint={tint} className="p-0">
-      {watermark ? <Watermark icon={watermark} tint={tint} className="bottom-3 right-3" /> : null}
+      {watermark ? (
+        <Watermark tone={tint} className="bottom-3 right-3">
+          {watermark}
+        </Watermark>
+      ) : null}
 
       <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5 lg:px-6 lg:pb-6 lg:pt-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              {icon ? (
-                <div className="text-slate-500">
-                  {icon}
-                </div>
-              ) : null}
+              <div className="text-slate-500">{icon}</div>
               <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
                 {title}
               </div>
@@ -384,20 +514,12 @@ function DonutCard({
 }
 
 const BANK_THEME = {
-  GSB: { tint: 'rose', logo: '/banks/gsb.png', icon: Coins },
-  KTB: { tint: 'sky', logo: '/banks/ktb.png', icon: Landmark },
-  KBANK: { tint: 'emerald', logo: '/banks/kbank.png', icon: Leaf },
+  GSB: { tint: 'rose', logo: '/banks/gsb.png' },
+  KTB: { tint: 'sky', logo: '/banks/ktb.png' },
+  KBANK: { tint: 'emerald', logo: '/banks/kbank.png' },
 }
 
-function BankBalanceCard({
-  bank,
-  balance,
-  income,
-  expense,
-  tint = 'default',
-  logo = '',
-  icon: WaterIcon,
-}) {
+function BankBalanceCard({ bank, balance, income, expense, tint = 'default', logo = '', watermark }) {
   return (
     <Card tint={tint} className="min-h-[182px]">
       {logo ? (
@@ -408,8 +530,12 @@ function BankBalanceCard({
             className="absolute bottom-2 right-2 h-[90px] w-[90px] select-none object-contain opacity-[0.06] blur-[0.2px]"
           />
         </div>
-      ) : WaterIcon ? (
-        <Watermark icon={WaterIcon} tint={tint} />
+      ) : null}
+
+      {watermark ? (
+        <Watermark tone={tint}>
+          {watermark}
+        </Watermark>
       ) : null}
 
       <div className="relative z-10">
@@ -664,12 +790,10 @@ export default function DashboardPage() {
         expensesAllRes,
       ] = await Promise.all([
         supabase.rpc('dashboard_plants_agg'),
-
         supabase.rpc('get_month_summary', {
           p_start: start,
           p_end: end,
         }),
-
         supabase
           .from('invoices')
           .select(
@@ -678,7 +802,6 @@ export default function DashboardPage() {
           .gte('sale_date', start)
           .lt('sale_date', end)
           .neq('invoice_status', 'cancelled'),
-
         supabase
           .from('invoices')
           .select(
@@ -687,13 +810,11 @@ export default function DashboardPage() {
           .neq('invoice_status', 'cancelled')
           .order('created_at', { ascending: false })
           .limit(10),
-
         supabase
           .from('bank_opening_balances')
           .select('bank, opening_amount, as_of_date, created_at')
           .order('as_of_date', { ascending: false })
           .order('created_at', { ascending: false }),
-
         supabase.from('payments').select('bank, amount, pay_date'),
         supabase.from('expenses').select('bank, amount, type, expense_date'),
       ])
@@ -900,30 +1021,30 @@ export default function DashboardPage() {
               title="ยอดขายเดือนนี้"
               value={kpi.monthSales}
               tint="rose"
-              icon={ReceiptText}
-              watermark={ReceiptText}
+              icon="🧾"
+              watermark={<ReceiptIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
             <StatCard
               title="กำไรสุทธิเดือนนี้"
               value={kpi.monthNet}
               tint="sky"
-              icon={TrendingUp}
-              watermark={TrendingUp}
+              icon="📈"
+              watermark={<TrendIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
             <SmallStatCard
               title="ไม้คงเหลือ"
               value={kpi.activeCount}
               suffix="ต้น"
               tint="cream"
-              icon={PackageOpen}
-              watermark={Boxes}
+              icon="📦"
+              watermark={<BoxIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
             <StatCard
               title="มูลค่าทุนคงเหลือ"
               value={kpi.activeCostSum}
               tint="emerald"
-              icon={Wallet}
-              watermark={BriefcaseBusiness}
+              icon="💼"
+              watermark={<WalletIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
           </div>
 
@@ -939,8 +1060,8 @@ export default function DashboardPage() {
               )}
               centerBottom="สุทธิเดือนนี้"
               tint="emerald"
-              icon={<CircleDollarSign className="h-4 w-4" />}
-              watermark={Leaf}
+              icon="◉"
+              watermark={<LeafIllustration className="h-28 w-28 sm:h-32 sm:w-32" />}
             />
 
             <DonutCard
@@ -951,18 +1072,20 @@ export default function DashboardPage() {
               centerTop={money(kpi.monthSales)}
               centerBottom="ยอดขายเดือนนี้"
               tint="sky"
-              icon={<TrendingUp className="h-4 w-4" />}
-              watermark={TrendingUp}
+              icon="↗"
+              watermark={<ChartBarsIllustration className="h-28 w-28 sm:h-32 sm:w-32" />}
             />
 
             <Card tint="rose" className="min-h-[395px]">
-              <Watermark icon={ReceiptText} tint="rose" className="bottom-4 right-3" />
+              <Watermark tone="rose" className="bottom-4 right-3">
+                <ReceiptIllustration className="h-28 w-28 sm:h-32 sm:w-32" />
+              </Watermark>
 
               <div className="relative z-10 flex h-full flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <TriangleAlert className="h-4 w-4 text-rose-500" />
+                      <span className="text-rose-500">⚠</span>
                       <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
                         ยอดค้างชำระ
                       </div>
@@ -1006,13 +1129,13 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr_1fr]">
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               title="ภาษี 15%"
               value={kpi.taxReserve}
               tint="cream"
-              icon={PercentCircle}
-              watermark={PercentCircle}
+              icon="%"
+              watermark={<SparkIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
             <SalaryCard
               title="เงินเดือน"
@@ -1020,10 +1143,10 @@ export default function DashboardPage() {
               time={kpi.salaryTime}
               nisa={kpi.salaryNisa}
               tint="lilac"
-              icon={Coins}
-              watermark={Coins}
+              icon="↺"
+              watermark={<SparkIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
-            <div className="hidden lg:block" />
+            <div className="hidden xl:block xl:col-span-2" />
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[1fr_1fr]">
@@ -1031,15 +1154,15 @@ export default function DashboardPage() {
               title="AI แนะนำการซื้อไม้"
               text={aiPlantText}
               tint="cream"
-              icon={Sparkles}
-              watermark={Sparkles}
+              icon="✦"
+              watermark={<SparkIllustration className="h-28 w-28 sm:h-32 sm:w-32" />}
             />
             <TextCard
               title="AI วิเคราะห์ธุรกิจ"
               text={aiBizText}
               tint="sky"
-              icon={BrainCircuit}
-              watermark={BrainCircuit}
+              icon="🧠"
+              watermark={<BrainIllustration className="h-28 w-28 sm:h-32 sm:w-32" />}
             />
           </div>
 
@@ -1051,7 +1174,7 @@ export default function DashboardPage() {
               expense={bankCards.GSB.expense}
               tint={BANK_THEME.GSB.tint}
               logo={BANK_THEME.GSB.logo}
-              icon={BANK_THEME.GSB.icon}
+              watermark={<ReceiptIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
             <BankBalanceCard
               bank="KTB"
@@ -1060,7 +1183,7 @@ export default function DashboardPage() {
               expense={bankCards.KTB.expense}
               tint={BANK_THEME.KTB.tint}
               logo={BANK_THEME.KTB.logo}
-              icon={BANK_THEME.KTB.icon}
+              watermark={<BankIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
             <BankBalanceCard
               bank="KBANK"
@@ -1069,7 +1192,7 @@ export default function DashboardPage() {
               expense={bankCards.KBANK.expense}
               tint={BANK_THEME.KBANK.tint}
               logo={BANK_THEME.KBANK.logo}
-              icon={BANK_THEME.KBANK.icon}
+              watermark={<LeafIllustration className="h-24 w-24 sm:h-28 sm:w-28" />}
             />
           </div>
 
