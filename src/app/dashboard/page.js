@@ -18,6 +18,10 @@ function monthRange(date = new Date()) {
   return { start: toISO(start), end: toISO(end) }
 }
 
+function cn(...classes) {
+  return classes.filter(Boolean).join(' ')
+}
+
 function Pill({ tone = 'slate', children }) {
   const map = {
     emerald: 'border border-emerald-200/80 bg-emerald-50 text-emerald-700',
@@ -26,14 +30,15 @@ function Pill({ tone = 'slate', children }) {
     slate: 'border border-slate-200/80 bg-white text-slate-600',
     teal: 'border border-teal-200/80 bg-teal-50 text-teal-700',
     sky: 'border border-sky-200/80 bg-sky-50 text-sky-700',
+    lilac: 'border border-violet-200/80 bg-violet-50 text-violet-700',
   }
 
   return (
     <span
-      className={
-        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight ' +
-        (map[tone] || map.slate)
-      }
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight',
+        map[tone] || map.slate
+      )}
     >
       {children}
     </span>
@@ -59,12 +64,11 @@ function Card({ children, className = '', style, tint = 'default' }) {
   return (
     <div
       style={style}
-      className={
-        'relative overflow-hidden rounded-[30px] p-4 sm:p-5 ' +
-        (tintMap[tint] || tintMap.default) +
-        ' ' +
+      className={cn(
+        'relative overflow-hidden rounded-[30px] p-4 sm:p-5',
+        tintMap[tint] || tintMap.default,
         className
-      }
+      )}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_38%)]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.12)_100%)]" />
@@ -83,9 +87,6 @@ function PageHeader({ title, loading, onReload }) {
           </div>
           <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
             {title}
-          </div>
-          <div className="mt-1 text-sm leading-relaxed text-slate-500">
-          
           </div>
         </div>
 
@@ -209,166 +210,158 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
           </span>
         </div>
 
-        <div className="mt-4">
-          <div className="relative overflow-hidden rounded-[26px] border border-white/85 bg-[linear-gradient(180deg,rgba(255,255,255,0.9)_0%,rgba(255,255,255,0.72)_100%)] ring-1 ring-slate-900/5">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),transparent_55%)]" />
-            <div className="relative h-[250px] p-3 sm:h-[275px] sm:p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={safeData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={72}
-                    outerRadius={104}
-                    paddingAngle={3}
-                    stroke="rgba(255,255,255,0.96)"
-                    strokeWidth={3}
-                  >
-                    {safeData.map((_, i) => (
-                      <Cell
-                        key={i}
-                        fill={total > 0 ? colors[i % colors.length] : '#e2e8f0'}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v) => money(v)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-5">
-              <div className="rounded-[24px] border border-white/88 bg-white/88 px-5 py-3 text-center shadow-[0_6px_18px_rgba(15,23,42,0.06)]">
-                <div className="text-[30px] font-extrabold leading-none tracking-tight text-slate-900 sm:text-[34px]">
-                  {centerTop}
-                </div>
-                <div className="mt-1 text-[11px] font-semibold text-slate-500 sm:text-xs">
-                  {centerBottom}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {data.map((d, i) => (
-              <span
-                key={d.name}
-                className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/86 px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm sm:text-[12px]"
+        <div className="mt-3 h-[240px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={safeData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={62}
+                outerRadius={92}
+                stroke="#fff"
+                strokeWidth={2}
               >
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ background: colors[i % colors.length] }}
-                />
-                <span className="whitespace-nowrap">{d.name}</span>
-                <span className="text-slate-900">{money(d.value)}</span>
-              </span>
-            ))}
+                {safeData.map((entry, idx) => (
+                  <Cell
+                    key={`cell-${idx}`}
+                    fill={total > 0 ? colors[idx % colors.length] : '#e2e8f0'}
+                  />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v) => money(v)} />
+            </PieChart>
+          </ResponsiveContainer>
+
+          <div className="pointer-events-none -mt-[145px] flex h-0 items-center justify-center">
+            <div className="rounded-full border border-white/85 bg-white/84 px-6 py-5 text-center shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+              <div className="text-[22px] font-bold tracking-tight text-slate-900">
+                {centerTop}
+              </div>
+              <div className="mt-1 text-xs font-semibold text-slate-500">{centerBottom}</div>
+            </div>
           </div>
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {data.map((item, idx) => (
+            <span
+              key={item.name}
+              className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600"
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: colors[idx % colors.length] }}
+              />
+              {item.name} {money(item.value)}
+            </span>
+          ))}
         </div>
       </div>
     </Card>
   )
 }
 
-function UnpaidCard({ amount, unpaidCount, partialCount, monthSales }) {
-  const percent =
-    Number(monthSales) > 0
-      ? Math.min(100, Math.round((Number(amount || 0) / Number(monthSales || 0)) * 100))
-      : 0
-
+function BankBalanceCard({ bank, balance, income, expense, tint = 'default' }) {
   return (
-    <Card tint="rose" className="min-h-[250px] lg:min-h-full">
-      <div className="pointer-events-none absolute right-5 top-5 text-[56px] text-rose-200/30">
-        ₿
-      </div>
+    <Card tint={tint} className="min-h-[170px]">
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="text-[15px] font-semibold tracking-[0.22em] text-slate-800">
+            {bank}
+          </div>
+          <Pill tone={bank === 'GSB' ? 'rose' : bank === 'KTB' ? 'sky' : 'emerald'}>
+            Balance
+          </Pill>
+        </div>
 
-      <div className="relative z-10 flex h-full flex-col">
-        <div className="text-sm font-medium text-slate-500">ยอดค้างชำระ</div>
-
-        <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
-          <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900 sm:text-[38px]">
-            {money(amount)}
+        <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
+          <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900">
+            {money(balance)}
           </span>
           <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Pill tone="rose">unpaid {money(unpaidCount)}</Pill>
-          <Pill tone="amber">partial {money(partialCount)}</Pill>
-        </div>
-
-        <div className="mt-5">
-          <div className="mb-2 flex items-center justify-between gap-3 text-xs font-semibold">
-            <span className="text-slate-500">สัดส่วนเทียบยอดขายเดือนนี้</span>
-            <span className="text-slate-700">{percent}%</span>
+        <div className="mt-5 rounded-[20px] border border-white/85 bg-white/72 px-4 py-3 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-slate-500">รับเดือนนี้</span>
+            <span className="font-bold text-slate-900">{money(income)}</span>
           </div>
-          <div className="h-2.5 w-full overflow-hidden rounded-full bg-rose-100">
-            <div
-              className="h-full rounded-full bg-[linear-gradient(90deg,#fb7185_0%,#f43f5e_100%)]"
-              style={{ width: `${percent}%` }}
-            />
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-slate-500">จ่ายเดือนนี้</span>
+            <span className="font-bold text-slate-900">{money(expense)}</span>
           </div>
-        </div>
-
-        <div className="mt-5 rounded-[20px] border border-white/85 bg-white/70 px-4 py-3 text-sm leading-6 text-slate-500">
-          ติดตามยอดค้างชำระก่อนซื้อเพิ่ม จะช่วยลดความเสี่ยงของ cashflow
         </div>
       </div>
     </Card>
   )
 }
 
-function InvoiceStatusPill({ status }) {
-  const s = String(status || '').toLowerCase()
-
-  if (s === 'paid') return <Pill tone="emerald">paid</Pill>
-  if (s === 'partial') return <Pill tone="amber">partial</Pill>
-  return <Pill tone="rose">unpaid</Pill>
-}
-
-function BankCard({ bankCode, bankData, bgImage }) {
-  const tone = bankCode === 'GSB' ? 'rose' : bankCode === 'KTB' ? 'sky' : 'emerald'
-  const tint = bankCode === 'GSB' ? 'rose' : bankCode === 'KTB' ? 'sky' : 'emerald'
-
+function LatestInvoicesCard({ rows }) {
   return (
-    <Card tint={tint} className="min-h-[194px] sm:min-h-[206px]">
-      <div
-        className="absolute inset-0 bg-no-repeat opacity-[0.05] blur-[1px]"
-        style={{
-          backgroundImage: `url(${bgImage})`,
-          backgroundPosition: 'center right',
-          backgroundSize: 'cover',
-        }}
-      />
-
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.9),transparent_42%)]" />
-
-      <div className="relative z-10 flex h-full flex-col justify-between">
+    <Card tint="default" className="p-0">
+      <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-sm font-semibold tracking-[0.16em] text-slate-700">{bankCode}</div>
-
-            <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
-              <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900 sm:text-[38px]">
-                {money(bankData.balance)}
-              </span>
-              <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+            <div className="text-[15px] font-semibold tracking-tight text-slate-900">
+              10 บิลล่าสุด
+            </div>
+            <div className="mt-1 text-xs leading-relaxed text-slate-500">
+              รวม paid, partial, ยังไม่จ่าย
             </div>
           </div>
-
-          <Pill tone={tone}>Balance</Pill>
+          <Pill tone="slate">{rows.length} รายการ</Pill>
         </div>
 
-        <div className="mt-5 space-y-2 rounded-[22px] border border-white/82 bg-white/62 p-3">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-slate-500">รับเดือนนี้</span>
-            <span className="font-semibold text-slate-900">{money(bankData.income)}</span>
-          </div>
+        <div className="mt-4">
+          {!rows.length ? (
+            <div className="rounded-[24px] border border-dashed border-slate-200 bg-white/60 px-4 py-10 text-center text-sm font-medium text-slate-500">
+              ยังไม่มีรายการ
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {rows.map((r) => {
+                const tone =
+                  r.pay_status === 'paid'
+                    ? 'emerald'
+                    : r.pay_status === 'partial'
+                    ? 'amber'
+                    : 'rose'
 
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span className="text-slate-500">จ่ายเดือนนี้</span>
-            <span className="font-semibold text-slate-900">{money(bankData.expense)}</span>
-          </div>
+                const payLabel =
+                  r.pay_status === 'paid'
+                    ? 'paid'
+                    : r.pay_status === 'partial'
+                    ? 'partial'
+                    : 'unpaid'
+
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between gap-3 rounded-[22px] border border-white/85 bg-white/84 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
+                        {r.invoice_no}
+                      </div>
+                      <div className="mt-1 truncate text-xs text-slate-500">
+                        {r.sale_date} • {r.customer_name || '-'}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Pill tone={tone}>{payLabel}</Pill>
+                      </div>
+                      <div className="mt-2 text-sm font-bold text-slate-900">
+                        {money(r.total_price)} บาท
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </Card>
@@ -377,57 +370,71 @@ function BankCard({ bankCode, bankData, bgImage }) {
 
 export default function DashboardPage() {
   const supabase = supabaseBrowser()
-
   const [loading, setLoading] = useState(true)
-  const [ok, setOk] = useState('')
   const [err, setErr] = useState('')
 
   const [kpi, setKpi] = useState({
-    monthSales: 0,
-    monthGrossProfit: 0,
-    monthIncome: 0,
-    monthExpenses: 0,
-    monthNetBusiness: 0,
     activeCount: 0,
     activeCostSum: 0,
+    monthSales: 0,
+    monthProfit: 0,
+    taxReserve: 0,
+    salaryTotal: 0,
+    salaryTime: 0,
+    salaryNisa: 0,
   })
 
-  const [latestInvoices, setLatestInvoices] = useState([])
+  const [incomeExpenseData, setIncomeExpenseData] = useState([
+    { name: 'รายรับ', value: 0 },
+    { name: 'รายจ่าย', value: 0 },
+  ])
 
-  const [bankBalances, setBankBalances] = useState({
+  const [salesProfitData, setSalesProfitData] = useState([
+    { name: 'ยอดขาย', value: 0 },
+    { name: 'ทุนคงเหลือ', value: 0 },
+  ])
+
+  const [arData, setArData] = useState({
+    total: 0,
+    unpaidCount: 0,
+    partialCount: 0,
+    collectionPct: 0,
+  })
+
+  const [bankCards, setBankCards] = useState({
     GSB: { balance: 0, income: 0, expense: 0 },
     KTB: { balance: 0, income: 0, expense: 0 },
     KBANK: { balance: 0, income: 0, expense: 0 },
   })
 
-  const [unpaidStats, setUnpaidStats] = useState({
-    unpaid: 0,
-    partial: 0,
-    amount: 0,
-  })
+  const [latestInvoices, setLatestInvoices] = useState([])
 
-  function toastOk(msg) {
-    setOk(msg)
-    setTimeout(() => setOk(''), 1800)
-  }
+  const aiPlantText = useMemo(() => {
+    if (kpi.activeCount <= 0) return 'มีเงินค้างชำระ ควรตามลูกหนี้ก่อนซื้อเพิ่ม'
+    if (kpi.activeCount <= 5) return 'Stock ต่ำ ควรวางแผนเข้ามาเพิ่ม'
+    if (kpi.activeCount <= 20) return 'สต๊อกกำลังดี คุมทุนและคุมการหมุนเงินต่อ'
+    return 'สต๊อกค่อนข้างเยอะ ควรเร่งระบายและโฟกัสกำไร'
+  }, [kpi.activeCount])
 
-  function toastErr(msg) {
-    setErr(msg)
-    setTimeout(() => setErr(''), 4000)
-  }
+  const aiBizText = useMemo(() => {
+    if (arData.total > 0) return 'มีบิลค้างชำระ ควรตามเก็บเงินเพื่อลดความเสี่ยง cashflow'
+    if (kpi.monthProfit > 0) return 'ภาพรวมธุรกิจอยู่ในระดับปกติ'
+    return 'ยังไม่มีรายได้เดือนนี้ ควรเริ่มจากบิลขายและคุมค่าใช้จ่าย'
+  }, [arData.total, kpi.monthProfit])
 
   async function loadDashboard() {
     setLoading(true)
+    setErr('')
 
     try {
-      const { start, end } = monthRange(new Date())
+      const { start, end } = monthRange()
 
       const [
         plantsRes,
         expensesMonthRes,
-        expensesAllRes,
         invoicesMonthRes,
         invoicesLatestRes,
+        bankBalancesRes,
       ] = await Promise.all([
         supabase.rpc('dashboard_plants_agg'),
 
@@ -438,53 +445,94 @@ export default function DashboardPage() {
           .lt('expense_date', end),
 
         supabase
-          .from('expenses')
-          .select('amount, type, bank, expense_date'),
-
-        supabase
           .from('invoices')
-          .select('id, invoice_no, sale_date, customer_name, total_price, total_profit, pay_status, created_at')
+          .select(
+            'id, invoice_no, sale_date, customer_name, total_price, total_profit, pay_status, created_at'
+          )
           .gte('sale_date', start)
           .lt('sale_date', end),
 
         supabase
           .from('invoices')
-          .select('id, invoice_no, sale_date, customer_name, total_price, pay_status, created_at')
+          .select(
+            'id, invoice_no, sale_date, customer_name, total_price, pay_status, created_at'
+          )
           .order('created_at', { ascending: false })
-          .limit(50),
+          .limit(10),
+
+        supabase.rpc('get_bank_balances'),
       ])
 
       if (plantsRes.error) throw plantsRes.error
       if (expensesMonthRes.error) throw expensesMonthRes.error
-      if (expensesAllRes.error) throw expensesAllRes.error
       if (invoicesMonthRes.error) throw invoicesMonthRes.error
       if (invoicesLatestRes.error) throw invoicesLatestRes.error
+      if (bankBalancesRes.error) throw bankBalancesRes.error
 
-      const plantsAgg = Array.isArray(plantsRes.data) ? plantsRes.data[0] : plantsRes.data
+      const plantRow = Array.isArray(plantsRes.data) ? plantsRes.data[0] || {} : plantsRes.data || {}
       const monthExpensesRows = expensesMonthRes.data || []
-      const allExpenseRows = expensesAllRes.data || []
-      const monthInvoices = invoicesMonthRes.data || []
-      const latestInvoicePool = invoicesLatestRes.data || []
+      const monthInvoicesRows = invoicesMonthRes.data || []
+      const latestRows = invoicesLatestRes.data || []
+      const bankBalanceRows = bankBalancesRes.data || []
 
-      const monthIncome = monthExpensesRows
-        .filter((x) => String(x.type || '').toLowerCase() === 'income')
-        .reduce((sum, x) => sum + Number(x.amount || 0), 0)
+      const activeCount = Number(
+        plantRow.active_count ?? plantRow.activecount ?? plantRow.count ?? 0
+      )
+      const activeCostSum = Number(
+        plantRow.total_cost ?? plantRow.active_cost_sum ?? plantRow.cost_sum ?? 0
+      )
 
-      const monthExpenses = monthExpensesRows
-        .filter((x) => String(x.type || '').toLowerCase() === 'expense')
-        .reduce((sum, x) => sum + Number(x.amount || 0), 0)
+      let monthIncome = 0
+      let monthExpense = 0
 
-      const monthSales = monthInvoices.reduce(
-        (sum, x) => sum + Number(x.total_price || 0),
+      for (const row of monthExpensesRows) {
+        const amount = Number(row.amount || 0)
+        const type = String(row.type || '').toLowerCase()
+        if (type === 'income') monthIncome += amount
+        else monthExpense += amount
+      }
+
+      const monthSales = monthInvoicesRows.reduce(
+        (sum, row) => sum + Number(row.total_price || 0),
+        0
+      )
+      const monthProfit = monthInvoicesRows.reduce(
+        (sum, row) => sum + Number(row.total_profit || 0),
         0
       )
 
-      const monthGrossProfit = monthInvoices.reduce(
-        (sum, x) => sum + Number(x.total_profit || 0),
+      const taxReserve = monthProfit > 0 ? monthProfit * 0.15 : 0
+      const salaryTime = monthProfit > 0 ? Math.floor((monthProfit * 0.1) / 10) : 0
+      const salaryNisa = monthProfit > 0 ? Math.floor((monthProfit * 0.2) / 10) : 0
+      const salaryTotal = Math.min(60000, salaryTime + salaryNisa)
+
+      const unpaidInvoices = monthInvoicesRows.filter(
+        (r) => String(r.pay_status || '').toLowerCase() === 'unpaid'
+      )
+      const partialInvoices = monthInvoicesRows.filter(
+        (r) => String(r.pay_status || '').toLowerCase() === 'partial'
+      )
+
+      const arTotal = [...unpaidInvoices, ...partialInvoices].reduce(
+        (sum, row) => sum + Number(row.total_price || 0),
         0
       )
 
-      const monthNetBusiness = monthGrossProfit - monthExpenses
+      const totalMonthInvoiceAmount = monthInvoicesRows.reduce(
+        (sum, row) => sum + Number(row.total_price || 0),
+        0
+      )
+
+      const collectionPct =
+        totalMonthInvoiceAmount > 0
+          ? Math.max(
+              0,
+              Math.min(
+                100,
+                ((totalMonthInvoiceAmount - arTotal) / totalMonthInvoiceAmount) * 100
+              )
+            )
+          : 0
 
       const bankMap = {
         GSB: { balance: 0, income: 0, expense: 0 },
@@ -492,89 +540,46 @@ export default function DashboardPage() {
         KBANK: { balance: 0, income: 0, expense: 0 },
       }
 
-      for (const row of allExpenseRows) {
+      for (const row of bankBalanceRows) {
         const bank = String(row.bank || '')
         if (!bankMap[bank]) continue
-
-        const amount = Number(row.amount || 0)
-        const type = String(row.type || '').toLowerCase()
-
-        if (type === 'income') {
-          bankMap[bank].balance += amount
-        } else {
-          bankMap[bank].balance -= amount
-        }
-      }
-
-      for (const row of monthExpensesRows) {
-        const bank = String(row.bank || '')
-        if (!bankMap[bank]) continue
-
-        const amount = Number(row.amount || 0)
-        const type = String(row.type || '').toLowerCase()
-
-        if (type === 'income') {
-          bankMap[bank].income += amount
-        } else {
-          bankMap[bank].expense += amount
-        }
-      }
-
-      const now = new Date()
-      const latestFiltered = []
-
-      for (const inv of latestInvoicePool) {
-        const pay = String(inv.pay_status || '').toLowerCase()
-
-        if (pay === 'paid') {
-          const createdAt = inv.created_at ? new Date(inv.created_at) : null
-          if (createdAt) {
-            const diffDays = (now - createdAt) / (1000 * 60 * 60 * 24)
-            if (diffDays > 1) continue
-          }
-        }
-
-        latestFiltered.push(inv)
-        if (latestFiltered.length >= 10) break
-      }
-
-      let unpaid = 0
-      let partial = 0
-      let amount = 0
-
-      for (const inv of latestInvoicePool) {
-        const pay = String(inv.pay_status || '').toLowerCase()
-        if (pay === 'unpaid') {
-          unpaid += 1
-          amount += Number(inv.total_price || 0)
-        } else if (pay === 'partial') {
-          partial += 1
-          amount += Number(inv.total_price || 0)
-        }
+        bankMap[bank].balance = Number(row.balance || 0)
+        bankMap[bank].income = Number(row.month_in || 0)
+        bankMap[bank].expense = Number(row.month_out || 0)
       }
 
       setKpi({
+        activeCount,
+        activeCostSum,
         monthSales,
-        monthGrossProfit,
-        monthIncome,
-        monthExpenses,
-        monthNetBusiness,
-        activeCount: Number(plantsAgg?.active_count || 0),
-        activeCostSum: Number(plantsAgg?.active_cost_sum || 0),
+        monthProfit,
+        taxReserve,
+        salaryTotal,
+        salaryTime,
+        salaryNisa,
       })
 
-      setBankBalances(bankMap)
-      setLatestInvoices(latestFiltered)
-      setUnpaidStats({
-        unpaid,
-        partial,
-        amount,
+      setIncomeExpenseData([
+        { name: 'รายรับ', value: monthIncome },
+        { name: 'รายจ่าย', value: monthExpense },
+      ])
+
+      setSalesProfitData([
+        { name: 'ยอดขาย', value: monthSales },
+        { name: 'ทุนคงเหลือ', value: activeCostSum },
+      ])
+
+      setArData({
+        total: arTotal,
+        unpaidCount: unpaidInvoices.length,
+        partialCount: partialInvoices.length,
+        collectionPct,
       })
 
-      toastOk('อัปเดตแล้ว')
+      setBankCards(bankMap)
+      setLatestInvoices(latestRows)
     } catch (e) {
-      console.error(e)
-      toastErr('โหลดข้อมูลไม่สำเร็จ')
+      setErr(e?.message || 'โหลด Dashboard ไม่สำเร็จ')
     } finally {
       setLoading(false)
     }
@@ -585,169 +590,135 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const tax15 = Math.max(0, Math.floor(kpi.monthNetBusiness * 0.15))
-  const afterTax = Math.max(0, kpi.monthNetBusiness - tax15)
-  const salaryTotal = Math.min(Math.floor(afterTax * 0.3), 60000)
-  const salaryTime = Math.floor(salaryTotal / 3)
-  const salaryNisa = salaryTotal - salaryTime
-
-  const donutIncomeExpense = [
-    { name: 'รายรับ', value: kpi.monthIncome },
-    { name: 'รายจ่าย', value: kpi.monthExpenses },
-  ]
-
-  const donutSalesCost = [
-    { name: 'ยอดขาย', value: kpi.monthSales },
-    { name: 'ทุนคงเหลือ', value: kpi.activeCostSum },
-  ]
-
-  const aiBuyAdvice = useMemo(() => {
-    if (unpaidStats.amount > 0) return 'มีเงินค้างชำระ ควรตามลูกหนี้ก่อนซื้อเพิ่ม'
-    if (kpi.activeCount < 10) return 'Stock ต่ำ ควรหาไม้เข้ามาเพิ่ม'
-    if (kpi.monthNetBusiness > 20000) return 'กำไรดี สามารถซื้อไม้เพิ่มได้'
-    if (kpi.activeCostSum > kpi.monthSales && kpi.monthSales > 0) return 'ทุนคงเหลือสูงกว่ายอดขาย ควรระบายของก่อน'
-    return 'ระบบค่อนข้างสมดุล ยังไม่จำเป็นต้องซื้อเพิ่มมาก'
-  }, [kpi.activeCount, kpi.activeCostSum, kpi.monthNetBusiness, kpi.monthSales, unpaidStats.amount])
-
-  const aiBusinessAnalysis = useMemo(() => {
-    if (kpi.monthSales <= 0 && kpi.monthIncome > 0) return 'เดือนนี้ยังไม่มีการขาย แต่มีเงินเข้า ควรแยกเงินทุนกับยอดขายให้ชัด'
-    if (kpi.monthNetBusiness < 0) return 'ธุรกิจขาดทุน ต้องลดค่าใช้จ่ายหรือเพิ่มยอดขาย'
-    if (unpaidStats.partial + unpaidStats.unpaid > 0) return 'มีบิลค้างชำระ ควรตามเก็บเงินเพื่อลดความเสี่ยง'
-    if (kpi.monthNetBusiness > 30000) return 'ธุรกิจกำไรดี สามารถขยายได้'
-    return 'ภาพรวมธุรกิจอยู่ในระดับปกติ'
-  }, [kpi.monthIncome, kpi.monthNetBusiness, kpi.monthSales, unpaidStats.partial, unpaidStats.unpaid])
-
-  const bankBg = {
-    GSB: '/banks/gsb.png',
-    KTB: '/banks/ktb.png',
-    KBANK: '/banks/kbank.png',
-  }
-
   return (
     <AppShell title="Dashboard">
       <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
-        <PageHeader title="ภาพรวมธุรกิจ" loading={loading} onReload={loadDashboard} />
+        <div className="mx-auto max-w-6xl">
+          <PageHeader title="ภาพรวมธุรกิจ" loading={loading} onReload={loadDashboard} />
 
-        {(ok || err) && (
-          <div className="mb-4 sm:mb-5">
-            {ok ? (
-              <div className="rounded-[24px] border border-emerald-100/90 bg-emerald-50/92 px-4 py-3 text-sm font-semibold text-emerald-700">
-                {ok}
-              </div>
-            ) : null}
+          {err ? (
+            <div className="mb-4 rounded-[24px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+              {err}
+            </div>
+          ) : null}
 
-            {err ? (
-              <div className="rounded-[24px] border border-rose-100/90 bg-rose-50/92 px-4 py-3 text-sm font-semibold text-rose-700">
-                {err}
-              </div>
-            ) : null}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} tint="rose" />
+            <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthProfit} tint="sky" />
+            <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" />
+            <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} tint="emerald" />
           </div>
-        )}
 
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} tint="rose" />
-          <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthNetBusiness} tint="sky" />
-          <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" />
-          <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} tint="emerald" />
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard title="ภาษี 15%" value={tax15} tint="cream" />
-          <SalaryCard
-            title="เงินเดือน"
-            total={salaryTotal}
-            time={salaryTime}
-            nisa={salaryNisa}
-            tint="lilac"
-          />
-          <TextCard title="AI แนะนำการซื้อไม้" text={aiBuyAdvice} tint="rose" icon="✿" />
-          <TextCard title="AI วิเคราะห์ธุรกิจ" text={aiBusinessAnalysis} tint="sky" icon="◎" />
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-3">
-          <DonutCard
-            title="รายรับ / รายจ่าย"
-            subtitle="ดูจากหน้า รายรับ/รายจ่าย ของเดือนนี้"
-            data={donutIncomeExpense}
-            colors={['#34d399', '#fb7185']}
-            centerTop={money(kpi.monthIncome - kpi.monthExpenses)}
-            centerBottom="สุทธิเดือนนี้"
-            tint="emerald"
-          />
-
-          <DonutCard
-            title="ยอดขาย / ทุนคงเหลือ"
-            subtitle="ยอดขายเดือนนี้ เทียบกับมูลค่าทุนคงเหลือ"
-            data={donutSalesCost}
-            colors={['#60a5fa', '#fbbf24']}
-            centerTop={money(kpi.monthSales)}
-            centerBottom="ยอดขายเดือนนี้"
-            tint="sky"
-          />
-
-          <UnpaidCard
-            amount={unpaidStats.amount}
-            unpaidCount={unpaidStats.unpaid}
-            partialCount={unpaidStats.partial}
-            monthSales={kpi.monthSales}
-          />
-        </div>
-
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-3">
-          {(['GSB', 'KTB', 'KBANK']).map((bankCode) => (
-            <BankCard
-              key={bankCode}
-              bankCode={bankCode}
-              bankData={bankBalances[bankCode]}
-              bgImage={bankBg[bankCode]}
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard title="ภาษี 15%" value={kpi.taxReserve} tint="cream" />
+            <SalaryCard
+              title="เงินเดือน"
+              total={kpi.salaryTotal}
+              time={kpi.salaryTime}
+              nisa={kpi.salaryNisa}
+              tint="lilac"
             />
-          ))}
-        </div>
+            <TextCard title="AI แนะนำการซื้อไม้" text={aiPlantText} tint="rose" icon="✿" />
+            <TextCard title="AI วิเคราะห์ธุรกิจ" text={aiBizText} tint="sky" icon="◎" />
+          </div>
 
-        <div className="mt-3 sm:mt-4">
-          <Card tint="default" className="p-0">
-            <div className="flex flex-col gap-2 border-b border-slate-100/80 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-              <div>
-                <div className="text-[15px] font-semibold tracking-tight text-slate-900">
-                  10 บิลล่าสุด
-                </div>
-                <div className="mt-1 text-xs text-slate-500">ซ่อน paid ที่เกิน 1 วัน</div>
-              </div>
-            </div>
-
-            <div className="p-2.5 sm:p-3">
-              {latestInvoices.length === 0 ? (
-                <div className="rounded-[22px] px-4 py-8 text-sm text-slate-500">
-                  ยังไม่มีรายการ
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {latestInvoices.map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="flex flex-col gap-3 rounded-[22px] border border-white/85 bg-white/82 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)] md:flex-row md:items-center md:justify-between"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold tracking-tight text-slate-900 sm:text-[15px]">
-                          {inv.invoice_no || '(no invoice)'}
-                        </div>
-                        <div className="mt-1 truncate text-xs text-slate-500 sm:text-sm">
-                          {inv.sale_date || '-'} • {inv.customer_name || '-'}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-3 md:justify-end">
-                        <InvoiceStatusPill status={inv.pay_status} />
-                        <div className="text-right text-sm font-semibold text-slate-900 sm:text-[15px]">
-                          {money(inv.total_price)} บาท
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr_0.95fr]">
+            <DonutCard
+              title="รายรับ / รายจ่าย"
+              subtitle="ดูจากหน้า ค่าใช้จ่าย/รายรับ ของเดือนนี้"
+              data={incomeExpenseData}
+              colors={['#34d399', '#fb7185']}
+              centerTop={money(
+                incomeExpenseData.reduce((sum, x) => sum + Number(x.value || 0), 0) -
+                  Number(incomeExpenseData[1]?.value || 0)
               )}
-            </div>
-          </Card>
+              centerBottom="สุทธิเดือนนี้"
+              tint="emerald"
+            />
+
+            <DonutCard
+              title="ยอดขาย / ทุนคงเหลือ"
+              subtitle="ยอดขายเดือนนี้ เทียบกับมูลค่าทุนคงเหลือ"
+              data={salesProfitData}
+              colors={['#60a5fa', '#fbbf24']}
+              centerTop={money(kpi.monthSales)}
+              centerBottom="ยอดขายเดือนนี้"
+              tint="sky"
+            />
+
+            <Card tint="rose" className="min-h-[385px]">
+              <div className="relative z-10 flex h-full flex-col">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-[15px] font-semibold tracking-tight text-slate-900">
+                      ยอดค้างชำระ
+                    </div>
+                    <div className="mt-1 text-xs leading-relaxed text-slate-500">
+                      ดูบิล unpaid / partial ของเดือนนี้
+                    </div>
+                  </div>
+                  <div className="text-[36px] font-light text-rose-200">฿</div>
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-end gap-x-2 gap-y-1">
+                  <span className="text-[38px] font-bold leading-none tracking-tight text-slate-900">
+                    {money(arData.total)}
+                  </span>
+                  <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Pill tone="rose">unpaid {arData.unpaidCount}</Pill>
+                  <Pill tone="amber">partial {arData.partialCount}</Pill>
+                </div>
+
+                <div className="mt-6 rounded-[22px] border border-white/85 bg-white/75 p-4">
+                  <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                    <span>สัดส่วนที่เก็บยอดขายเดือนนี้</span>
+                    <span>{Math.round(arData.collectionPct)}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-rose-100">
+                    <div
+                      className="h-full rounded-full bg-rose-400 transition-all"
+                      style={{ width: `${arData.collectionPct}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-auto rounded-[20px] border border-white/85 bg-white/72 px-4 py-3 text-sm leading-6 text-slate-500">
+                  ติดตามยอดค้างชำระก่อนซื้อเพิ่ม จะช่วยลดความเสี่ยงของ cashflow
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <BankBalanceCard
+              bank="GSB"
+              balance={bankCards.GSB.balance}
+              income={bankCards.GSB.income}
+              expense={bankCards.GSB.expense}
+              tint="rose"
+            />
+            <BankBalanceCard
+              bank="KTB"
+              balance={bankCards.KTB.balance}
+              income={bankCards.KTB.income}
+              expense={bankCards.KTB.expense}
+              tint="sky"
+            />
+            <BankBalanceCard
+              bank="KBANK"
+              balance={bankCards.KBANK.balance}
+              income={bankCards.KBANK.income}
+              expense={bankCards.KBANK.expense}
+              tint="emerald"
+            />
+          </div>
+
+          <div className="mt-3">
+            <LatestInvoicesCard rows={latestInvoices} />
+          </div>
         </div>
       </div>
     </AppShell>
