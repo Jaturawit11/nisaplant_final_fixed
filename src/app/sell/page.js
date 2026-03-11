@@ -603,7 +603,7 @@ export default function SellPage() {
                 ขายสินค้า
               </div>
               <div className="mt-1 text-sm leading-relaxed text-slate-500">
-                ธีมเดียวกับ Dashboard เน้นมือถือ ใช้งานง่าย และไม่แตะ logic เดิม
+              
               </div>
             </div>
 

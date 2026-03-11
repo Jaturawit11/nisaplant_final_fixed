@@ -286,7 +286,7 @@ export default function ExpensesPage() {
   const latest10 = rows.slice(0, 10)
 
   return (
-    <AppShell title="รายรับ / รายจ่าย">
+    <AppShell title="เงินเข้าออกพิเศษ">
       <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
         <div className="mx-auto grid max-w-6xl gap-3 sm:gap-4">
           <div className="mb-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -295,10 +295,10 @@ export default function ExpensesPage() {
                 NisaPlant Income & Expense
               </div>
               <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
-                รายรับ / รายจ่าย
+                เงินเข้าออกพิเศษ
               </div>
               <div className="mt-1 text-sm leading-relaxed text-slate-500">
-                ธีมเดียวกับทุกหน้า เน้นกรอกง่าย อ่านง่าย และรองรับมือถือ
+                
               </div>
             </div>
 

@@ -180,6 +180,7 @@ export default function PlantsPage() {
   const [ok, setOk] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deadLoadingId, setDeadLoadingId] = useState('')
 
   const [kind, setKind] = useState('NEW')
   const [dateCode, setDateCode] = useState(currentYYMM())
@@ -246,6 +247,32 @@ export default function PlantsPage() {
   function toastErr(msg) {
     setErr(msg)
     setTimeout(() => setErr(''), 4000)
+  }
+
+  async function markPlantDead(id) {
+    const confirmed = window.confirm('ยืนยันเปลี่ยนสถานะต้นไม้นี้เป็น "DEAD" ใช่ไหม')
+    if (!confirmed) return
+
+    setDeadLoadingId(id)
+    setErr('')
+    setOk('')
+
+    try {
+      const { error } = await supabase
+        .from('plants')
+        .update({ status: 'DEAD' })
+        .eq('id', id)
+        .eq('status', 'ACTIVE')
+
+      if (error) throw error
+
+      toastOk('อัพเดทสถานะเป็น DEAD แล้ว')
+      await loadPlants()
+    } catch (e) {
+      toastErr(e?.message || 'อัพเดทสถานะไม่สำเร็จ')
+    } finally {
+      setDeadLoadingId('')
+    }
   }
 
   async function loadPlants() {
@@ -604,9 +631,7 @@ export default function PlantsPage() {
               <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
                 เพิ่มฐานข้อมูลต้นไม้
               </div>
-              <div className="mt-1 text-sm leading-relaxed text-slate-500">
-                ธีมเดียวกับ Dashboard และ Sell เน้นมือถือ ใช้งานง่าย และไม่แตะ logic เดิม
-              </div>
+              <div className="mt-1 text-sm leading-relaxed text-slate-500"></div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -817,6 +842,17 @@ export default function PlantsPage() {
                             {Number(p.cost || 0).toLocaleString('th-TH')}
                           </div>
                         </div>
+                      </div>
+
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => markPlantDead(p.id)}
+                          disabled={deadLoadingId === p.id}
+                          className="inline-flex h-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {deadLoadingId === p.id ? 'กำลังอัพเดท...' : 'ตาย'}
+                        </button>
                       </div>
                     </div>
                   ))}

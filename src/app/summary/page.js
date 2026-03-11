@@ -401,7 +401,7 @@ export default function SummaryPage() {
                 สรุป
               </div>
               <div className="mt-1 text-sm leading-relaxed text-slate-500">
-                ภาพรวมยอดขาย กำไร ภาษี และแนวโน้มรายเดือนในธีมเดียวกับทั้งระบบ
+                
               </div>
             </div>
 

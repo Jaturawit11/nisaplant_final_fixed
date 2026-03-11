@@ -511,7 +511,7 @@ export default function EditInvoicePage() {
                 แก้ไขบิล
               </div>
               <div className="mt-1 text-sm leading-relaxed text-slate-500">
-                ธีมเดียวกับทุกหน้า เน้นมือถือ อ่านง่าย และคง logic เดิมไว้
+                
               </div>
             </div>
 
