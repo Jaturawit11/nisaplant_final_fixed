@@ -88,7 +88,7 @@ function Card({ children, className = '', style, tint = 'default' }) {
   )
 }
 
-function PageHeader({ title, loading, onReload }) {
+function PageHeader({ loading, onReload }) {
   return (
     <div className="mb-5 sm:mb-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -295,11 +295,13 @@ function BankBalanceCard({ bank, balance, income, expense, tint = 'default', log
   return (
     <Card tint={tint} className="min-h-[170px]">
       {logo ? (
-        <img
-          src={logo}
-          alt=""
-          className="pointer-events-none absolute bottom-3 left-5 h-24 w-24 select-none object-contain opacity-[0.10]"
-        />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[30px]">
+          <img
+            src={logo}
+            alt=""
+            className="absolute bottom-2 left-3 h-[92px] w-[92px] select-none object-contain opacity-[0.08] blur-[0.2px]"
+          />
+        </div>
       ) : null}
 
       <div className="relative z-10">
@@ -467,7 +469,7 @@ export default function DashboardPage() {
     )
 
     if (maxBuy <= 0) {
-      return `เดือนนี้ยังไม่ควรซื้อเพิ่ม\nควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
+      return `เดือนนี้ควรซื้อไม้เพิ่มได้ไม่เกิน 0 บาท\nและควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
     }
 
     return `เดือนนี้ควรซื้อไม้เพิ่มได้ไม่เกิน ${money(maxBuy)} บาท\nและควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
@@ -499,7 +501,6 @@ export default function DashboardPage() {
       const [
         plantsRes,
         monthSummaryRes,
-        expensesMonthRes,
         invoicesMonthRes,
         invoicesLatestRes,
         openingsRes,
@@ -512,12 +513,6 @@ export default function DashboardPage() {
           p_start: start,
           p_end: end,
         }),
-
-        supabase
-          .from('expenses')
-          .select('amount, type, bank, expense_date')
-          .gte('expense_date', start)
-          .lt('expense_date', end),
 
         supabase
           .from('invoices')
@@ -548,7 +543,6 @@ export default function DashboardPage() {
 
       if (plantsRes.error) throw plantsRes.error
       if (monthSummaryRes.error) throw monthSummaryRes.error
-      if (expensesMonthRes.error) throw expensesMonthRes.error
       if (invoicesMonthRes.error) throw invoicesMonthRes.error
       if (invoicesLatestRes.error) throw invoicesLatestRes.error
       if (openingsRes.error) throw openingsRes.error
@@ -560,7 +554,6 @@ export default function DashboardPage() {
         ? monthSummaryRes.data[0] || {}
         : monthSummaryRes.data || {}
 
-      const monthExpensesRows = expensesMonthRes.data || []
       const monthInvoicesRows = invoicesMonthRes.data || []
       const latestRows = invoicesLatestRes.data || []
       const openingRows = openingsRes.data || []
@@ -575,7 +568,6 @@ export default function DashboardPage() {
       )
 
       const totalSales = Number(summaryRow.total_sales ?? summaryRow.sales ?? 0)
-      const totalExpenses = Number(summaryRow.total_expenses ?? summaryRow.expenses ?? 0)
       const netProfit = Number(summaryRow.net_profit ?? summaryRow.net ?? 0)
       const tax15 = Number(summaryRow.tax_15 ?? summaryRow.tax ?? 0)
       const afterTax = Number(summaryRow.after_tax ?? summaryRow.after ?? 0)
@@ -587,11 +579,23 @@ export default function DashboardPage() {
       let monthIncome = 0
       let monthExpense = 0
 
-      for (const row of monthExpensesRows) {
+      for (const row of paymentsAllRows) {
+        if (isDateInRange(row.pay_date, start, end)) {
+          monthIncome += Number(row.amount || 0)
+        }
+      }
+
+      for (const row of expensesAllRows) {
         const amount = Number(row.amount || 0)
         const type = String(row.type || '').toLowerCase()
-        if (type === 'income') monthIncome += amount
-        else monthExpense += amount
+
+        if (!isDateInRange(row.expense_date, start, end)) continue
+
+        if (type === 'income') {
+          monthIncome += amount
+        } else {
+          monthExpense += amount
+        }
       }
 
       const unpaidInvoices = monthInvoicesRows.filter(
@@ -755,7 +759,7 @@ export default function DashboardPage() {
           <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr_0.95fr]">
             <DonutCard
               title="รายรับ / รายจ่าย"
-              subtitle="ดูจากหน้า ค่าใช้จ่าย/รายรับ ของเดือนนี้"
+              subtitle="ดูจากเงินเข้าออกจริงของเดือนนี้"
               data={incomeExpenseData}
               colors={['#34d399', '#fb7185']}
               centerTop={money(
