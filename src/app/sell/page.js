@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { supabaseBrowser } from '@/lib/supabase/browser'
 import Link from 'next/link'
@@ -255,6 +255,7 @@ const ghostBtnClass =
 export default function SellPage() {
   const supabase = supabaseBrowser()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [saleDate, setSaleDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [customer, setCustomer] = useState('')
@@ -266,7 +267,19 @@ export default function SellPage() {
   const [receivedAmount, setReceivedAmount] = useState('')
   const [codeInput, setCodeInput] = useState('')
   const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(false)
+const [loading, setLoading] = useState(false)
+
+useEffect(() => {
+  const code = searchParams.get('code')
+  if (!code) return
+
+  const normalized = normalizeCode(code)
+
+  setCodeInput((prev) => {
+    if (prev && prev.includes(normalized)) return prev
+    return prev ? prev + '\n' + normalized : normalized
+  })
+}, [searchParams])
   const [err, setErr] = useState('')
   const [lookupErr, setLookupErr] = useState('')
   const [lookupLoading, setLookupLoading] = useState(false)
