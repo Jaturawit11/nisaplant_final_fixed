@@ -255,6 +255,7 @@ export default function EditInvoicePage() {
         .select(
           'id, invoice_no, sale_date, customer_name, bank, pay_status, ship_status, payment_method, paid_date, invoice_status, total_cost, total_price, total_profit'
         )
+        .neq('invoice_status', 'cancelled')
         .order('sale_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(100)
@@ -469,33 +470,40 @@ export default function EditInvoicePage() {
   async function refreshSelected() {
     if (!selected?.id) return
 
-    const { data, error } = await supabase
-      .from('invoices')
-      .select(
-        'id, invoice_no, sale_date, customer_name, bank, pay_status, ship_status, payment_method, paid_date, invoice_status, total_cost, total_price, total_profit'
-      )
-      .eq('id', selected.id)
-      .single()
+  const { data, error } = await supabase
+  .from('invoices')
+  .select(
+    'id, invoice_no, sale_date, customer_name, bank, pay_status, ship_status, payment_method, paid_date, invoice_status, total_cost, total_price, total_profit'
+  )
+  .eq('id', selected.id)
+  .neq('invoice_status', 'cancelled')
+  .maybeSingle()
 
-    if (error) throw error
+if (error) throw error
 
-    setSelected(data)
-    setPayStatus(data.pay_status || 'unpaid')
-    setShipStatus(data.ship_status || 'not_shipped')
-    setBank(data.bank || 'GSB')
-    setPaymentMethod(data.payment_method || 'transfer')
-    setPaidDate(data.paid_date || '')
-    setCustomerName(data.customer_name || '')
+if (!data) {
+  setSelected(null)
+  setItems([])
+  return
+}
 
-    const b = await supabase
-      .from('sale_items')
-      .select('id, invoice_id, plant_id, plant_code, plant_name, cost, price, profit, item_status, created_at')
-      .eq('invoice_id', data.id)
-      .or('item_status.is.null,item_status.eq.ACTIVE')
-      .order('created_at', { ascending: true })
+setSelected(data)
+setPayStatus(data.pay_status || 'unpaid')
+setShipStatus(data.ship_status || 'not_shipped')
+setBank(data.bank || 'GSB')
+setPaymentMethod(data.payment_method || 'transfer')
+setPaidDate(data.paid_date || '')
+setCustomerName(data.customer_name || '')
 
-    if (b.error) throw b.error
-    setItems(b.data || [])
+const b = await supabase
+  .from('sale_items')
+  .select('id, invoice_id, plant_id, plant_code, plant_name, cost, price, profit, item_status, created_at')
+  .eq('invoice_id', data.id)
+  .or('item_status.is.null,item_status.eq.ACTIVE')
+  .order('created_at', { ascending: true })
+
+if (b.error) throw b.error
+setItems(b.data || [])
   }
 
   return (
