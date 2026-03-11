@@ -359,46 +359,48 @@ function LatestInvoicesCard({ rows }) {
             </div>
           ) : (
             <div className="grid gap-2">
-              {rows.map((r) => {
-                const tone =
-                  r.pay_status === 'paid'
-                    ? 'emerald'
-                    : r.pay_status === 'partial'
-                    ? 'amber'
-                    : 'rose'
+              {rows
+                .filter((r) => String(r.invoice_status || '').toLowerCase() !== 'cancelled')
+                .map((r) => {
+                  const tone =
+                    r.pay_status === 'paid'
+                      ? 'emerald'
+                      : r.pay_status === 'partial'
+                      ? 'amber'
+                      : 'rose'
 
-                const payLabel =
-                  r.pay_status === 'paid'
-                    ? 'paid'
-                    : r.pay_status === 'partial'
-                    ? 'partial'
-                    : 'unpaid'
+                  const payLabel =
+                    r.pay_status === 'paid'
+                      ? 'paid'
+                      : r.pay_status === 'partial'
+                      ? 'partial'
+                      : 'unpaid'
 
-                return (
-                  <div
-                    key={r.id}
-                    className="flex items-center justify-between gap-3 rounded-[22px] border border-white/85 bg-white/84 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
-                        {r.invoice_no}
+                  return (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between gap-3 rounded-[22px] border border-white/85 bg-white/84 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
+                          {r.invoice_no}
+                        </div>
+                        <div className="mt-1 truncate text-xs text-slate-500">
+                          {r.sale_date} • {r.customer_name || '-'}
+                        </div>
                       </div>
-                      <div className="mt-1 truncate text-xs text-slate-500">
-                        {r.sale_date} • {r.customer_name || '-'}
+
+                      <div className="shrink-0 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Pill tone={tone}>{payLabel}</Pill>
+                        </div>
+                        <div className="mt-2 text-sm font-bold text-slate-900">
+                          {money(r.total_price)} บาท
+                        </div>
                       </div>
                     </div>
-
-                    <div className="shrink-0 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Pill tone={tone}>{payLabel}</Pill>
-                      </div>
-                      <div className="mt-2 text-sm font-bold text-slate-900">
-                        {money(r.total_price)} บาท
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
             </div>
           )}
         </div>
@@ -517,16 +519,18 @@ export default function DashboardPage() {
         supabase
           .from('invoices')
           .select(
-            'id, invoice_no, sale_date, customer_name, total_price, total_profit, pay_status, created_at'
+            'id, invoice_no, sale_date, customer_name, total_price, total_profit, pay_status, invoice_status, created_at'
           )
           .gte('sale_date', start)
-          .lt('sale_date', end),
+          .lt('sale_date', end)
+          .neq('invoice_status', 'cancelled'),
 
         supabase
           .from('invoices')
           .select(
-            'id, invoice_no, sale_date, customer_name, total_price, pay_status, created_at'
+            'id, invoice_no, sale_date, customer_name, total_price, pay_status, invoice_status, created_at'
           )
+          .neq('invoice_status', 'cancelled')
           .order('created_at', { ascending: false })
           .limit(10),
 
