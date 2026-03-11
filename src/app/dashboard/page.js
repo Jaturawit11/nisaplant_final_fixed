@@ -35,19 +35,26 @@ function isDateInRange(dateStr, start, end) {
 
 function Pill({ tone = 'slate', children }) {
   const map = {
-    emerald: 'border border-emerald-200/80 bg-emerald-50 text-emerald-700',
-    amber: 'border border-amber-200/80 bg-amber-50 text-amber-700',
-    rose: 'border border-rose-200/80 bg-rose-50 text-rose-700',
-    slate: 'border border-slate-200/80 bg-white text-slate-600',
-    teal: 'border border-teal-200/80 bg-teal-50 text-teal-700',
-    sky: 'border border-sky-200/80 bg-sky-50 text-sky-700',
-    lilac: 'border border-violet-200/80 bg-violet-50 text-violet-700',
+    emerald:
+      'border border-emerald-200/80 bg-emerald-50/90 text-emerald-700 shadow-[0_2px_8px_rgba(16,185,129,0.08)]',
+    amber:
+      'border border-amber-200/80 bg-amber-50/90 text-amber-700 shadow-[0_2px_8px_rgba(245,158,11,0.08)]',
+    rose:
+      'border border-rose-200/80 bg-rose-50/90 text-rose-700 shadow-[0_2px_8px_rgba(244,63,94,0.08)]',
+    slate:
+      'border border-slate-200/80 bg-white/90 text-slate-600 shadow-[0_2px_8px_rgba(15,23,42,0.04)]',
+    teal:
+      'border border-teal-200/80 bg-teal-50/90 text-teal-700 shadow-[0_2px_8px_rgba(20,184,166,0.08)]',
+    sky:
+      'border border-sky-200/80 bg-sky-50/90 text-sky-700 shadow-[0_2px_8px_rgba(59,130,246,0.08)]',
+    lilac:
+      'border border-violet-200/80 bg-violet-50/90 text-violet-700 shadow-[0_2px_8px_rgba(139,92,246,0.08)]',
   }
 
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight',
+        'inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-tight whitespace-nowrap',
         map[tone] || map.slate
       )}
     >
@@ -59,30 +66,33 @@ function Pill({ tone = 'slate', children }) {
 function Card({ children, className = '', style, tint = 'default' }) {
   const tintMap = {
     default:
-      'border border-white/80 bg-white/92 shadow-[0_8px_24px_rgba(15,23,42,0.05)]',
+      'border border-white/80 bg-white/86 shadow-[0_14px_40px_rgba(15,23,42,0.06)] backdrop-blur-[6px]',
     rose:
-      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,244,247,0.96)_46%,rgba(252,231,243,0.92)_100%)] shadow-[0_8px_24px_rgba(244,63,94,0.06)]',
+      'border border-rose-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,248,251,0.96)_52%,rgba(255,238,244,0.96)_100%)] shadow-[0_14px_40px_rgba(244,63,94,0.08)] backdrop-blur-[6px]',
     sky:
-      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,250,255,0.96)_46%,rgba(224,242,254,0.92)_100%)] shadow-[0_8px_24px_rgba(59,130,246,0.06)]',
+      'border border-sky-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(247,251,255,0.96)_52%,rgba(235,246,255,0.96)_100%)] shadow-[0_14px_40px_rgba(59,130,246,0.08)] backdrop-blur-[6px]',
     emerald:
-      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
+      'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(247,255,251,0.96)_52%,rgba(232,250,241,0.96)_100%)] shadow-[0_14px_40px_rgba(16,185,129,0.08)] backdrop-blur-[6px]',
     cream:
-      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
+      'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(255,252,247,0.96)_52%,rgba(255,246,233,0.96)_100%)] shadow-[0_14px_40px_rgba(245,158,11,0.08)] backdrop-blur-[6px]',
     lilac:
-      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.94)_0%,rgba(250,248,255,0.96)_52%,rgba(244,238,255,0.96)_100%)] shadow-[0_14px_40px_rgba(139,92,246,0.08)] backdrop-blur-[6px]',
   }
 
   return (
     <div
       style={style}
       className={cn(
-        'relative overflow-hidden rounded-[30px] p-4 sm:p-5',
+        'relative overflow-hidden rounded-[28px] p-4 sm:p-5 lg:p-6',
         tintMap[tint] || tintMap.default,
         className
       )}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.66),transparent_38%)]" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.12)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.78),transparent_34%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.16)_100%)]" />
+      <div className="pointer-events-none absolute -bottom-6 left-0 right-0 h-20 opacity-70">
+        <div className="h-full w-full bg-[radial-gradient(60%_100%_at_50%_100%,rgba(255,255,255,0.36)_0%,transparent_70%)]" />
+      </div>
       {children}
     </div>
   )
@@ -90,20 +100,20 @@ function Card({ children, className = '', style, tint = 'default' }) {
 
 function PageHeader({ loading, onReload }) {
   return (
-    <div className="mb-5 sm:mb-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mb-5 sm:mb-6 lg:mb-7">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          <div className="text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
             NisaPlant Dashboard
           </div>
-          <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
+          <div className="mt-2 text-[28px] font-bold tracking-tight text-slate-900 sm:text-[32px]">
             ภาพรวมธุรกิจ
           </div>
         </div>
 
         <button
           onClick={onReload}
-          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(16,185,129,0.16)] transition hover:bg-emerald-600 active:scale-[0.99]"
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(16,185,129,0.22)] transition hover:bg-emerald-600 active:scale-[0.99]"
         >
           {loading ? 'กำลังโหลด...' : 'รีเฟรช'}
         </button>
@@ -112,15 +122,40 @@ function PageHeader({ loading, onReload }) {
   )
 }
 
-function StatCard({ title, value, suffix = 'บาท', tint = 'default' }) {
-  return (
-    <Card tint={tint} className="min-h-[132px] sm:min-h-[142px]">
-      <div className="relative z-10 flex h-full flex-col justify-between">
-        <div className="text-sm font-medium text-slate-500">{title}</div>
+function MetricIcon({ tone = 'slate', children }) {
+  const map = {
+    rose: 'bg-rose-100 text-rose-600',
+    sky: 'bg-sky-100 text-sky-600',
+    emerald: 'bg-emerald-100 text-emerald-600',
+    cream: 'bg-amber-100 text-amber-600',
+    lilac: 'bg-violet-100 text-violet-600',
+    slate: 'bg-slate-100 text-slate-600',
+  }
 
-        <div className="mt-4">
+  return (
+    <div
+      className={cn(
+        'flex h-11 w-11 items-center justify-center rounded-2xl text-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]',
+        map[tone] || map.slate
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function StatCard({ title, value, suffix = 'บาท', tint = 'default', icon = '◌' }) {
+  return (
+    <Card tint={tint} className="min-h-[150px] sm:min-h-[158px]">
+      <div className="relative z-10 flex h-full flex-col justify-between">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 text-sm font-medium text-slate-500">{title}</div>
+          <MetricIcon tone={tint}>{icon}</MetricIcon>
+        </div>
+
+        <div className="mt-5">
           <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-            <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900 sm:text-[36px]">
+            <span className="text-[33px] font-bold leading-none tracking-tight text-slate-900 sm:text-[38px]">
               {money(value)}
             </span>
             {suffix ? (
@@ -133,15 +168,18 @@ function StatCard({ title, value, suffix = 'บาท', tint = 'default' }) {
   )
 }
 
-function SmallStatCard({ title, value, suffix = '', tint = 'default' }) {
+function SmallStatCard({ title, value, suffix = '', tint = 'default', icon = '◌' }) {
   return (
-    <Card tint={tint} className="min-h-[132px] sm:min-h-[142px]">
+    <Card tint={tint} className="min-h-[150px] sm:min-h-[158px]">
       <div className="relative z-10 flex h-full flex-col justify-between">
-        <div className="text-sm font-medium text-slate-500">{title}</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 text-sm font-medium text-slate-500">{title}</div>
+          <MetricIcon tone={tint}>{icon}</MetricIcon>
+        </div>
 
-        <div className="mt-4">
+        <div className="mt-5">
           <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-            <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900 sm:text-[36px]">
+            <span className="text-[33px] font-bold leading-none tracking-tight text-slate-900 sm:text-[38px]">
               {money(value)}
             </span>
             {suffix ? (
@@ -156,19 +194,19 @@ function SmallStatCard({ title, value, suffix = '', tint = 'default' }) {
 
 function TextCard({ title, text, tint = 'default', icon = '✦' }) {
   return (
-    <Card tint={tint} className="min-h-[170px] sm:min-h-[182px]">
-      <div className="pointer-events-none absolute right-5 top-4 text-[42px] font-light text-slate-300/35">
+    <Card tint={tint} className="min-h-[220px] sm:min-h-[230px]">
+      <div className="pointer-events-none absolute right-5 top-5 text-[40px] font-light text-slate-300/35">
         {icon}
       </div>
 
       <div className="relative z-10 flex h-full flex-col">
         <div className="text-sm font-medium text-slate-500">{title}</div>
 
-        <div className="mt-3 inline-flex w-fit rounded-full border border-white/80 bg-white/75 px-3 py-1 text-[11px] font-semibold text-slate-500">
+        <div className="mt-3 inline-flex w-fit rounded-full border border-white/80 bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
           Insight
         </div>
 
-        <div className="mt-4 whitespace-pre-line text-base font-semibold leading-7 tracking-tight text-slate-900 sm:text-[17px]">
+        <div className="mt-4 whitespace-pre-line text-[15px] font-semibold leading-8 tracking-tight text-slate-900 sm:text-[17px]">
           {text || '-'}
         </div>
       </div>
@@ -178,16 +216,16 @@ function TextCard({ title, text, tint = 'default', icon = '✦' }) {
 
 function SalaryCard({ title, total, time, nisa, tint = 'default' }) {
   return (
-    <Card tint={tint} className="min-h-[150px] sm:min-h-[162px]">
+    <Card tint={tint} className="min-h-[150px] sm:min-h-[158px]">
       <div className="relative z-10">
         <div className="text-sm font-medium text-slate-500">{title}</div>
 
-        <div className="mt-2 inline-flex rounded-full border border-white/80 bg-white/75 px-3 py-1 text-xs font-semibold text-slate-500">
+        <div className="mt-3 inline-flex rounded-full border border-white/80 bg-white/78 px-3 py-1 text-xs font-semibold text-slate-500 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
           Time {money(time)} / Nisa {money(nisa)}
         </div>
 
-        <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
-          <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900 sm:text-[36px]">
+        <div className="mt-5 flex flex-wrap items-end gap-x-2 gap-y-1">
+          <span className="text-[33px] font-bold leading-none tracking-tight text-slate-900 sm:text-[38px]">
             {money(total)}
           </span>
           <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
@@ -203,10 +241,10 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
 
   return (
     <Card tint={tint} className="p-0">
-      <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+      <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5 lg:px-6 lg:pb-6 lg:pt-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="truncate text-[15px] font-semibold tracking-tight text-slate-900">
+            <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
               {title}
             </div>
             {subtitle ? (
@@ -216,22 +254,28 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
             ) : null}
           </div>
 
-          <span className="inline-flex items-center rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600">
+          <span className="inline-flex items-center rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
             รวม {money(total)}
           </span>
         </div>
 
-        <div className="mt-3 h-[240px]">
+        <div className="mt-3 h-[250px] sm:h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
+              <defs>
+                <filter id={`softShadow-${title.replace(/\s+/g, '-')}`}>
+                  <feDropShadow dx="0" dy="4" stdDeviation="6" floodOpacity="0.10" />
+                </filter>
+              </defs>
               <Pie
                 data={safeData}
                 dataKey="value"
                 nameKey="name"
-                innerRadius={62}
-                outerRadius={92}
+                innerRadius={64}
+                outerRadius={94}
                 stroke="#fff"
                 strokeWidth={2}
+                filter={`url(#softShadow-${title.replace(/\s+/g, '-')})`}
               >
                 {safeData.map((entry, idx) => (
                   <Cell
@@ -244,9 +288,9 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
             </PieChart>
           </ResponsiveContainer>
 
-          <div className="pointer-events-none -mt-[145px] flex h-0 items-center justify-center">
-            <div className="rounded-full border border-white/85 bg-white/84 px-6 py-5 text-center shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
-              <div className="text-[22px] font-bold tracking-tight text-slate-900">
+          <div className="pointer-events-none -mt-[150px] flex h-0 items-center justify-center">
+            <div className="rounded-full border border-white/85 bg-white/88 px-6 py-5 text-center shadow-[0_8px_20px_rgba(15,23,42,0.06)] backdrop-blur-[4px]">
+              <div className="text-[23px] font-bold tracking-tight text-slate-900">
                 {centerTop}
               </div>
               <div className="mt-1 text-xs font-semibold text-slate-500">{centerBottom}</div>
@@ -258,7 +302,7 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
           {data.map((item, idx) => (
             <span
               key={item.name}
-              className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600"
+              className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600 shadow-[0_2px_10px_rgba(15,23,42,0.04)]"
             >
               <span
                 className="h-2.5 w-2.5 rounded-full"
@@ -292,42 +336,48 @@ const BANK_THEME = {
 }
 
 function BankBalanceCard({ bank, balance, income, expense, tint = 'default', logo = '' }) {
+  const dotTone = bank === 'GSB' ? 'bg-rose-400' : bank === 'KTB' ? 'bg-sky-400' : 'bg-emerald-400'
+
   return (
-    <Card tint={tint} className="min-h-[170px]">
+    <Card tint={tint} className="min-h-[190px]">
       {logo ? (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[30px]">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]">
           <img
             src={logo}
             alt=""
-            className="absolute bottom-2 left-3 h-[92px] w-[92px] select-none object-contain opacity-[0.08] blur-[0.2px]"
+            className="absolute bottom-2 left-3 h-[96px] w-[96px] select-none object-contain opacity-[0.08] blur-[0.2px]"
           />
         </div>
       ) : null}
 
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-3">
-          <div className="text-[15px] font-semibold tracking-[0.22em] text-slate-800">
-            {bank}
-          </div>
+          <div className="text-[16px] font-bold tracking-[0.24em] text-slate-800">{bank}</div>
           <Pill tone={bank === 'GSB' ? 'rose' : bank === 'KTB' ? 'sky' : 'emerald'}>
             Balance
           </Pill>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-end gap-x-2 gap-y-1">
-          <span className="text-[31px] font-bold leading-none tracking-tight text-slate-900">
+        <div className="mt-5 flex flex-wrap items-end gap-x-2 gap-y-1">
+          <span className="text-[33px] font-bold leading-none tracking-tight text-slate-900">
             {money(balance)}
           </span>
           <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
         </div>
 
-        <div className="mt-5 rounded-[20px] border border-white/85 bg-white/72 px-4 py-3 text-sm">
+        <div className="mt-5 rounded-[22px] border border-white/85 bg-white/74 px-4 py-3 text-sm shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-slate-500">รับเดือนนี้</span>
+            <span className="flex items-center gap-2 text-slate-500">
+              <span className={cn('h-2.5 w-2.5 rounded-full', dotTone)} />
+              รับเดือนนี้
+            </span>
             <span className="font-bold text-slate-900">{money(income)}</span>
           </div>
           <div className="mt-2 flex items-center justify-between gap-3">
-            <span className="text-slate-500">จ่ายเดือนนี้</span>
+            <span className="flex items-center gap-2 text-slate-500">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+              จ่ายเดือนนี้
+            </span>
             <span className="font-bold text-slate-900">{money(expense)}</span>
           </div>
         </div>
@@ -339,10 +389,10 @@ function BankBalanceCard({ bank, balance, income, expense, tint = 'default', log
 function LatestInvoicesCard({ rows }) {
   return (
     <Card tint="default" className="p-0">
-      <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+      <div className="relative z-10 px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5 lg:px-6 lg:pb-6 lg:pt-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold tracking-tight text-slate-900">
+            <div className="text-[16px] font-bold tracking-tight text-slate-900">
               10 บิลล่าสุด
             </div>
             <div className="mt-1 text-xs leading-relaxed text-slate-500">
@@ -358,50 +408,60 @@ function LatestInvoicesCard({ rows }) {
               ยังไม่มีรายการ
             </div>
           ) : (
-            <div className="grid gap-2">
-              {rows
-                .filter((r) => String(r.invoice_status || '').toLowerCase() !== 'cancelled')
-                .map((r) => {
-                  const tone =
-                    r.pay_status === 'paid'
-                      ? 'emerald'
-                      : r.pay_status === 'partial'
-                      ? 'amber'
-                      : 'rose'
+            <>
+              <div className="hidden md:grid md:grid-cols-[1.1fr_1fr_auto] md:items-center md:gap-4 md:px-4 md:pb-3 md:text-xs md:font-bold md:text-slate-400">
+                <div>เลขที่บิล / วันที่</div>
+                <div>ลูกค้า</div>
+                <div className="text-right">สถานะ / ยอดรวม</div>
+              </div>
 
-                  const payLabel =
-                    r.pay_status === 'paid'
-                      ? 'paid'
-                      : r.pay_status === 'partial'
-                      ? 'partial'
-                      : 'unpaid'
+              <div className="grid gap-2.5">
+                {rows
+                  .filter((r) => String(r.invoice_status || '').toLowerCase() !== 'cancelled')
+                  .map((r) => {
+                    const tone =
+                      r.pay_status === 'paid'
+                        ? 'emerald'
+                        : r.pay_status === 'partial'
+                        ? 'amber'
+                        : 'rose'
 
-                  return (
-                    <div
-                      key={r.id}
-                      className="flex items-center justify-between gap-3 rounded-[22px] border border-white/85 bg-white/84 px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]"
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
-                          {r.invoice_no}
+                    const payLabel =
+                      r.pay_status === 'paid'
+                        ? 'paid'
+                        : r.pay_status === 'partial'
+                        ? 'partial'
+                        : 'unpaid'
+
+                    return (
+                      <div
+                        key={r.id}
+                        className="grid gap-3 rounded-[22px] border border-white/85 bg-white/84 px-4 py-4 shadow-[0_6px_18px_rgba(15,23,42,0.05)] md:grid-cols-[1.1fr_1fr_auto] md:items-center"
+                      >
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-extrabold tracking-tight text-slate-900">
+                            {r.invoice_no}
+                          </div>
+                          <div className="mt-1 truncate text-xs text-slate-500">{r.sale_date}</div>
                         </div>
-                        <div className="mt-1 truncate text-xs text-slate-500">
-                          {r.sale_date} • {r.customer_name || '-'}
+
+                        <div className="min-w-0 text-xs text-slate-600 md:text-sm">
+                          <div className="truncate">{r.customer_name || '-'}</div>
+                        </div>
+
+                        <div className="shrink-0 md:text-right">
+                          <div className="flex items-center gap-2 md:justify-end">
+                            <Pill tone={tone}>{payLabel}</Pill>
+                          </div>
+                          <div className="mt-2 text-sm font-bold text-slate-900">
+                            {money(r.total_price)} บาท
+                          </div>
                         </div>
                       </div>
-
-                      <div className="shrink-0 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Pill tone={tone}>{payLabel}</Pill>
-                        </div>
-                        <div className="mt-2 text-sm font-bold text-slate-900">
-                          {money(r.total_price)} บาท
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-            </div>
+                    )
+                  })}
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -770,8 +830,8 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="Dashboard">
-      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
-        <div className="mx-auto max-w-6xl">
+      <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffefe_0%,#fffafc_22%,#f6fbff_56%,#f5fff8_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
+        <div className="mx-auto max-w-7xl">
           <PageHeader loading={loading} onReload={loadDashboard} />
 
           {err ? (
@@ -781,14 +841,14 @@ export default function DashboardPage() {
           ) : null}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} tint="rose" />
-            <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthNet} tint="sky" />
-            <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" />
-            <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} tint="emerald" />
+            <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} tint="rose" icon="🧾" />
+            <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthNet} tint="sky" icon="◔" />
+            <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" icon="📦" />
+            <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} tint="emerald" icon="💼" />
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard title="ภาษี 15%" value={kpi.taxReserve} tint="cream" />
+            <StatCard title="ภาษี 15%" value={kpi.taxReserve} tint="cream" icon="◌" />
             <SalaryCard
               title="เงินเดือน"
               total={kpi.salaryTotal}
@@ -824,11 +884,11 @@ export default function DashboardPage() {
               tint="sky"
             />
 
-            <Card tint="rose" className="min-h-[385px]">
+            <Card tint="rose" className="min-h-[395px]">
               <div className="relative z-10 flex h-full flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="truncate text-[15px] font-semibold tracking-tight text-slate-900">
+                    <div className="truncate text-[16px] font-bold tracking-tight text-slate-900">
                       ยอดค้างชำระ
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-slate-500">
@@ -839,7 +899,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-end gap-x-2 gap-y-1">
-                  <span className="text-[38px] font-bold leading-none tracking-tight text-slate-900">
+                  <span className="text-[40px] font-bold leading-none tracking-tight text-slate-900">
                     {money(arData.total)}
                   </span>
                   <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
@@ -850,7 +910,7 @@ export default function DashboardPage() {
                   <Pill tone="amber">partial {arData.partialCount}</Pill>
                 </div>
 
-                <div className="mt-6 rounded-[22px] border border-white/85 bg-white/75 p-4">
+                <div className="mt-6 rounded-[22px] border border-white/85 bg-white/76 p-4 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
                   <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
                     <span>สัดส่วนที่เก็บยอดขายเดือนนี้</span>
                     <span>{Math.round(arData.collectionPct)}%</span>
@@ -863,7 +923,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="mt-auto rounded-[20px] border border-white/85 bg-white/72 px-4 py-3 text-sm leading-6 text-slate-500">
+                <div className="mt-auto rounded-[20px] border border-white/85 bg-white/74 px-4 py-3 text-sm leading-6 text-slate-500 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
                   ติดตามยอดค้างชำระก่อนซื้อเพิ่ม จะช่วยลดความเสี่ยงของ cashflow
                 </div>
               </div>
