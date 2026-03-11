@@ -85,7 +85,7 @@ function PageHeader({ title, loading, onReload }) {
             {title}
           </div>
           <div className="mt-1 text-sm leading-relaxed text-slate-500">
-            มินิมอล สะอาดตา อ่านง่าย และรองรับ iPhone
+          
           </div>
         </div>
 

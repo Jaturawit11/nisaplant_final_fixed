@@ -491,7 +491,7 @@ export default function SummaryPage() {
             right={series30Note ? <Pill tone="amber">ยังไม่ครบ</Pill> : null}
           >
             {series30?.length ? (
-              <SimpleBarChart rows={series30} xKey="d" yKey="net_profit" />
+              <SimpleBarChart rows={series30} xKey="d" yKey="net" />
             ) : (
               <EmptyHint text={series30Note || 'ยังไม่มีข้อมูลกราฟ 30 วัน'} />
             )}
