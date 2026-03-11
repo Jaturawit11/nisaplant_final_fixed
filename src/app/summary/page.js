@@ -46,11 +46,21 @@ function normalizeSummary(sum) {
   const totalCost = Number(sum?.total_cost ?? sum?.cost ?? 0)
   const grossProfit = Number(sum?.gross_profit ?? sum?.gross ?? 0)
   const totalExpenses = Number(sum?.total_expenses ?? sum?.expenses ?? 0)
+  const deadLoss = Number(sum?.dead_loss ?? sum?.dead ?? 0)
   const netProfit = Number(sum?.net_profit ?? sum?.net ?? 0)
   const tax15 = Number(sum?.tax_15 ?? sum?.tax ?? 0)
   const afterTax = Number(sum?.after_tax ?? sum?.after ?? 0)
 
-  return { totalSales, totalCost, grossProfit, totalExpenses, netProfit, tax15, afterTax }
+  return {
+    totalSales,
+    totalCost,
+    grossProfit,
+    totalExpenses,
+    deadLoss,
+    netProfit,
+    tax15,
+    afterTax,
+  }
 }
 function Pill({ tone = 'slate', children }) {
   const map = {
@@ -463,25 +473,33 @@ export default function SummaryPage() {
           </div>
 
           <ShellCard title="ภาพรวมรายเดือน" subtitle="ค่าสรุปหลักของเดือนที่เลือก" tint="default">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <MiniStat label="ยอดขายรวม" value={money(m.totalSales)} tone="rose" />
-              <MiniStat label="ต้นทุนรวม" value={money(m.totalCost)} tone="sky" />
+               <MiniStat label="ต้นทุนรวม" value={money(m.totalCost)} tone="sky" />
               <MiniStat label="กำไรจากการขาย" value={money(m.grossProfit)} tone="emerald" />
               <MiniStat label="ค่าใช้จ่ายรวม" value={money(m.totalExpenses)} tone="cream" />
+              <MiniStat label="ขาดทุนจากไม้ตาย" value={money(m.deadLoss)} tone="rose" />
             </div>
           </ShellCard>
 
           <ShellCard title="กำไรสุทธิจริง + ภาษี" subtitle="สรุปกำไรหลังหักค่าใช้จ่ายและเกราะภาษี" tint="lilac">
             <div className="grid gap-3">
-              <BigLine label="กำไรสุทธิ (กำไรจากการขาย - ค่าใช้จ่าย)" value={money(m.netProfit)} tone="default" />
-              <BigLine label="ภาษี 15%" value={money(m.tax15)} tone="cream" />
-              <BigLine
-                label="เหลือหลังกันภาษี (เงินใช้/ลงทุนได้จริง)"
-                value={money(m.afterTax)}
-                tone="emerald"
-                emphasize
-              />
-            </div>
+  <BigLine label="กำไรจากการขาย" value={money(m.grossProfit)} tone="default" />
+  <BigLine label="ค่าใช้จ่ายรวม" value={money(m.totalExpenses)} tone="cream" />
+  <BigLine label="ขาดทุนจากไม้ตาย" value={money(m.deadLoss)} tone="rose" />
+  <BigLine
+    label="กำไรสุทธิจริง (กำไรจากการขาย - ค่าใช้จ่าย - ไม้ตาย)"
+    value={money(m.netProfit)}
+    tone="sky"
+  />
+  <BigLine label="ภาษี 15%" value={money(m.tax15)} tone="cream" />
+  <BigLine
+    label="เหลือหลังกันภาษี (เงินใช้/ลงทุนได้จริง)"
+    value={money(m.afterTax)}
+    tone="emerald"
+    emphasize
+  />
+</div>
           </ShellCard>
 
           <ShellCard

@@ -415,16 +415,17 @@ export default function DashboardPage() {
   const [err, setErr] = useState('')
 
   const [kpi, setKpi] = useState({
-    activeCount: 0,
-    activeCostSum: 0,
-    monthSales: 0,
-    monthNet: 0,
-    taxReserve: 0,
-    afterTax: 0,
-    salaryTotal: 0,
-    salaryTime: 0,
-    salaryNisa: 0,
-  })
+  activeCount: 0,
+  activeCostSum: 0,
+  monthSales: 0,
+  deadLoss: 0,
+  monthNet: 0,
+  taxReserve: 0,
+  afterTax: 0,
+  salaryTotal: 0,
+  salaryTime: 0,
+  salaryNisa: 0,
+})
 
   const [incomeExpenseData, setIncomeExpenseData] = useState([
     { name: 'รายรับ', value: 0 },
@@ -478,20 +479,24 @@ export default function DashboardPage() {
   }, [arData.total, bankCards.GSB.balance, bankCards.GSB.expense, kpi.afterTax])
 
   const aiBizText = useMemo(() => {
-    if (arData.total > 0) {
-      return `มีเงินค้างชำระ ${money(arData.total)} บาท\nควรตามลูกหนี้ก่อนขยายสต๊อก`
-    }
+  if (kpi.deadLoss > 0) {
+    return `เดือนนี้มีขาดทุนจากไม้ตาย ${money(kpi.deadLoss)} บาท\nควรระวังการซื้อเพิ่มและเช็คสภาพไม้ในตู้`
+  }
 
-    if (kpi.monthNet > 0 && bankCards.GSB.balance >= 30000) {
-      return `ธุรกิจเดือนนี้ยังอยู่ในโซนปลอดภัย\nคุมค่าใช้จ่ายต่อและอย่าซื้อไม้เกินกำไรจริง`
-    }
+  if (arData.total > 0) {
+    return `มีเงินค้างชำระ ${money(arData.total)} บาท\nควรตามลูกหนี้ก่อนขยายสต๊อก`
+  }
 
-    if (kpi.monthNet <= 0 && kpi.monthSales <= 0) {
-      return 'ยังไม่มีรายได้เดือนนี้\nควรเริ่มจากปิดบิลขายและคุมค่าใช้จ่าย'
-    }
+  if (kpi.monthNet > 0 && bankCards.GSB.balance >= 30000) {
+    return `ธุรกิจเดือนนี้ยังอยู่ในโซนปลอดภัย\nคุมค่าใช้จ่ายต่อและอย่าซื้อไม้เกินกำไรจริง`
+  }
 
-    return 'ภาพรวมธุรกิจปกติ\nระวังเงินจมในสต๊อกและคุม GSB ให้เหลือพอใช้'
-  }, [arData.total, bankCards.GSB.balance, kpi.monthNet, kpi.monthSales])
+  if (kpi.monthNet <= 0 && kpi.monthSales <= 0) {
+    return 'ยังไม่มีรายได้เดือนนี้\nควรเริ่มจากปิดบิลขายและคุมค่าใช้จ่าย'
+  }
+
+  return 'ภาพรวมธุรกิจปกติ\nระวังเงินจมในสต๊อกและคุม GSB ให้เหลือพอใช้'
+}, [arData.total, bankCards.GSB.balance, kpi.monthNet, kpi.monthSales, kpi.deadLoss])
 
   async function loadDashboard() {
     setLoading(true)
@@ -572,9 +577,10 @@ export default function DashboardPage() {
       )
 
       const totalSales = Number(summaryRow.total_sales ?? summaryRow.sales ?? 0)
-      const netProfit = Number(summaryRow.net_profit ?? summaryRow.net ?? 0)
-      const tax15 = Number(summaryRow.tax_15 ?? summaryRow.tax ?? 0)
-      const afterTax = Number(summaryRow.after_tax ?? summaryRow.after ?? 0)
+const deadLoss = Number(summaryRow.dead_loss ?? summaryRow.dead ?? 0)
+const netProfit = Number(summaryRow.net_profit ?? summaryRow.net ?? 0)
+const tax15 = Number(summaryRow.tax_15 ?? summaryRow.tax ?? 0)
+const afterTax = Number(summaryRow.after_tax ?? summaryRow.after ?? 0)
 
       const salaryTime = afterTax > 0 ? Math.floor((afterTax * 0.1) / 10) * 10 : 0
       const salaryNisa = afterTax > 0 ? Math.floor((afterTax * 0.2) / 10) * 10 : 0
