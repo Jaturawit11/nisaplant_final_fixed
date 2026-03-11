@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/AppShell'
-import { supabaseBrowser } from '@/lib/supabase/browser'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
+import { supabaseBrowser } from '@/lib/supabase/browser'
 
 function money(n) {
   const x = Number(n)
@@ -20,6 +20,17 @@ function monthRange(date = new Date()) {
 
 function cn(...classes) {
   return classes.filter(Boolean).join(' ')
+}
+
+function roundUp1000(n) {
+  const x = Number(n || 0)
+  if (x <= 0) return 0
+  return Math.ceil(x / 1000) * 1000
+}
+
+function isDateInRange(dateStr, start, end) {
+  const d = String(dateStr || '')
+  return d >= start && d < end
 }
 
 function Pill({ tone = 'slate', children }) {
@@ -86,7 +97,7 @@ function PageHeader({ title, loading, onReload }) {
             NisaPlant Dashboard
           </div>
           <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
-            {title}
+            ภาพรวมธุรกิจ
           </div>
         </div>
 
@@ -157,7 +168,7 @@ function TextCard({ title, text, tint = 'default', icon = '✦' }) {
           Insight
         </div>
 
-        <div className="mt-4 text-base font-semibold leading-7 tracking-tight text-slate-900 sm:text-[17px]">
+        <div className="mt-4 whitespace-pre-line text-base font-semibold leading-7 tracking-tight text-slate-900 sm:text-[17px]">
           {text || '-'}
         </div>
       </div>
@@ -262,9 +273,35 @@ function DonutCard({ title, subtitle, data, colors, centerTop, centerBottom, tin
   )
 }
 
-function BankBalanceCard({ bank, balance, income, expense, tint = 'default' }) {
+const BANK_THEME = {
+  GSB: {
+    pill: 'rose',
+    tint: 'rose',
+    logo: '/banks/gsb.png',
+  },
+  KTB: {
+    pill: 'sky',
+    tint: 'sky',
+    logo: '/banks/ktb.png',
+  },
+  KBANK: {
+    pill: 'emerald',
+    tint: 'emerald',
+    logo: '/banks/kbank.png',
+  },
+}
+
+function BankBalanceCard({ bank, balance, income, expense, tint = 'default', logo = '' }) {
   return (
     <Card tint={tint} className="min-h-[170px]">
+      {logo ? (
+        <img
+          src={logo}
+          alt=""
+          className="pointer-events-none absolute bottom-3 left-5 h-24 w-24 select-none object-contain opacity-[0.10]"
+        />
+      ) : null}
+
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-3">
           <div className="text-[15px] font-semibold tracking-[0.22em] text-slate-800">
@@ -377,8 +414,9 @@ export default function DashboardPage() {
     activeCount: 0,
     activeCostSum: 0,
     monthSales: 0,
-    monthProfit: 0,
+    monthNet: 0,
     taxReserve: 0,
+    afterTax: 0,
     salaryTotal: 0,
     salaryTime: 0,
     salaryNisa: 0,
@@ -410,17 +448,46 @@ export default function DashboardPage() {
   const [latestInvoices, setLatestInvoices] = useState([])
 
   const aiPlantText = useMemo(() => {
-    if (kpi.activeCount <= 0) return 'มีเงินค้างชำระ ควรตามลูกหนี้ก่อนซื้อเพิ่ม'
-    if (kpi.activeCount <= 5) return 'Stock ต่ำ ควรวางแผนเข้ามาเพิ่ม'
-    if (kpi.activeCount <= 20) return 'สต๊อกกำลังดี คุมทุนและคุมการหมุนเงินต่อ'
-    return 'สต๊อกค่อนข้างเยอะ ควรเร่งระบายและโฟกัสกำไร'
-  }, [kpi.activeCount])
+    const gsbBalance = Number(bankCards.GSB.balance || 0)
+    const gsbExpense = Number(bankCards.GSB.expense || 0)
+    const arTotal = Number(arData.total || 0)
+
+    const minReserve = Math.max(
+      30000,
+      roundUp1000(gsbExpense * 1.2),
+      roundUp1000(arTotal * 0.25)
+    )
+
+    const maxBuy = Math.max(
+      0,
+      Math.min(
+        Math.max(0, gsbBalance - minReserve),
+        Math.max(0, Number(kpi.afterTax || 0))
+      )
+    )
+
+    if (maxBuy <= 0) {
+      return `เดือนนี้ยังไม่ควรซื้อเพิ่ม\nควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
+    }
+
+    return `เดือนนี้ควรซื้อไม้เพิ่มได้ไม่เกิน ${money(maxBuy)} บาท\nและควรเหลือเงินใน GSB ไม่น้อยกว่า ${money(minReserve)} บาท`
+  }, [arData.total, bankCards.GSB.balance, bankCards.GSB.expense, kpi.afterTax])
 
   const aiBizText = useMemo(() => {
-    if (arData.total > 0) return 'มีบิลค้างชำระ ควรตามเก็บเงินเพื่อลดความเสี่ยง cashflow'
-    if (kpi.monthProfit > 0) return 'ภาพรวมธุรกิจอยู่ในระดับปกติ'
-    return 'ยังไม่มีรายได้เดือนนี้ ควรเริ่มจากบิลขายและคุมค่าใช้จ่าย'
-  }, [arData.total, kpi.monthProfit])
+    if (arData.total > 0) {
+      return `มีเงินค้างชำระ ${money(arData.total)} บาท\nควรตามลูกหนี้ก่อนขยายสต๊อก`
+    }
+
+    if (kpi.monthNet > 0 && bankCards.GSB.balance >= 30000) {
+      return `ธุรกิจเดือนนี้ยังอยู่ในโซนปลอดภัย\nคุมค่าใช้จ่ายต่อและอย่าซื้อไม้เกินกำไรจริง`
+    }
+
+    if (kpi.monthNet <= 0 && kpi.monthSales <= 0) {
+      return 'ยังไม่มีรายได้เดือนนี้\nควรเริ่มจากปิดบิลขายและคุมค่าใช้จ่าย'
+    }
+
+    return 'ภาพรวมธุรกิจปกติ\nระวังเงินจมในสต๊อกและคุม GSB ให้เหลือพอใช้'
+  }, [arData.total, bankCards.GSB.balance, kpi.monthNet, kpi.monthSales])
 
   async function loadDashboard() {
     setLoading(true)
@@ -431,12 +498,20 @@ export default function DashboardPage() {
 
       const [
         plantsRes,
+        monthSummaryRes,
         expensesMonthRes,
         invoicesMonthRes,
         invoicesLatestRes,
-        bankBalancesRes,
+        openingsRes,
+        paymentsAllRes,
+        expensesAllRes,
       ] = await Promise.all([
         supabase.rpc('dashboard_plants_agg'),
+
+        supabase.rpc('get_month_summary', {
+          p_start: start,
+          p_end: end,
+        }),
 
         supabase
           .from('expenses')
@@ -460,20 +535,37 @@ export default function DashboardPage() {
           .order('created_at', { ascending: false })
           .limit(10),
 
-        supabase.rpc('get_bank_balances'),
+        supabase
+          .from('bank_opening_balances')
+          .select('bank, opening_amount, as_of_date, created_at')
+          .order('as_of_date', { ascending: false })
+          .order('created_at', { ascending: false }),
+
+        supabase.from('payments').select('bank, amount, pay_date'),
+
+        supabase.from('expenses').select('bank, amount, type, expense_date'),
       ])
 
       if (plantsRes.error) throw plantsRes.error
+      if (monthSummaryRes.error) throw monthSummaryRes.error
       if (expensesMonthRes.error) throw expensesMonthRes.error
       if (invoicesMonthRes.error) throw invoicesMonthRes.error
       if (invoicesLatestRes.error) throw invoicesLatestRes.error
-      if (bankBalancesRes.error) throw bankBalancesRes.error
+      if (openingsRes.error) throw openingsRes.error
+      if (paymentsAllRes.error) throw paymentsAllRes.error
+      if (expensesAllRes.error) throw expensesAllRes.error
 
       const plantRow = Array.isArray(plantsRes.data) ? plantsRes.data[0] || {} : plantsRes.data || {}
+      const summaryRow = Array.isArray(monthSummaryRes.data)
+        ? monthSummaryRes.data[0] || {}
+        : monthSummaryRes.data || {}
+
       const monthExpensesRows = expensesMonthRes.data || []
       const monthInvoicesRows = invoicesMonthRes.data || []
       const latestRows = invoicesLatestRes.data || []
-      const bankBalanceRows = bankBalancesRes.data || []
+      const openingRows = openingsRes.data || []
+      const paymentsAllRows = paymentsAllRes.data || []
+      const expensesAllRows = expensesAllRes.data || []
 
       const activeCount = Number(
         plantRow.active_count ?? plantRow.activecount ?? plantRow.count ?? 0
@@ -481,6 +573,16 @@ export default function DashboardPage() {
       const activeCostSum = Number(
         plantRow.total_cost ?? plantRow.active_cost_sum ?? plantRow.cost_sum ?? 0
       )
+
+      const totalSales = Number(summaryRow.total_sales ?? summaryRow.sales ?? 0)
+      const totalExpenses = Number(summaryRow.total_expenses ?? summaryRow.expenses ?? 0)
+      const netProfit = Number(summaryRow.net_profit ?? summaryRow.net ?? 0)
+      const tax15 = Number(summaryRow.tax_15 ?? summaryRow.tax ?? 0)
+      const afterTax = Number(summaryRow.after_tax ?? summaryRow.after ?? 0)
+
+      const salaryTime = afterTax > 0 ? Math.floor((afterTax * 0.1) / 10) * 10 : 0
+      const salaryNisa = afterTax > 0 ? Math.floor((afterTax * 0.2) / 10) * 10 : 0
+      const salaryTotal = Math.min(60000, salaryTime + salaryNisa)
 
       let monthIncome = 0
       let monthExpense = 0
@@ -491,20 +593,6 @@ export default function DashboardPage() {
         if (type === 'income') monthIncome += amount
         else monthExpense += amount
       }
-
-      const monthSales = monthInvoicesRows.reduce(
-        (sum, row) => sum + Number(row.total_price || 0),
-        0
-      )
-      const monthProfit = monthInvoicesRows.reduce(
-        (sum, row) => sum + Number(row.total_profit || 0),
-        0
-      )
-
-      const taxReserve = monthProfit > 0 ? monthProfit * 0.15 : 0
-      const salaryTime = monthProfit > 0 ? Math.floor((monthProfit * 0.1) / 10) : 0
-      const salaryNisa = monthProfit > 0 ? Math.floor((monthProfit * 0.2) / 10) : 0
-      const salaryTotal = Math.min(60000, salaryTime + salaryNisa)
 
       const unpaidInvoices = monthInvoicesRows.filter(
         (r) => String(r.pay_status || '').toLowerCase() === 'unpaid'
@@ -540,20 +628,62 @@ export default function DashboardPage() {
         KBANK: { balance: 0, income: 0, expense: 0 },
       }
 
-      for (const row of bankBalanceRows) {
+      const latestOpeningMap = new Map()
+      for (const row of openingRows) {
+        const bank = String(row.bank || '')
+        if (!bank) continue
+        if (!latestOpeningMap.has(bank)) {
+          latestOpeningMap.set(bank, {
+            opening_amount: Number(row.opening_amount || 0),
+            as_of_date: String(row.as_of_date || ''),
+          })
+        }
+      }
+
+      for (const bank of Object.keys(bankMap)) {
+        const opening = latestOpeningMap.get(bank)
+        if (opening) bankMap[bank].balance = Number(opening.opening_amount || 0)
+      }
+
+      for (const row of paymentsAllRows) {
         const bank = String(row.bank || '')
         if (!bankMap[bank]) continue
-        bankMap[bank].balance = Number(row.balance || 0)
-        bankMap[bank].income = Number(row.month_in || 0)
-        bankMap[bank].expense = Number(row.month_out || 0)
+
+        const amount = Number(row.amount || 0)
+        bankMap[bank].balance += amount
+
+        if (isDateInRange(row.pay_date, start, end)) {
+          bankMap[bank].income += amount
+        }
+      }
+
+      for (const row of expensesAllRows) {
+        const bank = String(row.bank || '')
+        if (!bankMap[bank]) continue
+
+        const amount = Number(row.amount || 0)
+        const type = String(row.type || '').toLowerCase()
+
+        if (type === 'income') {
+          bankMap[bank].balance += amount
+          if (isDateInRange(row.expense_date, start, end)) {
+            bankMap[bank].income += amount
+          }
+        } else {
+          bankMap[bank].balance -= amount
+          if (isDateInRange(row.expense_date, start, end)) {
+            bankMap[bank].expense += amount
+          }
+        }
       }
 
       setKpi({
         activeCount,
         activeCostSum,
-        monthSales,
-        monthProfit,
-        taxReserve,
+        monthSales: totalSales,
+        monthNet: netProfit,
+        taxReserve: tax15,
+        afterTax,
         salaryTotal,
         salaryTime,
         salaryNisa,
@@ -565,7 +695,7 @@ export default function DashboardPage() {
       ])
 
       setSalesProfitData([
-        { name: 'ยอดขาย', value: monthSales },
+        { name: 'ยอดขาย', value: totalSales },
         { name: 'ทุนคงเหลือ', value: activeCostSum },
       ])
 
@@ -594,7 +724,7 @@ export default function DashboardPage() {
     <AppShell title="Dashboard">
       <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
         <div className="mx-auto max-w-6xl">
-          <PageHeader title="ภาพรวมธุรกิจ" loading={loading} onReload={loadDashboard} />
+          <PageHeader loading={loading} onReload={loadDashboard} />
 
           {err ? (
             <div className="mb-4 rounded-[24px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
@@ -604,7 +734,7 @@ export default function DashboardPage() {
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard title="ยอดขายเดือนนี้" value={kpi.monthSales} tint="rose" />
-            <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthProfit} tint="sky" />
+            <StatCard title="กำไรสุทธิเดือนนี้" value={kpi.monthNet} tint="sky" />
             <SmallStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" />
             <StatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} tint="emerald" />
           </div>
@@ -629,7 +759,7 @@ export default function DashboardPage() {
               data={incomeExpenseData}
               colors={['#34d399', '#fb7185']}
               centerTop={money(
-                incomeExpenseData.reduce((sum, x) => sum + Number(x.value || 0), 0) -
+                Number(incomeExpenseData[0]?.value || 0) -
                   Number(incomeExpenseData[1]?.value || 0)
               )}
               centerBottom="สุทธิเดือนนี้"
@@ -638,7 +768,7 @@ export default function DashboardPage() {
 
             <DonutCard
               title="ยอดขาย / ทุนคงเหลือ"
-              subtitle="ยอดขายเดือนนี้ เทียบกับมูลค่าทุนคงเหลือ"
+              subtitle="ยอดขายเดือนนี้ เทียบกับมูลค่าทุนคงเหลือปัจจุบัน"
               data={salesProfitData}
               colors={['#60a5fa', '#fbbf24']}
               centerTop={money(kpi.monthSales)}
@@ -698,21 +828,24 @@ export default function DashboardPage() {
               balance={bankCards.GSB.balance}
               income={bankCards.GSB.income}
               expense={bankCards.GSB.expense}
-              tint="rose"
+              tint={BANK_THEME.GSB.tint}
+              logo={BANK_THEME.GSB.logo}
             />
             <BankBalanceCard
               bank="KTB"
               balance={bankCards.KTB.balance}
               income={bankCards.KTB.income}
               expense={bankCards.KTB.expense}
-              tint="sky"
+              tint={BANK_THEME.KTB.tint}
+              logo={BANK_THEME.KTB.logo}
             />
             <BankBalanceCard
               bank="KBANK"
               balance={bankCards.KBANK.balance}
               income={bankCards.KBANK.income}
               expense={bankCards.KBANK.expense}
-              tint="emerald"
+              tint={BANK_THEME.KBANK.tint}
+              logo={BANK_THEME.KBANK.logo}
             />
           </div>
 
