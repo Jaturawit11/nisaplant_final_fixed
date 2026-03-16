@@ -168,15 +168,23 @@ export default function ExpensesPage() {
     setOk('')
 
     try {
-      const [openingsRes, paymentsRes, expensesRes] = await Promise.all([
+      const [openingsRes, paymentsRes, expensesCalcRes, expensesRecentRes] = await Promise.all([
         supabase
           .from('bank_opening_balances')
           .select('bank, opening_amount, as_of_date, created_at')
           .order('as_of_date', { ascending: false })
           .order('created_at', { ascending: false }),
 
-        supabase.from('payments').select('bank, amount, pay_date'),
+        supabase
+          .from('payments')
+          .select('bank, amount, pay_date'),
 
+        // ใช้คำนวณจริงทั้งหมด ห้าม limit
+        supabase
+          .from('expenses')
+          .select('id, expense_date, category, amount, bank, note, type, created_at'),
+
+        // ใช้แสดงแค่ล่าสุด 10 รายการ
         supabase
           .from('expenses')
           .select('id, expense_date, category, amount, bank, note, type, created_at')
@@ -187,11 +195,13 @@ export default function ExpensesPage() {
 
       if (openingsRes.error) throw openingsRes.error
       if (paymentsRes.error) throw paymentsRes.error
-      if (expensesRes.error) throw expensesRes.error
+      if (expensesCalcRes.error) throw expensesCalcRes.error
+      if (expensesRecentRes.error) throw expensesRecentRes.error
 
       const openingRows = openingsRes.data || []
       const paymentRows = paymentsRes.data || []
-      const expenseRows = expensesRes.data || []
+      const expenseCalcRows = expensesCalcRes.data || []
+      const expenseRecentRows = expensesRecentRes.data || []
 
       const latestOpeningMap = new Map()
       for (const row of openingRows) {
@@ -208,43 +218,46 @@ export default function ExpensesPage() {
         KBANK: { balance: latestOpeningMap.get('KBANK') || 0, monthIn: 0, monthOut: 0 },
       }
 
-      // ยอดเงินจริงปัจจุบัน = opening + payments + expenses(income) - expenses(expense)
+      // opening + payments
       for (const row of paymentRows) {
         const b = String(row.bank || '')
+        const amt = Number(row.amount || 0)
         if (!bankMap[b]) continue
-        bankMap[b].balance += Number(row.amount || 0)
+        bankMap[b].balance += amt
       }
 
       let incomeTotal = 0
       let expenseTotal = 0
 
-      for (const row of expenseRows) {
+      // expenses ทั้งหมดสำหรับคำนวณจริง
+      for (const row of expenseCalcRows) {
         const b = String(row.bank || '')
         const amt = Number(row.amount || 0)
         const rowType = String(row.type || '').toLowerCase()
+        const rowDate = String(row.expense_date || '')
 
         if (bankMap[b]) {
           if (rowType === 'income') {
             bankMap[b].balance += amt
-            if (String(row.expense_date || '') >= start && String(row.expense_date || '') < end) {
+            if (rowDate >= start && rowDate < end) {
               bankMap[b].monthIn += amt
             }
           } else {
             bankMap[b].balance -= amt
-            if (String(row.expense_date || '') >= start && String(row.expense_date || '') < end) {
+            if (rowDate >= start && rowDate < end) {
               bankMap[b].monthOut += amt
             }
           }
         }
 
-        if (String(row.expense_date || '') >= start && String(row.expense_date || '') < end) {
+        if (rowDate >= start && rowDate < end) {
           if (rowType === 'income') incomeTotal += amt
           else expenseTotal += amt
         }
       }
 
       setBankCards(bankMap)
-      setRecentRows(expenseRows)
+      setRecentRows(expenseRecentRows)
       setSummary({
         incomeTotal,
         expenseTotal,
