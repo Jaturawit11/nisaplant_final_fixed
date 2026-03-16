@@ -378,6 +378,8 @@ export default function ExpensesPage() {
 
                 <Field label="หมวดหมู่">
                   <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
+                    <option value="ซื้อไม้เข้าสวน">ซื้อไม้เข้าสวน</option>
+                    <option value="ค่าต้นไม้เก่าที่ค้าง">ค่าต้นไม้เก่าที่ค้าง</option>
                     <option value="ค่าไฟ">ค่าไฟ</option>
                     <option value="ค่าน้ำ">ค่าน้ำ</option>
                     <option value="ค่ากล่อง/อุปกรณ์">ค่ากล่อง/อุปกรณ์</option>
