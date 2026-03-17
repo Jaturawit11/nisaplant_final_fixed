@@ -7,15 +7,14 @@ const supabase = createClient(
 )
 
 export async function POST(req) {
-  const body = await req.json()
-
   try {
+    const body = await req.json()
     const events = body.events || []
 
     for (const event of events) {
       if (event.type === 'message' && event.message.type === 'image') {
 
-        // 🔥 mock ก่อน (เดี๋ยวค่อย OCR จริง)
+        // 🔥 mock ก่อน
         const amount = 50000
 
         await supabase.from('purchase_batches').insert({
