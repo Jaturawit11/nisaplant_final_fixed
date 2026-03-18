@@ -329,7 +329,7 @@ async function ocrWithOpenAI(base64) {
   return data.choices?.[0]?.message?.content || ''
 }
 
-export async function POST(req) {
+export async function POST(req) {console.log('🔥 NEW WEBHOOK VERSION WORKING')
   try {
     const body = await req.json()
     const events = body.events || []
