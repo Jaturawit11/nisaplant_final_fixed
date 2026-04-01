@@ -618,7 +618,7 @@ export default function DashboardPage() {
           .select('bank, opening_amount, as_of_date, created_at')
           .order('as_of_date', { ascending: false })
           .order('created_at', { ascending: false }),
-        supabase.from('payments').select('bank, amount, pay_date'),
+        supabase.from('payments').select('invoice_id, bank, amount, pay_date'),
         supabase.from('expenses').select('bank, amount, type, expense_date'),
       ])
 
@@ -657,9 +657,16 @@ export default function DashboardPage() {
       let monthIncome = 0
       let monthExpense = 0
 
+      const paidByInvoice = {}
       for (const row of paymentsAllRows) {
+        const amount = Number(row.amount || 0)
+        const invoiceId = String(row.invoice_id || '')
+        if (invoiceId) {
+          paidByInvoice[invoiceId] = (paidByInvoice[invoiceId] || 0) + amount
+        }
+
         if (isDateInRange(row.pay_date, start, end)) {
-          monthIncome += Number(row.amount || 0)
+          monthIncome += amount
         }
       }
 
@@ -684,25 +691,30 @@ export default function DashboardPage() {
         (r) => String(r.pay_status || '').toLowerCase() === 'partial'
       )
 
-      const arTotal = [...unpaidInvoices, ...partialInvoices].reduce(
+      const partialOutstanding = partialInvoices.reduce((sum, row) => {
+        const total = Number(row.total_price || 0)
+        const paid = Number(paidByInvoice[row.id] || 0)
+        const outstanding = Math.max(total - paid, 0)
+        return sum + outstanding
+      }, 0)
+
+      const unpaidOutstanding = unpaidInvoices.reduce(
         (sum, row) => sum + Number(row.total_price || 0),
         0
       )
+
+      const arTotal = unpaidOutstanding + partialOutstanding
 
       const totalMonthInvoiceAmount = monthInvoicesRows.reduce(
         (sum, row) => sum + Number(row.total_price || 0),
         0
       )
 
+      const collectedAmount = Math.max(totalMonthInvoiceAmount - arTotal, 0)
+
       const collectionPct =
         totalMonthInvoiceAmount > 0
-          ? Math.max(
-              0,
-              Math.min(
-                100,
-                ((totalMonthInvoiceAmount - arTotal) / totalMonthInvoiceAmount) * 100
-              )
-            )
+          ? Math.max(0, Math.min(100, (collectedAmount / totalMonthInvoiceAmount) * 100))
           : 0
 
       const bankMap = {

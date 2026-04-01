@@ -204,6 +204,9 @@ export default function PlantsPage() {
   const [labelList, setLabelList] = useState([])
   const [selectedIds, setSelectedIds] = useState([])
 
+  const [plantNameOptions, setPlantNameOptions] = useState([])
+  const [recentPlantNames, setRecentPlantNames] = useState([])
+
   const isNew = kind === 'NEW'
   const prefix = isNew ? 'N' : 'O'
 
@@ -247,6 +250,38 @@ export default function PlantsPage() {
   function toastErr(msg) {
     setErr(msg)
     setTimeout(() => setErr(''), 4000)
+  }
+
+  async function loadPlantNames() {
+    try {
+      const { data, error } = await supabase
+        .from('plants')
+        .select('name, created_at')
+        .not('name', 'is', null)
+        .neq('name', '')
+        .order('created_at', { ascending: false })
+        .limit(500)
+
+      if (error) throw error
+
+      const unique = []
+      const seen = new Set()
+
+      for (const row of data || []) {
+        const n = String(row.name || '').trim()
+        if (!n) continue
+        const key = n.toLowerCase()
+        if (seen.has(key)) continue
+        seen.add(key)
+        unique.push(n)
+      }
+
+      setPlantNameOptions(unique)
+      setRecentPlantNames(unique.slice(0, 8))
+    } catch {
+      setPlantNameOptions([])
+      setRecentPlantNames([])
+    }
   }
 
   async function markPlantDead(id) {
@@ -296,6 +331,7 @@ export default function PlantsPage() {
 
   useEffect(() => {
     loadPlants()
+    loadPlantNames()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -356,10 +392,12 @@ export default function PlantsPage() {
         throw new Error(`โค้ดซ้ำในระบบ: ${sample}${existedCodes.size > 10 ? ' ...' : ''}`)
       }
 
+      const finalName = name.trim()
+
       const rows = codes.map((c) => ({
         plant_code: c,
         code_kind: isNew ? 'NEW' : 'OLD',
-        name: name.trim(),
+        name: finalName,
         cost: costNum,
         status: 'ACTIVE',
         acquired_date: todayISO(),
@@ -369,6 +407,18 @@ export default function PlantsPage() {
       if (insErr) throw insErr
 
       toastOk(qn === 1 ? `เพิ่มต้นไม้สำเร็จ: ${codes[0]}` : `เพิ่มต้นไม้สำเร็จ ${qn} ต้น`)
+
+      setRecentPlantNames((prev) => {
+        const next = [finalName, ...prev.filter((x) => x.toLowerCase() !== finalName.toLowerCase())]
+        return next.slice(0, 8)
+      })
+
+      setPlantNameOptions((prev) => {
+        const exists = prev.some((x) => x.toLowerCase() === finalName.toLowerCase())
+        if (exists) return prev
+        return [finalName, ...prev]
+      })
+
       resetFormKeepDate()
       await loadPlants()
     } catch (e) {
@@ -619,6 +669,13 @@ export default function PlantsPage() {
     toastOk(`สร้างไฟล์สำเร็จ ${selectedLabels.length} รายการ`)
   }
 
+  function handleCostKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (!saving) addPlants()
+    }
+  }
+
   return (
     <AppShell title="ฐานต้นไม้">
       <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
@@ -631,7 +688,6 @@ export default function PlantsPage() {
               <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
                 เพิ่มฐานข้อมูลต้นไม้
               </div>
-              <div className="mt-1 text-sm leading-relaxed text-slate-500"></div>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -729,25 +785,58 @@ export default function PlantsPage() {
                   </div>
                 </div>
 
-                <Field label="ชื่อไม้">
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={inputClass}
-                    placeholder="เช่น Alocasia..."
-                  />
+                <Field
+                  label="ชื่อไม้"
+                  hint="ระบบจะจำชื่อที่เคยบันทึกไว้ แล้วพิมพ์บางส่วนเพื่อเลือกได้"
+                >
+                  <>
+                    <input
+                      list="plant-name-history"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={inputClass}
+                      placeholder="เช่น Alocasia..."
+                      autoComplete="off"
+                    />
+                    <datalist id="plant-name-history">
+                      {plantNameOptions.map((n) => (
+                        <option key={n} value={n} />
+                      ))}
+                    </datalist>
+                  </>
                 </Field>
 
-                <Field label="ทุน (บาท)" hint="ใช้คำนวณกำไรตอนขาย">
+                <Field label="ทุน (บาท)" hint="กด Enter เพื่อบันทึกได้เลย">
                   <input
                     value={cost}
                     onChange={(e) => setCost(e.target.value.replace(/[^0-9.]/g, ''))}
+                    onKeyDown={handleCostKeyDown}
                     className={inputClass}
                     placeholder="0"
                     inputMode="decimal"
                   />
                 </Field>
               </div>
+
+              {recentPlantNames.length ? (
+                <div className="mt-4">
+                  <div className="mb-2 text-xs font-semibold tracking-tight text-slate-500">
+                    ชื่อไม้ล่าสุดที่เคยใช้
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recentPlantNames.map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setName(n)}
+                        className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 bg-white/80 px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs leading-relaxed text-slate-500">
