@@ -185,60 +185,80 @@ function BankBalanceCard({ bank, balance, income, expense, tint = 'default', log
 
 function DonutIncomeExpenseCard({ incomeExpenseData, netValue }) {
   const total = incomeExpenseData.reduce((a, b) => a + Number(b.value || 0), 0)
+  const income = Number(incomeExpenseData?.[0]?.value || 0)
+  const expense = Number(incomeExpenseData?.[1]?.value || 0)
   const safeData = total > 0 ? incomeExpenseData : [{ name: 'ไม่มีข้อมูล', value: 1 }]
 
   return (
-    <Card tint="emerald" className="h-full">
+    <Card tint="emerald" className="h-full min-h-[520px]">
       <SectionTitle
         title="รายรับ / รายจ่าย"
         subtitle="ดูจากเงินเข้าออกจริงของเดือนนี้"
         right={<Pill tone="emerald">รวม {money(total)}</Pill>}
       />
 
-      <div className="h-[250px] sm:h-[270px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={safeData}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={68}
-              outerRadius={96}
-              stroke="#fff"
-              strokeWidth={2}
-            >
-              {safeData.map((entry, idx) => (
-                <Cell
-                  key={`cell-${idx}`}
-                  fill={total > 0 ? ['#34d399', '#fb7185'][idx % 2] : '#e2e8f0'}
-                />
-              ))}
-            </Pie>
-            <Tooltip formatter={(v) => money(v)} />
-          </PieChart>
-        </ResponsiveContainer>
+      <div className="flex h-[350px] items-center justify-center">
+        <div className="relative h-[300px] w-full max-w-[360px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={safeData}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={78}
+                outerRadius={112}
+                stroke="#fff"
+                strokeWidth={2}
+              >
+                {safeData.map((entry, idx) => (
+                  <Cell
+                    key={`cell-${idx}`}
+                    fill={total > 0 ? ['#34d399', '#fb7185'][idx % 2] : '#e2e8f0'}
+                  />
+                ))}
+              </Pie>
+              <Tooltip formatter={(v) => money(v)} />
+            </PieChart>
+          </ResponsiveContainer>
 
-        <div className="pointer-events-none -mt-[155px] flex h-0 items-center justify-center">
-          <div className="rounded-full border border-white/85 bg-white/90 px-6 py-5 text-center shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
-            <div className="text-[22px] font-bold tracking-tight text-slate-900">{money(netValue)}</div>
-            <div className="mt-1 text-xs font-semibold text-slate-500">สุทธิเดือนนี้</div>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="rounded-full border border-white/85 bg-white/90 px-7 py-6 text-center shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
+              <div className="text-[24px] font-bold tracking-tight text-slate-900">{money(netValue)}</div>
+              <div className="mt-1 text-xs font-semibold text-slate-500">สุทธิเดือนนี้</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {incomeExpenseData.map((item, idx) => (
-          <span
-            key={item.name}
-            className="inline-flex items-center gap-2 rounded-full border border-white/85 bg-white/84 px-3 py-1 text-[11px] font-semibold text-slate-600"
-          >
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: ['#34d399', '#fb7185'][idx % 2] }}
-            />
-            {item.name} {money(item.value)}
-          </span>
-        ))}
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="rounded-[20px] border border-white/85 bg-white/80 p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+            รายรับ
+          </div>
+          <div className="mt-2 text-[24px] font-bold tracking-tight text-slate-900">{money(income)}</div>
+          <div className="mt-1 text-xs text-slate-400">บาท</div>
+        </div>
+
+        <div className="rounded-[20px] border border-white/85 bg-white/80 p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+            รายจ่าย
+          </div>
+          <div className="mt-2 text-[24px] font-bold tracking-tight text-slate-900">{money(expense)}</div>
+          <div className="mt-1 text-xs text-slate-400">บาท</div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-[20px] border border-white/85 bg-white/78 p-4">
+        <div className="text-xs font-semibold text-slate-500">สรุปวันนี้</div>
+        <div className="mt-2 text-sm leading-6 text-slate-700">
+          {expense <= 0
+            ? 'เดือนนี้ยังไม่มีรายจ่ายจริงเข้ามา ทำให้กระแสเงินสดดูสะอาดและอ่านง่าย'
+            : netValue >= 0
+            ? 'เงินเข้าในเดือนนี้ยังมากกว่ารายจ่าย ถือว่า cashflow ยังอยู่ในฝั่งที่ควบคุมได้'
+            : 'รายจ่ายเดือนนี้สูงกว่ารายรับจริงแล้ว ควรชะลอการใช้เงินรอบใหม่'}
+        </div>
       </div>
     </Card>
   )
@@ -328,7 +348,7 @@ function AiBusinessCard({ insight }) {
       : 'emerald'
 
   return (
-    <Card tint="sky" className="h-full">
+    <Card tint="sky" className="h-full min-h-[520px]">
       <SectionTitle
         title="AI ผู้ช่วยธุรกิจวันนี้"
         subtitle="วิเคราะห์จากยอดขาย กำไร เงินสด ยอดค้าง และทุนคงเหลือ"
@@ -370,7 +390,7 @@ function AiBusinessCard({ insight }) {
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <div className="rounded-[22px] border border-white/85 bg-white/78 p-4">
-          <div className="text-sm font-bold tracking-tight text-slate-900">เหตุผลที่ AI ใช้ตัดสินใจ</div>
+          <div className="text-sm font-bold tracking-tight text-slate-900">เหตุผลหลักที่ AI ใช้ตัดสินใจ</div>
           <div className="mt-3 space-y-2">
             {insight.reasons.map((reason, idx) => (
               <div key={idx} className="flex items-start gap-2 text-sm leading-6 text-slate-700">
@@ -409,6 +429,7 @@ function buildBusinessInsight({
 }) {
   const gsbBalance = Number(bankCards?.GSB?.balance || 0)
   const gsbExpense = Number(bankCards?.GSB?.expense || 0)
+
   const reserveBase = Math.max(
     30000,
     roundUp1000(gsbExpense * 1.2),
@@ -417,8 +438,6 @@ function buildBusinessInsight({
   )
 
   const availableCash = Math.max(0, gsbBalance - reserveBase)
-
-  // เพดานซื้อ: เอาค่าต่ำสุดระหว่างเงินสดใช้ได้ กับกำไรหลังภาษี
   const rawMaxBuy = Math.max(0, Math.min(availableCash, Math.max(0, afterTax)))
   const maxBuy = Math.floor(rawMaxBuy)
 
@@ -426,17 +445,13 @@ function buildBusinessInsight({
   if (monthNet < 0 || deadLoss > 0 || arTotal > 0) riskLevel = 'เฝ้าระวัง'
   if ((monthNet < 0 && arTotal > 0) || deadLoss > 0 || gsbBalance < 30000) riskLevel = 'เสี่ยง'
 
+  // ลดให้เหลือเฉพาะเหตุผลที่สำคัญจริง
   const reasons = [
     `ยอดขายเดือนนี้ ${money(monthSales)} บาท`,
     `กำไรสุทธิ ${money(monthNet)} บาท`,
-    `ภาษีสำรอง ${money(taxReserve)} บาท`,
-    `กำไรหลังภาษี ${money(afterTax)} บาท`,
     `เงินคงเหลือ GSB ${money(gsbBalance)} บาท`,
-    `ทุนคงเหลือใน stock ${money(activeCost)} บาท`,
+    arTotal > 0 ? `มียอดค้างชำระ ${money(arTotal)} บาท` : `ทุนคงเหลือใน stock ${money(activeCost)} บาท`,
   ]
-
-  if (arTotal > 0) reasons.push(`มียอดค้างชำระ ${money(arTotal)} บาท`)
-  if (deadLoss > 0) reasons.push(`มี dead loss ${money(deadLoss)} บาท`)
 
   let headline = 'ธุรกิจเดือนนี้อยู่ในโซนปลอดภัย'
   let mainAdvice = ''
@@ -454,7 +469,6 @@ function buildBusinessInsight({
       'งดซื้อไม้ใหม่ก่อน จนกว่ากำไรสุทธิจะกลับมาเป็นบวก',
       'เร่งปิดยอดขายที่ค้างอยู่และหมุนเงินสดกลับเข้า GSB',
       'ลดค่าใช้จ่ายที่ไม่จำเป็น โดยเฉพาะค่าใช้จ่ายที่ไม่สร้างยอดขายทันที',
-      'ถ้ามีไม้ตาย ให้เช็กสภาพแวดล้อมและหยุดจมทุนเพิ่ม',
     ]
   } else if (afterTax <= 0) {
     headline = 'ยอดขายมี แต่กำไรหลังภาษียังไม่เหลือ'
@@ -497,9 +511,8 @@ function buildBusinessInsight({
 
     actions = [
       `กำหนดงบซื้อรอบนี้ไม่เกิน ${money(maxBuy)} บาท`,
-      'ถ้าจะซื้อเพิ่ม ให้เริ่มจากไม้ที่ขายเร็วและเสี่ยงต่ำก่อน',
+      'เริ่มจากไม้ที่ขายเร็วและเสี่ยงต่ำก่อน',
       'ถ้ายอดค้างเพิ่มขึ้นในเดือนนี้ ให้ลดงบซื้อรอบถัดไปทันที',
-      'อย่าปล่อยให้ทุนคงเหลือโตเร็วกว่ายอดขายหลายรอบติดกัน',
     ]
   }
 
@@ -669,7 +682,6 @@ export default function DashboardPage() {
         const type = String(row.type || '').toLowerCase()
 
         if (!isDateInRange(row.expense_date, start, end)) continue
-
         if (type === 'purchase' || type === 'transfer') continue
 
         if (type === 'income') {
@@ -859,7 +871,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Donut + AI */}
-          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[0.86fr_1.14fr]">
             <DonutIncomeExpenseCard
               incomeExpenseData={incomeExpenseData}
               netValue={Number(incomeExpenseData[0]?.value || 0) - Number(incomeExpenseData[1]?.value || 0)}
@@ -902,9 +914,26 @@ export default function DashboardPage() {
                 title="สต๊อกคงเหลือ"
                 subtitle="ดูจำนวนต้นและมูลค่าทุนคงเหลือ"
               />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <MiniStatCard title="ไม้คงเหลือ" value={kpi.activeCount} suffix="ต้น" tint="cream" />
-                <MiniStatCard title="มูลค่าทุนคงเหลือ" value={kpi.activeCostSum} suffix="บาท" tint="emerald" />
+              <div className="grid gap-3">
+                <div className="rounded-[22px] border border-white/85 bg-white/80 p-5">
+                  <div className="text-xs font-semibold text-slate-500">ไม้คงเหลือ</div>
+                  <div className="mt-3 flex items-end gap-2">
+                    <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900">
+                      {money(kpi.activeCount)}
+                    </span>
+                    <span className="mb-1 text-sm font-semibold text-slate-400">ต้น</span>
+                  </div>
+                </div>
+
+                <div className="rounded-[22px] border border-white/85 bg-white/80 p-5">
+                  <div className="text-xs font-semibold text-slate-500">มูลค่าทุนคงเหลือ</div>
+                  <div className="mt-3 flex items-end gap-2">
+                    <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900">
+                      {money(kpi.activeCostSum)}
+                    </span>
+                    <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+                  </div>
+                </div>
               </div>
             </Card>
 
