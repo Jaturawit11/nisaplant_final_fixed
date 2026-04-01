@@ -29,6 +29,7 @@ function Pill({ tone = 'slate', children }) {
     rose: 'border border-rose-200/90 bg-rose-50 text-rose-700',
     slate: 'border border-slate-200/90 bg-white text-slate-600',
     sky: 'border border-sky-200/90 bg-sky-50 text-sky-700',
+    lilac: 'border border-violet-200/90 bg-violet-50 text-violet-700',
   }
 
   return (
@@ -55,6 +56,8 @@ function ShellCard({ title, subtitle, tint = 'default', children, className = ''
       'border border-emerald-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(245,255,250,0.96)_46%,rgba(209,250,229,0.92)_100%)] shadow-[0_8px_24px_rgba(16,185,129,0.06)]',
     cream:
       'border border-amber-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,251,245,0.96)_46%,rgba(255,247,237,0.92)_100%)] shadow-[0_8px_24px_rgba(245,158,11,0.06)]',
+    lilac:
+      'border border-violet-100/90 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(249,247,255,0.96)_46%,rgba(243,232,255,0.92)_100%)] shadow-[0_8px_24px_rgba(139,92,246,0.06)]',
   }
 
   return (
@@ -83,11 +86,12 @@ function ShellCard({ title, subtitle, tint = 'default', children, className = ''
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, children, hint }) {
   return (
     <label className="block">
       <div className="mb-2 text-xs font-semibold tracking-tight text-slate-500">{label}</div>
       {children}
+      {hint ? <div className="mt-1 text-[11px] text-slate-400">{hint}</div> : null}
     </label>
   )
 }
@@ -98,12 +102,17 @@ const inputClass =
 const primaryBtnClass =
   'inline-flex h-11 items-center justify-center rounded-full border border-emerald-200/80 bg-emerald-500 px-5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(16,185,129,0.16)] transition hover:bg-emerald-600 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60'
 
-function BankCard({ bank, balance, monthIn, monthOut }) {
+function BankCard({ bank, label, balance, monthIn, monthOut }) {
   return (
     <div className="rounded-[24px] border border-white/85 bg-white/72 p-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
       <div className="flex items-start justify-between gap-3">
-        <div className="text-sm font-extrabold tracking-tight text-slate-900">{bank}</div>
-        <Pill tone="sky">Balance</Pill>
+        <div>
+          <div className="text-sm font-extrabold tracking-tight text-slate-900">{bank}</div>
+          <div className="mt-1 text-xs text-slate-500">{label}</div>
+        </div>
+        <Pill tone={bank === 'GSB' ? 'rose' : bank === 'KTB' ? 'sky' : 'emerald'}>
+          Balance
+        </Pill>
       </div>
 
       <div className="mt-3 text-[20px] font-bold tracking-tight text-slate-900">
@@ -123,6 +132,8 @@ function SummaryBox({ label, value, tone = 'default' }) {
     emerald: 'border-emerald-100/90',
     rose: 'border-rose-100/90',
     sky: 'border-sky-100/90',
+    lilac: 'border-violet-100/90',
+    amber: 'border-amber-100/90',
   }
 
   return (
@@ -131,6 +142,22 @@ function SummaryBox({ label, value, tone = 'default' }) {
       <div className="mt-3 text-[20px] font-bold tracking-tight text-slate-900">{money(value)}</div>
     </div>
   )
+}
+
+const TYPE_META = {
+  income: { label: 'รายรับ', pill: 'emerald' },
+  expense: { label: 'รายจ่าย', pill: 'rose' },
+  purchase: { label: 'ซื้อของเข้า', pill: 'amber' },
+  transfer: { label: 'โยกเงิน', pill: 'sky' },
+  salary: { label: 'เงินเดือน', pill: 'lilac' },
+}
+
+const CATEGORY_PRESETS = {
+  income: ['รายรับอื่นๆ', 'คืนเงิน', 'ขายของเก่า', 'รายรับพิเศษ'],
+  expense: ['ค่าไฟ', 'ค่าน้ำ', 'ค่ากล่อง/อุปกรณ์', 'ค่าส่ง', 'อื่นๆ'],
+  purchase: ['ซื้อไม้เข้าสวน', 'ค่าต้นไม้เก่าที่ค้าง', 'ซื้อวัสดุปลูก'],
+  transfer: ['โยกเงินระหว่างบัญชี', 'สำรองจ่าย', 'โอนคืน'],
+  salary: ['เงินเดือนผู้ดูแลระบบ', 'เงินเดือนผู้ช่วยขาย', 'เงินเดือนเจ้าของ'],
 }
 
 export default function ExpensesPage() {
@@ -157,10 +184,25 @@ export default function ExpensesPage() {
   const [summary, setSummary] = useState({
     incomeTotal: 0,
     expenseTotal: 0,
-    netTotal: 0,
+    purchaseTotal: 0,
+    transferTotal: 0,
+    salaryTotal: 0,
+    businessNet: 0,
+    afterSalary: 0,
   })
 
   const { start, end } = useMemo(() => monthRange(), [])
+
+  const currentCategoryOptions = useMemo(() => {
+    return CATEGORY_PRESETS[type] || []
+  }, [type])
+
+  useEffect(() => {
+    if (!currentCategoryOptions.includes(category)) {
+      setCategory(currentCategoryOptions[0] || '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type])
 
   async function loadPage() {
     setLoading(true)
@@ -179,12 +221,10 @@ export default function ExpensesPage() {
           .from('payments')
           .select('bank, amount, pay_date'),
 
-        // ใช้คำนวณจริงทั้งหมด ห้าม limit
         supabase
           .from('expenses')
           .select('id, expense_date, category, amount, bank, note, type, created_at'),
 
-        // ใช้แสดงแค่ล่าสุด 10 รายการ
         supabase
           .from('expenses')
           .select('id, expense_date, category, amount, bank, note, type, created_at')
@@ -218,7 +258,6 @@ export default function ExpensesPage() {
         KBANK: { balance: latestOpeningMap.get('KBANK') || 0, monthIn: 0, monthOut: 0 },
       }
 
-      // opening + payments
       for (const row of paymentRows) {
         const b = String(row.bank || '')
         const amt = Number(row.amount || 0)
@@ -228,8 +267,10 @@ export default function ExpensesPage() {
 
       let incomeTotal = 0
       let expenseTotal = 0
+      let purchaseTotal = 0
+      let transferTotal = 0
+      let salaryTotal = 0
 
-      // expenses ทั้งหมดสำหรับคำนวณจริง
       for (const row of expenseCalcRows) {
         const b = String(row.bank || '')
         const amt = Number(row.amount || 0)
@@ -252,16 +293,26 @@ export default function ExpensesPage() {
 
         if (rowDate >= start && rowDate < end) {
           if (rowType === 'income') incomeTotal += amt
-          else expenseTotal += amt
+          else if (rowType === 'expense') expenseTotal += amt
+          else if (rowType === 'purchase') purchaseTotal += amt
+          else if (rowType === 'transfer') transferTotal += amt
+          else if (rowType === 'salary') salaryTotal += amt
         }
       }
+
+      const businessNet = incomeTotal - expenseTotal
+      const afterSalary = businessNet - salaryTotal
 
       setBankCards(bankMap)
       setRecentRows(expenseRecentRows)
       setSummary({
         incomeTotal,
         expenseTotal,
-        netTotal: incomeTotal - expenseTotal,
+        purchaseTotal,
+        transferTotal,
+        salaryTotal,
+        businessNet,
+        afterSalary,
       })
     } catch (e) {
       setErr(e.message || 'โหลดข้อมูลไม่สำเร็จ')
@@ -279,7 +330,7 @@ export default function ExpensesPage() {
     setErr('')
     setOk('')
 
-    const amt = Number(amount || 0)
+    const amt = Number(String(amount || '').replace(/,/g, ''))
     if (!amt || amt <= 0) {
       setErr('กรุณากรอกจำนวนเงินให้มากกว่า 0')
       return
@@ -310,6 +361,22 @@ export default function ExpensesPage() {
     }
   }
 
+  const insightText = useMemo(() => {
+    if (type === 'salary') {
+      return 'เงินเดือนเป็นเงินออกจริงจากธนาคาร แต่ไม่ควรไปรวมเป็นค่าใช้จ่ายธุรกิจปกติ'
+    }
+    if (type === 'transfer') {
+      return 'โยกเงินควรใช้แยกจากค่าใช้จ่ายธุรกิจ เพื่อไม่ให้กำไรดูติดลบปลอม'
+    }
+    if (type === 'purchase') {
+      return 'ซื้อของเข้าเป็นเงินออกจริง แต่ควรแยกจากค่าใช้จ่ายธุรกิจรายวัน'
+    }
+    if (type === 'income') {
+      return 'รายรับพิเศษจะเพิ่มเงินในธนาคาร และถูกแยกจากยอดขายหน้าขาย'
+    }
+    return 'รายจ่ายธุรกิจปกติจะถูกใช้ประกอบการคำนวณกำไรธุรกิจจริง'
+  }, [type])
+
   return (
     <AppShell title="ค่าใช้จ่าย">
       <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
@@ -322,12 +389,15 @@ export default function ExpensesPage() {
               <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
                 เงินเข้าออกพิเศษ
               </div>
+              <div className="mt-1 text-sm leading-relaxed text-slate-500">
+                จัดการรายรับ รายจ่าย ซื้อของเข้า โยกเงิน และเงินเดือน แยกหน้าที่ให้ชัดขึ้น
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Pill tone="emerald">รับ {money(summary.incomeTotal)}</Pill>
-              <Pill tone="rose">จ่าย {money(summary.expenseTotal)}</Pill>
-              <Pill tone="sky">สุทธิ {money(summary.netTotal)}</Pill>
+              <Pill tone="rose">จ่ายธุรกิจ {money(summary.expenseTotal)}</Pill>
+              <Pill tone="lilac">เงินเดือน {money(summary.salaryTotal)}</Pill>
             </div>
           </div>
 
@@ -343,120 +413,179 @@ export default function ExpensesPage() {
             </div>
           ) : null}
 
-          <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1fr_0.9fr]">
-            <ShellCard
-              title="เพิ่มรายการรายรับ / รายจ่าย"
-              subtitle="กรอกวันที่ ประเภท หมวด จำนวนเงิน ธนาคาร และหมายเหตุ"
-              tint="default"
-              className="min-h-[560px]"
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="วันที่">
-                  <input
-                    type="date"
-                    value={expenseDate}
-                    onChange={(e) => setExpenseDate(e.target.value)}
-                    className={inputClass}
-                  />
-                </Field>
+          <div className="grid gap-3 sm:gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid gap-3 sm:gap-4">
+              <ShellCard
+                title="เพิ่มรายการรายรับ / รายจ่าย"
+                subtitle="เลือกประเภทก่อน แล้วระบบจะปรับหมวดที่เหมาะให้"
+                tint="default"
+              >
+                <div className="grid gap-3">
+                  <Field label="ประเภท">
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+                      {Object.entries(TYPE_META).map(([key, meta]) => {
+                        const active = type === key
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => setType(key)}
+                            className={cn(
+                              'h-11 rounded-2xl border text-sm font-semibold transition',
+                              active
+                                ? key === 'income'
+                                  ? 'border-emerald-200 bg-emerald-500 text-white'
+                                  : key === 'expense'
+                                  ? 'border-rose-200 bg-rose-500 text-white'
+                                  : key === 'purchase'
+                                  ? 'border-amber-200 bg-amber-500 text-white'
+                                  : key === 'salary'
+                                  ? 'border-violet-200 bg-violet-500 text-white'
+                                  : 'border-sky-200 bg-sky-500 text-white'
+                                : 'border-slate-200 bg-white/85 text-slate-700'
+                            )}
+                          >
+                            {meta.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </Field>
 
-                <Field label="ประเภท">
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setType('income')}
-                      className={cn(
-                        'h-11 rounded-2xl border text-sm font-semibold transition',
-                        type === 'income'
-                          ? 'border-emerald-200 bg-emerald-500 text-white'
-                          : 'border-slate-200 bg-white/85 text-slate-700'
-                      )}
-                    >
-                      รายรับ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setType('expense')}
-                      className={cn(
-                        'h-11 rounded-2xl border text-sm font-semibold transition',
-                        type === 'expense'
-                          ? 'border-rose-200 bg-rose-500 text-white'
-                          : 'border-slate-200 bg-white/85 text-slate-700'
-                      )}
-                    >
-                      รายจ่าย
+                  <div className="rounded-[22px] border border-white/85 bg-white/72 px-4 py-3 text-sm text-slate-600">
+                    {insightText}
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="วันที่">
+                      <input
+                        type="date"
+                        value={expenseDate}
+                        onChange={(e) => setExpenseDate(e.target.value)}
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="ธนาคาร">
+                      <select value={bank} onChange={(e) => setBank(e.target.value)} className={inputClass}>
+                        <option value="GSB">GSB</option>
+                        <option value="KTB">KTB</option>
+                        <option value="KBANK">KBANK</option>
+                      </select>
+                    </Field>
+
+                    <Field label="หมวดหมู่" hint="กดเลือกเร็วได้จากปุ่มด้านล่าง">
+                      <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
+                        {currentCategoryOptions.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="จำนวนเงิน">
+                      <input
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        inputMode="numeric"
+                        placeholder="จำนวนเงิน"
+                        className={inputClass}
+                      />
+                    </Field>
+
+                    <Field label="หมายเหตุ" hint="ใส่เพิ่มเฉพาะถ้าจำเป็น">
+                      <input
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        placeholder="หมายเหตุ"
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+
+                  <div>
+                    <div className="mb-2 text-xs font-semibold tracking-tight text-slate-500">หมวดแนะนำ</div>
+                    <div className="flex flex-wrap gap-2">
+                      {currentCategoryOptions.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setCategory(c)}
+                          className={cn(
+                            'inline-flex h-9 items-center justify-center rounded-full border px-4 text-xs font-semibold transition',
+                            category === c
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                              : 'border-slate-200 bg-white/85 text-slate-600 hover:bg-slate-50'
+                          )}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <button onClick={onSave} className={primaryBtnClass} disabled={loading}>
+                      {loading ? 'กำลังบันทึก...' : 'บันทึก'}
                     </button>
                   </div>
-                </Field>
+                </div>
+              </ShellCard>
 
-                <Field label="หมวดหมู่">
-                  <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
-                    <option value="ซื้อไม้เข้าสวน">ซื้อไม้เข้าสวน</option>
-                    <option value="ค่าต้นไม้เก่าที่ค้าง">ค่าต้นไม้เก่าที่ค้าง</option>
-                    <option value="ค่าไฟ">ค่าไฟ</option>
-                    <option value="ค่าน้ำ">ค่าน้ำ</option>
-                    <option value="ค่ากล่อง/อุปกรณ์">ค่ากล่อง/อุปกรณ์</option>
-                    <option value="ค่าส่ง">ค่าส่ง</option>
-                    <option value="อื่นๆ">อื่นๆ</option>
-                  </select>
-                </Field>
+              <ShellCard
+                title="วิเคราะห์วันนี้"
+                subtitle="กล่องนี้ช่วยให้หน้านี้มีมุมตัดสินใจ ไม่ใช่แค่ฟอร์มกรอก"
+                tint="lilac"
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SummaryBox label="สุทธิธุรกิจเดือนนี้" value={summary.businessNet} tone="sky" />
+                  <SummaryBox label="เหลือหลังเงินเดือน" value={summary.afterSalary} tone="lilac" />
+                  <SummaryBox label="ซื้อของเข้าเดือนนี้" value={summary.purchaseTotal} tone="amber" />
+                  <SummaryBox label="โยกเงินเดือนนี้" value={summary.transferTotal} tone="sky" />
+                </div>
 
-                <Field label="จำนวนเงิน">
-                  <input
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    inputMode="numeric"
-                    placeholder="จำนวนเงิน"
-                    className={inputClass}
-                  />
-                </Field>
-
-                <Field label="ธนาคาร">
-                  <select value={bank} onChange={(e) => setBank(e.target.value)} className={inputClass}>
-                    <option value="GSB">GSB</option>
-                    <option value="KTB">KTB</option>
-                    <option value="KBANK">KBANK</option>
-                  </select>
-                </Field>
-
-                <Field label="หมายเหตุ">
-                  <input
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder="หมายเหตุ"
-                    className={inputClass}
-                  />
-                </Field>
-              </div>
-
-              <div className="mt-4">
-                <button onClick={onSave} className={primaryBtnClass} disabled={loading}>
-                  {loading ? 'กำลังบันทึก...' : 'บันทึก'}
-                </button>
-              </div>
-            </ShellCard>
+                <div className="mt-4 rounded-[22px] border border-white/85 bg-white/74 px-4 py-4 text-sm leading-7 text-slate-700">
+                  {summary.salaryTotal > 0 ? (
+                    <>
+                      เดือนนี้มีการจ่ายเงินเดือนแล้ว <b>{money(summary.salaryTotal)}</b> บาท
+                      ดังนั้นเวลามองกำไรธุรกิจ ควรดูที่ <b>สุทธิธุรกิจเดือนนี้</b> ก่อน
+                      แล้วค่อยดู <b>เหลือหลังเงินเดือน</b> เพื่อประเมินเงินใช้จริง
+                    </>
+                  ) : (
+                    <>
+                      เดือนนี้ยังไม่มีเงินเดือนถูกบันทึก ถ้าจะเริ่มแบ่งกำไรออกมาใช้
+                      ควรลงเป็นประเภท <b>เงินเดือน</b> แยกจากรายจ่ายธุรกิจปกติ
+                    </>
+                  )}
+                </div>
+              </ShellCard>
+            </div>
 
             <div className="grid gap-3 sm:gap-4">
               <ShellCard
                 title="ยอดเงินจริงในธนาคาร"
-                subtitle="คำนวณจาก opening + payments + expenses"
+                subtitle="คำนวณจาก opening + payments + expenses ทั้งหมด"
                 tint="sky"
               >
                 <div className="grid gap-3">
                   <BankCard
                     bank="GSB"
+                    label="ธุรกิจ"
                     balance={bankCards.GSB.balance}
                     monthIn={bankCards.GSB.monthIn}
                     monthOut={bankCards.GSB.monthOut}
                   />
                   <BankCard
                     bank="KTB"
+                    label="ส่วนตัว"
                     balance={bankCards.KTB.balance}
                     monthIn={bankCards.KTB.monthIn}
                     monthOut={bankCards.KTB.monthOut}
                   />
                   <BankCard
                     bank="KBANK"
+                    label="เก็บกำไร"
                     balance={bankCards.KBANK.balance}
                     monthIn={bankCards.KBANK.monthIn}
                     monthOut={bankCards.KBANK.monthOut}
@@ -465,14 +594,16 @@ export default function ExpensesPage() {
               </ShellCard>
 
               <ShellCard
-                title="สรุปภาพรวม"
-                subtitle="รวมจากรายการพิเศษทั้งหมดที่กรอกมา"
+                title="สรุปเดือนนี้"
+                subtitle="แยกบทบาทของตัวเลขให้ชัด ไม่ปนกัน"
                 tint="cream"
               >
                 <div className="grid gap-3">
                   <SummaryBox label="รายรับรวม" value={summary.incomeTotal} tone="emerald" />
-                  <SummaryBox label="รายจ่ายรวม" value={summary.expenseTotal} tone="rose" />
-                  <SummaryBox label="สุทธิ" value={summary.netTotal} tone="sky" />
+                  <SummaryBox label="รายจ่ายธุรกิจรวม" value={summary.expenseTotal} tone="rose" />
+                  <SummaryBox label="เงินเดือนรวม" value={summary.salaryTotal} tone="lilac" />
+                  <SummaryBox label="สุทธิธุรกิจ" value={summary.businessNet} tone="sky" />
+                  <SummaryBox label="เหลือหลังเงินเดือน" value={summary.afterSalary} tone="amber" />
                 </div>
               </ShellCard>
             </div>
@@ -480,7 +611,7 @@ export default function ExpensesPage() {
 
           <ShellCard
             title="รายการล่าสุด 10 รายการ"
-            subtitle="แสดงรายการรายรับและรายจ่ายล่าสุด พร้อมธนาคารที่ใช้"
+            subtitle="แสดงรายการพิเศษล่าสุด พร้อมแยกประเภทชัดเจน"
             tint="default"
           >
             {!recentRows.length ? (
@@ -490,22 +621,29 @@ export default function ExpensesPage() {
             ) : (
               <div className="grid gap-2">
                 {recentRows.map((row) => {
-                  const isIncome = String(row.type || '').toLowerCase() === 'income'
+                  const rowType = String(row.type || '').toLowerCase()
+                  const meta = TYPE_META[rowType] || TYPE_META.expense
+                  const positive = rowType === 'income'
+
                   return (
                     <div
                       key={row.id}
                       className={cn(
                         'flex items-center justify-between gap-3 rounded-[22px] border px-4 py-4 shadow-[0_4px_14px_rgba(15,23,42,0.04)]',
-                        isIncome
+                        rowType === 'income'
                           ? 'border-emerald-100/90 bg-emerald-50/70'
+                          : rowType === 'salary'
+                          ? 'border-violet-100/90 bg-violet-50/70'
+                          : rowType === 'transfer'
+                          ? 'border-sky-100/90 bg-sky-50/70'
+                          : rowType === 'purchase'
+                          ? 'border-amber-100/90 bg-amber-50/70'
                           : 'border-rose-100/90 bg-rose-50/70'
                       )}
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Pill tone={isIncome ? 'emerald' : 'rose'}>
-                            {isIncome ? 'รับ' : 'จ่าย'}
-                          </Pill>
+                          <Pill tone={meta.pill}>{meta.label}</Pill>
                           <div className="text-sm font-bold text-slate-900">{row.category || '-'}</div>
                           <div className="text-xs text-slate-500">{row.bank || '-'}</div>
                         </div>
@@ -514,8 +652,14 @@ export default function ExpensesPage() {
                         </div>
                       </div>
 
-                      <div className={cn('text-right text-sm font-bold', isIncome ? 'text-emerald-700' : 'text-rose-700')}>
-                        {isIncome ? '+' : '-'}{money(row.amount)}
+                      <div
+                        className={cn(
+                          'text-right text-sm font-bold',
+                          positive ? 'text-emerald-700' : 'text-slate-700'
+                        )}
+                      >
+                        {positive ? '+' : '-'}
+                        {money(row.amount)}
                       </div>
                     </div>
                   )

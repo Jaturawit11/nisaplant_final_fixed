@@ -178,8 +178,8 @@ function DonutIncomeExpenseCard({ incomeExpenseData, netValue }) {
   return (
     <Card tint="emerald" className="h-full min-h-[520px]">
       <SectionTitle
-        title="รายรับ / รายจ่าย"
-        subtitle="ดูจากเงินเข้าออกจริงของเดือนนี้"
+        title="รายรับ / รายจ่ายธุรกิจ"
+        subtitle="ดูจากเงินเข้าออกจริงของเดือนนี้ (ไม่รวมเงินเดือน)"
         right={<Pill tone="emerald">รวม {money(total)}</Pill>}
       />
 
@@ -210,7 +210,7 @@ function DonutIncomeExpenseCard({ incomeExpenseData, netValue }) {
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div className="rounded-full border border-white/85 bg-white/90 px-7 py-6 text-center shadow-[0_8px_20px_rgba(15,23,42,0.05)]">
               <div className="text-[24px] font-bold tracking-tight text-slate-900">{money(netValue)}</div>
-              <div className="mt-1 text-xs font-semibold text-slate-500">สุทธิเดือนนี้</div>
+              <div className="mt-1 text-xs font-semibold text-slate-500">สุทธิธุรกิจ</div>
             </div>
           </div>
         </div>
@@ -229,7 +229,7 @@ function DonutIncomeExpenseCard({ incomeExpenseData, netValue }) {
         <div className="rounded-[20px] border border-white/85 bg-white/80 p-4">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
             <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
-            รายจ่าย
+            รายจ่ายธุรกิจ
           </div>
           <div className="mt-2 text-[24px] font-bold tracking-tight text-slate-900">{money(expense)}</div>
           <div className="mt-1 text-xs text-slate-400">บาท</div>
@@ -240,10 +240,10 @@ function DonutIncomeExpenseCard({ incomeExpenseData, netValue }) {
         <div className="text-xs font-semibold text-slate-500">สรุปวันนี้</div>
         <div className="mt-2 text-sm leading-6 text-slate-700">
           {expense <= 0
-            ? 'เดือนนี้ยังไม่มีรายจ่ายจริงเข้ามา ทำให้กระแสเงินสดดูสะอาดและอ่านง่าย'
+            ? 'เดือนนี้ยังไม่มีรายจ่ายธุรกิจจริงเข้ามา ทำให้กระแสเงินสดธุรกิจดูสะอาดและอ่านง่าย'
             : netValue >= 0
-            ? 'เงินเข้าในเดือนนี้ยังมากกว่ารายจ่าย ถือว่า cashflow ยังอยู่ในฝั่งที่ควบคุมได้'
-            : 'รายจ่ายเดือนนี้สูงกว่ารายรับจริงแล้ว ควรชะลอการใช้เงินรอบใหม่'}
+            ? 'เงินเข้าในเดือนนี้ยังมากกว่ารายจ่ายธุรกิจ ถือว่า cashflow ธุรกิจยังอยู่ในฝั่งที่ควบคุมได้'
+            : 'รายจ่ายธุรกิจเดือนนี้สูงกว่ารายรับจริงแล้ว ควรชะลอการใช้เงินรอบใหม่'}
         </div>
       </div>
     </Card>
@@ -338,7 +338,7 @@ function AiBusinessCard({ insight }) {
     <Card tint="sky" className="h-full min-h-[520px]">
       <SectionTitle
         title="AI ผู้ช่วยธุรกิจวันนี้"
-        subtitle="วิเคราะห์จากยอดขาย กำไร เงินสด ยอดค้าง และทุนคงเหลือ"
+        subtitle="วิเคราะห์จากยอดขาย กำไร เงินสด ยอดค้าง เงินเดือน และทุนคงเหลือ"
         right={<Pill tone={riskTone}>{insight.riskLevel}</Pill>}
       />
 
@@ -409,6 +409,8 @@ function buildBusinessInsight({
   monthNet,
   taxReserve,
   afterTax,
+  monthSalary,
+  afterSalary,
   bankCards,
   arTotal,
   activeCost,
@@ -425,16 +427,18 @@ function buildBusinessInsight({
   )
 
   const availableCash = Math.max(0, gsbBalance - reserveBase)
-  const rawMaxBuy = Math.max(0, Math.min(availableCash, Math.max(0, afterTax)))
+  const rawMaxBuy = Math.max(0, Math.min(availableCash, Math.max(0, afterSalary)))
   const maxBuy = Math.floor(rawMaxBuy)
 
   let riskLevel = 'ปลอดภัย'
-  if (monthNet < 0 || deadLoss > 0 || arTotal > 0) riskLevel = 'เฝ้าระวัง'
-  if ((monthNet < 0 && arTotal > 0) || deadLoss > 0 || gsbBalance < 30000) riskLevel = 'เสี่ยง'
+  if (monthNet < 0 || deadLoss > 0 || arTotal > 0 || monthSalary > 0) riskLevel = 'เฝ้าระวัง'
+  if ((monthNet < 0 && arTotal > 0) || deadLoss > 0 || gsbBalance < 30000 || afterSalary < 0) riskLevel = 'เสี่ยง'
 
   const reasons = [
     `ยอดขายเดือนนี้ ${money(monthSales)} บาท`,
-    `กำไรสุทธิ ${money(monthNet)} บาท`,
+    `กำไรสุทธิธุรกิจ ${money(monthNet)} บาท`,
+    `เงินเดือนเดือนนี้ ${money(monthSalary)} บาท`,
+    `เหลือหลังเงินเดือน ${money(afterSalary)} บาท`,
     `เงินคงเหลือ GSB ${money(gsbBalance)} บาท`,
     arTotal > 0 ? `มียอดค้างชำระ ${money(arTotal)} บาท` : `ทุนคงเหลือใน stock ${money(activeCost)} บาท`,
   ]
@@ -467,6 +471,17 @@ function buildBusinessInsight({
       'เน้นขาย stock เดิมให้เร็วขึ้น',
       'คุมค่าใช้จ่ายจริงให้น้อยที่สุดในรอบนี้',
     ]
+  } else if (afterSalary < 0) {
+    headline = 'หลังจ่ายเงินเดือนแล้ว เงินเหลือติดลบ'
+    mainAdvice =
+      `ตอนนี้ยังไม่ควรซื้อไม้เพิ่ม\n` +
+      `เพราะหลังหักเงินเดือนเดือนนี้แล้ว เหลือ ${money(afterSalary)} บาท`
+
+    actions = [
+      'ชะลอการซื้อเพิ่มก่อน',
+      'ทบทวนวงเงินเดือนนี้หรือรอให้ยอดขายเข้ามาเพิ่ม',
+      'โฟกัสเก็บยอดค้างและปิดบิลให้มากขึ้น',
+    ]
   } else if (maxBuy <= 0) {
     headline = 'เงินสำรองยังไม่พอสำหรับการซื้อเพิ่ม'
     mainAdvice =
@@ -478,11 +493,11 @@ function buildBusinessInsight({
       'ถ้ามียอดค้างชำระ ให้ตามเก็บก่อนซื้อรอบใหม่',
       'ซื้อใหม่เฉพาะกรณีจำเป็นจริง ๆ เท่านั้น',
     ]
-  } else if (afterTax < 1000) {
-    headline = 'กำไรยังบาง'
+  } else if (afterSalary < 1000) {
+    headline = 'เหลือหลังเงินเดือนยังบาง'
     mainAdvice =
       `ซื้อไม้เพิ่มได้ แต่ไม่ควรเกิน ${money(maxBuy)} บาท\n` +
-      `เพราะกำไรหลังภาษีเดือนนี้ยังบาง แม้เงินสดใน GSB ยังพอมี`
+      `เพราะหลังหักเงินเดือนแล้ว เงินที่เหลือยังบาง`
 
     actions = [
       `ถ้าจะซื้อใหม่ ควรคุมงบไม่เกิน ${money(maxBuy)} บาท`,
@@ -493,7 +508,7 @@ function buildBusinessInsight({
     headline = 'ธุรกิจอยู่ในโซนปลอดภัย'
     mainAdvice =
       `สามารถซื้อไม้เพิ่มได้ แต่ไม่ควรเกิน ${money(maxBuy)} บาท\n` +
-      `เพดานนี้คำนวณจากกำไรหลังภาษีและเงินสดใน GSB หลังกันสำรองแล้ว`
+      `เพดานนี้คำนวณจากเงินเหลือหลังภาษีและหลังเงินเดือนแล้ว`
 
     actions = [
       `กำหนดงบซื้อรอบนี้ไม่เกิน ${money(maxBuy)} บาท`,
@@ -533,11 +548,13 @@ export default function DashboardPage() {
     monthNet: 0,
     taxReserve: 0,
     afterTax: 0,
+    monthSalary: 0,
+    afterSalary: 0,
   })
 
   const [incomeExpenseData, setIncomeExpenseData] = useState([
     { name: 'รายรับ', value: 0 },
-    { name: 'รายจ่าย', value: 0 },
+    { name: 'รายจ่ายธุรกิจ', value: 0 },
   ])
 
   const [arData, setArData] = useState({
@@ -569,6 +586,8 @@ export default function DashboardPage() {
       monthNet: Number(kpi.monthNet || 0),
       taxReserve: Number(kpi.taxReserve || 0),
       afterTax: Number(kpi.afterTax || 0),
+      monthSalary: Number(kpi.monthSalary || 0),
+      afterSalary: Number(kpi.afterSalary || 0),
       bankCards,
       arTotal: Number(arData.total || 0),
       activeCost: Number(kpi.activeCostSum || 0),
@@ -656,6 +675,7 @@ export default function DashboardPage() {
 
       let monthIncome = 0
       let monthExpense = 0
+      let monthSalary = 0
 
       const paidByInvoice = {}
       for (const row of paymentsAllRows) {
@@ -675,11 +695,14 @@ export default function DashboardPage() {
         const type = String(row.type || '').toLowerCase()
 
         if (!isDateInRange(row.expense_date, start, end)) continue
+
         if (type === 'purchase' || type === 'transfer') continue
 
         if (type === 'income') {
           monthIncome += amount
-        } else {
+        } else if (type === 'salary') {
+          monthSalary += amount
+        } else if (type === 'expense') {
           monthExpense += amount
         }
       }
@@ -766,13 +789,11 @@ export default function DashboardPage() {
           if (isDateInRange(row.expense_date, start, end)) {
             bankMap[bank].income += amount
           }
-        } else if (type === 'expense') {
+        } else {
           bankMap[bank].balance -= amount
           if (isDateInRange(row.expense_date, start, end)) {
             bankMap[bank].expense += amount
           }
-        } else if (type === 'purchase') {
-          bankMap[bank].balance -= amount
         }
       }
 
@@ -784,11 +805,13 @@ export default function DashboardPage() {
         monthNet: netProfit,
         taxReserve: tax15,
         afterTax,
+        monthSalary,
+        afterSalary: afterTax - monthSalary,
       })
 
       setIncomeExpenseData([
         { name: 'รายรับ', value: monthIncome },
-        { name: 'รายจ่าย', value: monthExpense },
+        { name: 'รายจ่ายธุรกิจ', value: monthExpense },
       ])
 
       setArData({
@@ -852,7 +875,7 @@ export default function DashboardPage() {
               caption="รายได้จากบิลขายของเดือนนี้"
             />
             <KPIHeroCard
-              title="กำไรสุทธิเดือนนี้"
+              title="กำไรสุทธิธุรกิจ"
               value={kpi.monthNet}
               tint="sky"
               icon="📈"
@@ -902,6 +925,59 @@ export default function DashboardPage() {
             />
           </div>
 
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <Card tint="lilac">
+              <div className="text-xs font-semibold text-slate-500">เงินเดือนเดือนนี้</div>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900">
+                  {money(kpi.monthSalary)}
+                </span>
+                <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+              </div>
+              <div className="mt-3 text-xs text-slate-500">
+                เงินออกจริงจากธนาคาร แต่ไม่ใช่ค่าใช้จ่ายธุรกิจปกติ
+              </div>
+            </Card>
+
+            <Card tint="emerald">
+              <div className="text-xs font-semibold text-slate-500">เหลือหลังเงินเดือน</div>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900">
+                  {money(kpi.afterSalary)}
+                </span>
+                <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+              </div>
+              <div className="mt-3 text-xs text-slate-500">
+                ใช้เป็นฐานมองเงินที่เหลือจริงหลังภาษีและหลังเงินเดือน
+              </div>
+            </Card>
+
+            <Card tint="cream">
+              <div className="text-xs font-semibold text-slate-500">ไม้คงเหลือ</div>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900">
+                  {money(kpi.activeCount)}
+                </span>
+                <span className="mb-1 text-sm font-semibold text-slate-400">ต้น</span>
+              </div>
+              <div className="mt-3 text-xs text-slate-500">จำนวนต้นที่ยัง ACTIVE อยู่ในระบบ</div>
+            </Card>
+
+            <Card tint="rose">
+              <div className="text-xs font-semibold text-slate-500">ยอดค้างชำระ</div>
+              <div className="mt-3 flex items-end gap-2">
+                <span className="text-[34px] font-bold leading-none tracking-tight text-slate-900">
+                  {money(arData.total)}
+                </span>
+                <span className="mb-1 text-sm font-semibold text-slate-400">บาท</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Pill tone="rose">unpaid {arData.unpaidCount}</Pill>
+                <Pill tone="amber">partial {arData.partialCount}</Pill>
+              </div>
+            </Card>
+          </div>
+
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[0.9fr_0.9fr_1.2fr]">
             <Card tint="cream">
               <SectionTitle
@@ -933,8 +1009,8 @@ export default function DashboardPage() {
 
             <Card tint="rose">
               <SectionTitle
-                title="ยอดค้างชำระ"
-                subtitle="ดูบิล unpaid / partial ของเดือนนี้"
+                title="การเก็บยอดขายเดือนนี้"
+                subtitle="AR ของ partial คิดจากยอดค้างจริง"
                 right={<Pill tone="rose">AR</Pill>}
               />
 

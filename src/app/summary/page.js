@@ -62,6 +62,7 @@ function normalizeSummary(sum) {
     afterTax,
   }
 }
+
 function Pill({ tone = 'slate', children }) {
   const map = {
     emerald: 'border border-emerald-200/90 bg-emerald-50 text-emerald-700',
@@ -138,6 +139,7 @@ function KPI({ title, value, tone = 'default', suffix = 'บาท' }) {
     sky: 'border-sky-100/90 bg-white/72',
     emerald: 'border-emerald-100/90 bg-white/72',
     cream: 'border-amber-100/90 bg-white/72',
+    lilac: 'border-violet-100/90 bg-white/72',
   }
 
   return (
@@ -188,6 +190,7 @@ function BigLine({ label, value, tone = 'default', emphasize = false }) {
     sky: 'border-sky-100/90 bg-white/74',
     emerald: 'border-emerald-100/90 bg-white/74',
     cream: 'border-amber-100/90 bg-white/74',
+    lilac: 'border-violet-100/90 bg-white/74',
   }
 
   return (
@@ -289,6 +292,9 @@ export default function SummaryPage() {
   const [sumMonth, setSumMonth] = useState(null)
   const [sumToday, setSumToday] = useState(null)
 
+  const [salaryMonth, setSalaryMonth] = useState(0)
+  const [salaryToday, setSalaryToday] = useState(0)
+
   const [series30, setSeries30] = useState([])
   const [series30Note, setSeries30Note] = useState('')
 
@@ -319,6 +325,19 @@ export default function SummaryPage() {
     return data
   }
 
+  async function sumSalaryBetween(start, end) {
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('amount')
+      .eq('type', 'salary')
+      .gte('expense_date', start)
+      .lt('expense_date', end)
+
+    if (error) throw error
+
+    return (data || []).reduce((sum, row) => sum + Number(row.amount || 0), 0)
+  }
+
   async function loadAll() {
     setErr('')
     setLoading(true)
@@ -338,6 +357,15 @@ export default function SummaryPage() {
           p_end: rangeToday.end,
         })
         setSumToday(pickRow(data))
+      }
+
+      {
+        const [monthSalaryValue, todaySalaryValue] = await Promise.all([
+          sumSalaryBetween(rangeMonth.start, rangeMonth.end),
+          sumSalaryBetween(rangeToday.start, rangeToday.end),
+        ])
+        setSalaryMonth(monthSalaryValue)
+        setSalaryToday(todaySalaryValue)
       }
 
       try {
@@ -370,6 +398,8 @@ export default function SummaryPage() {
       setErr(e.message || String(e))
       setSumMonth(null)
       setSumToday(null)
+      setSalaryMonth(0)
+      setSalaryToday(0)
       setSeries30([])
       setTop10([])
     } finally {
@@ -397,6 +427,9 @@ export default function SummaryPage() {
   const m = normalizeSummary(sumMonth)
   const t = normalizeSummary(sumToday)
 
+  const todayAfterSalary = t.afterTax - salaryToday
+  const monthAfterSalary = m.afterTax - salaryMonth
+
   return (
     <AppShell title="สรุป (Summary)">
       <div className="-m-3 min-h-full rounded-[34px] bg-[linear-gradient(180deg,#fffdfd_0%,#fff8fb_24%,#f7fbff_58%,#f8fff9_100%)] p-3 sm:-m-4 sm:p-4 md:-m-5 md:p-5">
@@ -409,14 +442,12 @@ export default function SummaryPage() {
               <div className="mt-1 text-[24px] font-semibold tracking-tight text-slate-900 sm:text-[29px]">
                 สรุป
               </div>
-              <div className="mt-1 text-sm leading-relaxed text-slate-500">
-                
-              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Pill tone="sky">เดือน {month}</Pill>
               <Pill tone="emerald">วันนี้ {rangeToday.start}</Pill>
+              <Pill tone="lilac">เงินเดือนเดือนนี้ {money(salaryMonth)}</Pill>
             </div>
           </div>
 
@@ -465,41 +496,57 @@ export default function SummaryPage() {
             ) : null}
           </ShellCard>
 
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-6">
             <KPI title="ยอดขายวันนี้" value={money(t.totalSales)} tone="rose" />
             <KPI title="กำไรวันนี้" value={money(t.netProfit)} tone="sky" />
+            <KPI title="เงินเดือนวันนี้" value={money(salaryToday)} tone="lilac" />
             <KPI title="ยอดขายเดือนนี้" value={money(m.totalSales)} tone="cream" />
             <KPI title="กำไรเดือนนี้" value={money(m.netProfit)} tone="emerald" />
+            <KPI title="เงินเดือนเดือนนี้" value={money(salaryMonth)} tone="lilac" />
           </div>
 
           <ShellCard title="ภาพรวมรายเดือน" subtitle="ค่าสรุปหลักของเดือนที่เลือก" tint="default">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
               <MiniStat label="ยอดขายรวม" value={money(m.totalSales)} tone="rose" />
-               <MiniStat label="ต้นทุนรวม" value={money(m.totalCost)} tone="sky" />
+              <MiniStat label="ต้นทุนรวม" value={money(m.totalCost)} tone="sky" />
               <MiniStat label="กำไรจากการขาย" value={money(m.grossProfit)} tone="emerald" />
               <MiniStat label="ค่าใช้จ่ายรวม" value={money(m.totalExpenses)} tone="cream" />
               <MiniStat label="ขาดทุนจากไม้ตาย" value={money(m.deadLoss)} tone="rose" />
             </div>
           </ShellCard>
 
-          <ShellCard title="กำไรสุทธิจริง + ภาษี" subtitle="สรุปกำไรหลังหักค่าใช้จ่ายและเกราะภาษี" tint="lilac">
+          <ShellCard title="กำไรสุทธิจริง + ภาษี + เงินเดือน" subtitle="สรุปกำไรหลังหักค่าใช้จ่าย กันภาษี และดูเงินเหลือหลังเงินเดือน" tint="lilac">
             <div className="grid gap-3">
-  <BigLine label="กำไรจากการขาย" value={money(m.grossProfit)} tone="default" />
-  <BigLine label="ค่าใช้จ่ายรวม" value={money(m.totalExpenses)} tone="cream" />
-  <BigLine label="ขาดทุนจากไม้ตาย" value={money(m.deadLoss)} tone="rose" />
-  <BigLine
-    label="กำไรสุทธิจริง (กำไรจากการขาย - ค่าใช้จ่าย - ไม้ตาย)"
-    value={money(m.netProfit)}
-    tone="sky"
-  />
-  <BigLine label="ภาษี 15%" value={money(m.tax15)} tone="cream" />
-  <BigLine
-    label="เหลือหลังกันภาษี (เงินใช้/ลงทุนได้จริง)"
-    value={money(m.afterTax)}
-    tone="emerald"
-    emphasize
-  />
-</div>
+              <BigLine label="กำไรจากการขาย" value={money(m.grossProfit)} tone="default" />
+              <BigLine label="ค่าใช้จ่ายรวม" value={money(m.totalExpenses)} tone="cream" />
+              <BigLine label="ขาดทุนจากไม้ตาย" value={money(m.deadLoss)} tone="rose" />
+              <BigLine
+                label="กำไรสุทธิจริง (กำไรจากการขาย - ค่าใช้จ่าย - ไม้ตาย)"
+                value={money(m.netProfit)}
+                tone="sky"
+              />
+              <BigLine label="ภาษี 15%" value={money(m.tax15)} tone="cream" />
+              <BigLine
+                label="เหลือหลังกันภาษี"
+                value={money(m.afterTax)}
+                tone="emerald"
+              />
+              <BigLine label="เงินเดือนรวม" value={money(salaryMonth)} tone="lilac" />
+              <BigLine
+                label="เหลือหลังกันภาษีและหลังเงินเดือน"
+                value={money(monthAfterSalary)}
+                tone="emerald"
+                emphasize
+              />
+            </div>
+          </ShellCard>
+
+          <ShellCard title="ภาพรวมวันนี้" subtitle="ดูเงินเดือนวันนี้แยกจากกำไรธุรกิจวันนี้" tint="sky">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <MiniStat label="กำไรวันนี้" value={money(t.netProfit)} tone="sky" />
+              <MiniStat label="เงินเดือนวันนี้" value={money(salaryToday)} tone="lilac" />
+              <MiniStat label="เหลือหลังเงินเดือนวันนี้" value={money(todayAfterSalary)} tone="emerald" />
+            </div>
           </ShellCard>
 
           <ShellCard
