@@ -292,6 +292,8 @@ function SellPageInner() {
   const [lookupLoading, setLookupLoading] = useState(false)
   const [lookupMap, setLookupMap] = useState({})
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [customerOptions, setCustomerOptions] = useState([])
+  const customerInputRef = useRef(null)
   const lastLookupKeyRef = useRef('')
   const [needPrefixModal, setNeedPrefixModal] = useState(false)
   const [pendingDigits, setPendingDigits] = useState('')
@@ -314,6 +316,56 @@ function SellPageInner() {
       setShowAdvanced(true)
     }
   }, [payStatus])
+
+  useEffect(() => {
+    // paid -> ใส่วันที่รับเงินอัตโนมัติ
+    if (payStatus === 'paid' && !paidDate) {
+      setPaidDate(saleDate)
+    }
+
+    // unpaid -> ล้างค่าวันที่/ยอดรับจริง
+    if (payStatus === 'unpaid') {
+      setReceivedAmount('')
+      setPaidDate('')
+    }
+
+    // partial -> ถ้ายังไม่มี paidDate ให้ใช้ saleDate
+    if (payStatus === 'partial' && !paidDate) {
+      setPaidDate(saleDate)
+    }
+  }, [payStatus, saleDate, paidDate])
+
+  useEffect(() => {
+    async function loadCustomerOptions() {
+      try {
+        const { data, error } = await supabase
+          .from('invoices')
+          .select('customer_name, created_at')
+          .not('customer_name', 'is', null)
+          .neq('customer_name', '')
+          .order('created_at', { ascending: false })
+          .limit(300)
+
+        if (error) throw error
+
+        const seen = new Set()
+        const unique = []
+        for (const row of data || []) {
+          const name = String(row.customer_name || '').trim()
+          if (!name) continue
+          const key = name.toLowerCase()
+          if (seen.has(key)) continue
+          seen.add(key)
+          unique.push(name)
+        }
+        setCustomerOptions(unique)
+      } catch {
+        setCustomerOptions([])
+      }
+    }
+
+    loadCustomerOptions()
+  }, [supabase])
 
   const totals = useMemo(() => {
     const totalCost = items.reduce((s, x) => s + Number(x.cost || 0), 0)
@@ -609,6 +661,13 @@ function SellPageInner() {
     }
   }
 
+  function handleCodeKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      addParsed()
+    }
+  }
+
   const previewRows = useMemo(() => {
     if (!previewCodes.length) return []
 
@@ -671,12 +730,22 @@ function SellPageInner() {
               </Field>
 
               <Field label="ชื่อลูกค้า">
-                <input
-                  value={customer}
-                  onChange={(e) => setCustomer(e.target.value)}
-                  placeholder="พิมพ์ชื่อ..."
-                  className={inputClass}
-                />
+                <>
+                  <input
+                    ref={customerInputRef}
+                    list="customer-history-list"
+                    value={customer}
+                    onChange={(e) => setCustomer(e.target.value)}
+                    placeholder="พิมพ์ชื่อ..."
+                    className={inputClass}
+                    autoComplete="off"
+                  />
+                  <datalist id="customer-history-list">
+                    {customerOptions.map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
+                </>
               </Field>
 
               <Field label="ธนาคารรับเงิน">
@@ -774,6 +843,7 @@ function SellPageInner() {
                 <textarea
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
+                  onKeyDown={handleCodeKeyDown}
                   placeholder={`เช่น
 N-2603-0002
 n26030003
@@ -787,6 +857,7 @@ N-2603-0005 ถึง N-2603-0010`}
               <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs leading-relaxed text-slate-500">
                   {lookupLoading ? 'กำลังตรวจสอบ...' : `เพิ่มได้ (ACTIVE): ${canAddCount} / ${previewRows.length}`}
+                  <span className="ml-1 text-slate-400">• กด Enter เพื่อเพิ่มได้ทันที</span>
                   {parsedInput.unresolvedDigits.length ? (
                     <span className="font-semibold text-amber-600">
                       {' '}• มีรหัสเลขล้วน {parsedInput.unresolvedDigits.length} ตัว
@@ -839,35 +910,37 @@ N-2603-0005 ถึง N-2603-0010`}
               ) : null}
             </ShellCard>
 
-            <ShellCard title="สรุป" subtitle="ตรวจยอดก่อนกดยืนยันขาย" tint="sky">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <MiniStat label="จำนวนรายการ" value={items.length.toLocaleString('th-TH')} tone="default" />
-                <MiniStat label="ต้นทุนรวม" value={totals.totalCost.toLocaleString('th-TH')} tone="default" />
-                <MiniStat label="ยอดขายรวม" value={totals.totalPrice.toLocaleString('th-TH')} tone="sky" />
-                <MiniStat label="กำไร" value={totals.profit.toLocaleString('th-TH')} tone="emerald" />
-              </div>
-
-              <div className="mt-3 rounded-[20px] border border-white/85 bg-white/78 px-4 py-3">
-                <div className="text-xs font-semibold text-slate-500">กำไรเฉลี่ยต่อรายการ</div>
-                <div className="mt-2 text-[20px] font-bold tracking-tight text-slate-900">
-                  {totals.avgProfit.toLocaleString('th-TH')}
+            <div className="xl:sticky xl:top-4 xl:self-start">
+              <ShellCard title="สรุป" subtitle="ตรวจยอดก่อนกดยืนยันขาย" tint="sky">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <MiniStat label="จำนวนรายการ" value={items.length.toLocaleString('th-TH')} tone="default" />
+                  <MiniStat label="ต้นทุนรวม" value={totals.totalCost.toLocaleString('th-TH')} tone="default" />
+                  <MiniStat label="ยอดขายรวม" value={totals.totalPrice.toLocaleString('th-TH')} tone="sky" />
+                  <MiniStat label="กำไร" value={totals.profit.toLocaleString('th-TH')} tone="emerald" />
                 </div>
-              </div>
 
-              {err ? (
-                <div className="mt-4 rounded-[22px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 whitespace-pre-wrap">
-                  {err}
+                <div className="mt-3 rounded-[20px] border border-white/85 bg-white/78 px-4 py-3">
+                  <div className="text-xs font-semibold text-slate-500">กำไรเฉลี่ยต่อรายการ</div>
+                  <div className="mt-2 text-[20px] font-bold tracking-tight text-slate-900">
+                    {totals.avgProfit.toLocaleString('th-TH')}
+                  </div>
                 </div>
-              ) : null}
 
-              <button
-                disabled={loading}
-                onClick={submit}
-                className={cn(primaryBtnClass, 'mt-4 h-12 w-full text-[15px]')}
-              >
-                {loading ? 'กำลังบันทึก...' : 'ยืนยันการขาย'}
-              </button>
-            </ShellCard>
+                {err ? (
+                  <div className="mt-4 rounded-[22px] border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 whitespace-pre-wrap">
+                    {err}
+                  </div>
+                ) : null}
+
+                <button
+                  disabled={loading}
+                  onClick={submit}
+                  className={cn(primaryBtnClass, 'mt-4 h-12 w-full text-[15px]')}
+                >
+                  {loading ? 'กำลังบันทึก...' : 'ยืนยันการขาย'}
+                </button>
+              </ShellCard>
+            </div>
           </div>
 
           <ShellCard
