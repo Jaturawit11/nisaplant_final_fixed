@@ -863,20 +863,21 @@ export default function DashboardPage() {
           monthIncome += Number(row.amount || 0)
         }
       }
+for (const row of expensesAllRows) {
+  const amount = Number(row.amount || 0)
+  const type = String(row.type || '').toLowerCase()
 
-      for (const row of expensesAllRows) {
-        const amount = Number(row.amount || 0)
-        const type = String(row.type || '').toLowerCase()
+  if (!isDateInRange(row.expense_date, start, end)) continue
 
-        if (!isDateInRange(row.expense_date, start, end)) continue
+  // 🔥 เพิ่มตรงนี้ (สำคัญสุด)
+  if (type === 'purchase' || type === 'transfer') continue
 
-        if (type === 'income') {
-          monthIncome += amount
-        } else {
-          monthExpense += amount
-        }
-      }
-
+  if (type === 'income') {
+    monthIncome += amount
+  } else {
+    monthExpense += amount
+  }
+}
       const unpaidInvoices = monthInvoicesRows.filter(
         (r) => String(r.pay_status || '').toLowerCase() === 'unpaid'
       )
@@ -940,26 +941,32 @@ export default function DashboardPage() {
         }
       }
 
-      for (const row of expensesAllRows) {
-        const bank = String(row.bank || '')
-        if (!bankMap[bank]) continue
+     for (const row of expensesAllRows) {
+  const bank = String(row.bank || '')
+  if (!bankMap[bank]) continue
 
-        const amount = Number(row.amount || 0)
-        const type = String(row.type || '').toLowerCase()
+  const amount = Number(row.amount || 0)
+  const type = String(row.type || '').toLowerCase()
 
-        if (type === 'income') {
-          bankMap[bank].balance += amount
-          if (isDateInRange(row.expense_date, start, end)) {
-            bankMap[bank].income += amount
-          }
-        } else {
-          bankMap[bank].balance -= amount
-          if (isDateInRange(row.expense_date, start, end)) {
-            bankMap[bank].expense += amount
-          }
-        }
-      }
+  // 🔥 เพิ่มตรงนี้
+  if (type === 'transfer') continue
 
+  if (type === 'income') {
+    bankMap[bank].balance += amount
+    if (isDateInRange(row.expense_date, start, end)) {
+      bankMap[bank].income += amount
+    }
+  } else if (type === 'expense') {
+    bankMap[bank].balance -= amount
+    if (isDateInRange(row.expense_date, start, end)) {
+      bankMap[bank].expense += amount
+    }
+  }
+  // 🔥 purchase ยังหักเงินได้ แต่ไม่ถือเป็น expense ธุรกิจ
+  else if (type === 'purchase') {
+    bankMap[bank].balance -= amount
+  }
+}
       setKpi({
         activeCount,
         activeCostSum,
