@@ -128,20 +128,6 @@ function KPIHeroCard({ title, value, suffix = 'บาท', tint = 'default', ico
   )
 }
 
-function MiniStatCard({ title, value, suffix = '', tint = 'default' }) {
-  return (
-    <Card tint={tint} className="min-h-[138px]">
-      <div className="text-sm font-medium text-slate-500">{title}</div>
-      <div className="mt-5 flex flex-wrap items-end gap-x-2 gap-y-1">
-        <span className="text-[30px] font-bold leading-none tracking-tight text-slate-900">
-          {money(value)}
-        </span>
-        {suffix ? <span className="mb-1 text-sm font-semibold text-slate-400">{suffix}</span> : null}
-      </div>
-    </Card>
-  )
-}
-
 function BankBalanceCard({ bank, balance, income, expense, tint = 'default', logo = '' }) {
   return (
     <Card tint={tint} className="min-h-[170px]">
@@ -269,7 +255,7 @@ function LatestInvoicesCard({ rows }) {
     <Card tint="default" className="p-0">
       <div className="px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-5 lg:px-6 lg:pb-6 lg:pt-6">
         <SectionTitle
-          title="10 บิลล่าสุด"
+          title="5 บิลล่าสุด"
           subtitle="รวม paid, partial, ยังไม่จ่าย"
           right={<Pill tone="slate">{rows.length} รายการ</Pill>}
         />
@@ -289,6 +275,7 @@ function LatestInvoicesCard({ rows }) {
             <div className="grid gap-2.5">
               {rows
                 .filter((r) => String(r.invoice_status || '').toLowerCase() !== 'cancelled')
+                .slice(0, 5)
                 .map((r) => {
                   const tone =
                     r.pay_status === 'paid'
@@ -445,7 +432,6 @@ function buildBusinessInsight({
   if (monthNet < 0 || deadLoss > 0 || arTotal > 0) riskLevel = 'เฝ้าระวัง'
   if ((monthNet < 0 && arTotal > 0) || deadLoss > 0 || gsbBalance < 30000) riskLevel = 'เสี่ยง'
 
-  // ลดให้เหลือเฉพาะเหตุผลที่สำคัญจริง
   const reasons = [
     `ยอดขายเดือนนี้ ${money(monthSales)} บาท`,
     `กำไรสุทธิ ${money(monthNet)} บาท`,
@@ -845,7 +831,6 @@ export default function DashboardPage() {
             </div>
           ) : null}
 
-          {/* KPI หลัก 3 ตัว */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <KPIHeroCard
               title="ยอดขายเดือนนี้"
@@ -870,7 +855,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Donut + AI */}
           <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[0.86fr_1.14fr]">
             <DonutIncomeExpenseCard
               incomeExpenseData={incomeExpenseData}
@@ -879,7 +863,6 @@ export default function DashboardPage() {
             <AiBusinessCard insight={businessInsight} />
           </div>
 
-          {/* ธนาคาร */}
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
             <BankBalanceCard
               bank="GSB"
@@ -907,7 +890,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* ธุรกิจลึก */}
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[0.9fr_0.9fr_1.2fr]">
             <Card tint="cream">
               <SectionTitle
